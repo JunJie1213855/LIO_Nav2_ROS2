@@ -1,0 +1,1 @@
+Depends on rtabmap_sync which fails due to system libgdal/curl conflict in this environment.
