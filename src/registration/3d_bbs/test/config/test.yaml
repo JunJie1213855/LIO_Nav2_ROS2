@@ -1,0 +1,37 @@
+################[Necessary]################
+## Folder paths
+target_clouds: "your_path/target" # 目标点云文件夹路径
+source_clouds: "your_path/source" # 源点云文件夹路径
+output_folder: "your_path/output" # 输出文件夹路径
+
+## 3D-BBS parameters
+min_level_res: 1.0 # [m] 最小层级分辨率, 例如：室外: 1.0, 室内: 0.5
+max_level: 6 # 最大层级数
+
+## Angular search range [rad]
+# 6.28 input is converted to 2*M_PI
+min_rpy: [-0.02,-0.02,0.0] # [roll, pitch, yaw] 最小角度搜索范围 [弧度]
+max_rpy: [0.02,0.02,6.28] # [roll, pitch, yaw] 最大角度搜索范围 [弧度]
+
+## Score threshold
+# score_threshold = floor(src_points.size() * score_threshold_percentage)
+score_threshold_percentage: 0.9 # 得分阈值百分比, score_threshold = floor(src_points.size() * score_threshold_percentage)
+
+################[Optional]################
+## Downsample target clouds [m]
+tar_leaf_size: 0.1 # 目标点云降采样体素大小 [米], 关闭: 0.0
+
+## Downsample source clouds [m]
+src_leaf_size: 2.0 # 源点云降采样体素大小 [米], 关闭: 0.0
+
+## Crop source clouds [m]
+min_scan_range: 0.0 # [m] 最小扫描范围
+max_scan_range: 100.0 # [m] 最大扫描范围
+# off: set 0.0 to both min_scan_range and max_scan_range
+
+## Timeout [msec]
+# Enter the number as int
+timeout_msec: 0 # 超时时间 [毫秒], 关闭: 0
+ 
+## Final align (evaluate the error)
+use_gicp: false # 是否使用GICP进行最终配准（评估误差） 
