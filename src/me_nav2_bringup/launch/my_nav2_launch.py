@@ -12,11 +12,12 @@ def generate_launch_description():
 
     # 配置文件与地图路径
     params_file = os.path.join(me_share_path, 'config', 'nav2_params.yaml')
-    map_yaml_file = os.path.join(me_share_path, 'map', 'nav_test_4_27.yaml')
+    # map_yaml_file = os.path.join(me_share_path, 'map', 'nav_test_4_27.yaml')
+    map_yaml_file = os.path.join(me_share_path, 'map', 'test_map__2.yaml')
     rviz_file = os.path.join(me_share_path, 'rviz', 'nav2.rviz')
     
-    # 是否使用仿真时间
-    use_sim_time = False # False 
+    # 是否使用仿真时间 (仿真=True, 实机=False)
+    use_sim_time = True
 
     # 启动纯导航组件，不使用AMCL
     navigation_cmd = IncludeLaunchDescription(

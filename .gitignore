@@ -12,6 +12,7 @@ __pycache__/
 *.onnx
 *.weights
 *.engine
+.vscode
 
 .claude/
 .codex

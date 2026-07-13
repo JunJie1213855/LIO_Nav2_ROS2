@@ -29,7 +29,7 @@ def generate_launch_description():
 
     pcd_path = os.path.join(
         get_package_share_directory("me_nav2_bringup"),
-        "pcd", "nav_test_4_27.pcd"
+        "pcd", "test.pcd"
     )
 
     node = Node(
