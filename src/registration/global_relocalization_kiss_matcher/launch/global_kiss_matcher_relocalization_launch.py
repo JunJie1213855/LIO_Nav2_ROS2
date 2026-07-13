@@ -21,6 +21,7 @@ def generate_launch_description():
         remappings=remappings,
         parameters=[
             {
+                "use_sim_time": True,
                 "num_threads": 4,
                 "num_neighbors": 10,
                 "global_leaf_size": 0.25,

@@ -7,7 +7,7 @@
 # 行为树导航配置
 bt_navigator:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     global_frame: map                  # BT导航器所使用的全局坐标系
     robot_base_frame: base_footprint   # 机器人基座坐标系
     odom_topic: /odom                  # 里程计话题名称
@@ -18,7 +18,7 @@ bt_navigator:
 # 局部规划器
 controller_server:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     controller_frequency: 20.0        # 控制器运行的频率（Hz），即向底盘发cmd_vel的频率
     min_x_velocity_threshold: 0.001   # X方向最小速度阈值（避免极小值导致电机抖动）
     min_y_velocity_threshold: 0.5
@@ -80,7 +80,7 @@ controller_server:
 #       publish_frequency: 2.0          # 发布代价地图给RViz显示的频率
 #       global_frame: odom              # 局部代价地图的全局坐标系通常是odom
 #       robot_base_frame: base_footprint
-#       use_sim_time: False
+#       use_sim_time: True
 #       rolling_window: true            # 是否使用滑动窗口（机器人始终在地图中心）
 #       width: 3                        # 局部地图宽度（米）
 #       height: 3                       # 局部地图高度（米）
@@ -125,7 +125,7 @@ controller_server:
 #       publish_frequency: 1.0
 #       global_frame: map               # 全局代价地图依赖静态地图
 #       robot_base_frame: base_footprint
-#       use_sim_time: False
+#       use_sim_time: True
 #       robot_radius: 0.22              # 简化机器人为圆形（如果设置了footprint，此项无效）
 #       resolution: 0.05
 #       track_unknown_space: true       # 是否追踪未知空间（用于探索）
@@ -165,7 +165,7 @@ local_costmap:
       publish_frequency: 10.0         # 对应提高可视化发布频率
       global_frame: odom              # 保持 odom 保证局部里程计平滑
       robot_base_frame: base_footprint
-      use_sim_time: False
+      use_sim_time: True
       rolling_window: true
       width: 6                        # 保持 5x5 米的开阔局部窗口
       height: 6
@@ -206,7 +206,7 @@ global_costmap:
       publish_frequency: 2.0
       global_frame: map
       robot_base_frame: base_footprint
-      use_sim_time: False
+      use_sim_time: True
       footprint: "[ [0.21, 0.195], [0.21, -0.195], [-0.21, -0.195], [-0.21, 0.195] ]"
       resolution: 0.05
       track_unknown_space: true
@@ -242,14 +242,14 @@ global_costmap:
 # 静态地图服务器配置
 map_server:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     yaml_filename: "map.yaml"         # 要加载的静态地图文件路径（后续通过Launch传入实际路径）
 
 # 全局规划服务器
 planner_server:
   ros__parameters:
     expected_planner_frequency: 20.0  # 全局规划器被期望的运行频率
-    use_sim_time: False
+    use_sim_time: True
     planner_plugins: ["GridBased"]    # 加载规划器插件
     
     GridBased:
@@ -261,7 +261,7 @@ planner_server:
 # 路径平滑服务器
 smoother_server:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     smoother_plugins: ["SimpleSmoother"]
     SimpleSmoother:
       plugin: "nav2_smoother::SimpleSmoother" # 基于数学曲线的简单平滑器
@@ -309,7 +309,7 @@ waypoint_follower:
 # 速度平滑器配置
 velocity_smoother:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     smoothing_frequency: 20.0         # 平滑计算频率
     scale_velocities: False           # 如果超出物理极限，是否等比例缩小XY速度以保持原本运动轨迹的弧度
     feedback: "OPEN_LOOP"             # "OPEN_LOOP" (使用最后发出的指令计算) 或 "CLOSED_LOOP" (通过odom话题读取底盘真实速度计算)
