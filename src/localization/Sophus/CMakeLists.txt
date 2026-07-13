@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.20)
 project(Sophus VERSION 1.22.10)
 
 include(CMakePackageConfigHelpers)

@@ -16,8 +16,8 @@ def generate_launch_description():
     map_yaml_file = os.path.join(me_share_path, 'map', 'test_map__2.yaml')
     rviz_file = os.path.join(me_share_path, 'rviz', 'nav2.rviz')
     
-    # 是否使用仿真时间 (仿真=True, 实机=False)
-    use_sim_time = True
+    # 是否使用仿真时间 (仿真=true, 实机=false)
+    use_sim_time = 'true'
 
     # 启动纯导航组件，不使用AMCL
     navigation_cmd = IncludeLaunchDescription(
@@ -26,34 +26,31 @@ def generate_launch_description():
         ),
         launch_arguments={
             'params_file': params_file,
-            'use_sim_time': str(use_sim_time),
+            'use_sim_time': use_sim_time,
             'autostart': 'True'
         }.items()
     )
 
     # 独立启动 Map Server
-    # 加载静态地图，供 Global Costmap 使用
     map_server_cmd = Node(
         package='nav2_map_server',
         executable='map_server',
         name='map_server',
         output='screen',
-        # 同时传入你的 nav2_params.yaml 和 地图文件路径
-        parameters=[params_file, {'yaml_filename': map_yaml_file, 'use_sim_time': use_sim_time}]
+        parameters=[params_file,
+                    {'yaml_filename': map_yaml_file},
+                    {'use_sim_time': True}]
     )
 
     # 启动 Map Server 的生命周期管理器
-    # 负责将 map_server 从 Unconfigured 状态推送到 Active 状态
     lifecycle_manager_map_cmd = Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
         name='lifecycle_manager_map',
         output='screen',
-        parameters=[
-            {'use_sim_time': use_sim_time},
-            {'autostart': True},
-            {'node_names': ['map_server']}
-        ]
+        parameters=[{'use_sim_time': True},
+                    {'autostart': True},
+                    {'node_names': ['map_server']}]
     )
 
     # rviz
