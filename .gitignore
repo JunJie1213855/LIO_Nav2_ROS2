@@ -1,4 +1,5 @@
 # 编译与系统生成目录
+.codegraph
 build/
 install/
 log/
