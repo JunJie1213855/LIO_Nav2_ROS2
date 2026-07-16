@@ -3,8 +3,9 @@
 namespace sensor_scan_generation
 {
 
-SensorScanGeneration::SensorScanGeneration(const rclcpp::NodeOptions & options)
-: Node("sensor_scan_generation", options){
+  SensorScanGeneration::SensorScanGeneration(const rclcpp::NodeOptions &options)
+      : Node("sensor_scan_generation", options)
+  {
 
     lidar_frame_ = this->declare_parameter<std::string>("lidar_frame", "livox_frame");
     base_footprint_frame_ = this->declare_parameter<std::string>("base_footprint_frame", "base_footprint");
@@ -32,36 +33,38 @@ SensorScanGeneration::SensorScanGeneration(const rclcpp::NodeOptions & options)
     laser_cloud_sub_.subscribe(this, "/registered_scan", qos_profile);
     odometry_sub_.subscribe(this, "/registered_odometry", qos_profile);
 
+    // 将 点云 和 里程计位姿 时间同步
     sync_ = std::make_unique<message_filters::Synchronizer<SyncPolicy>>(
         SyncPolicy(100), odometry_sub_, laser_cloud_sub_);
+    
+    // 用 laserCloudAndOdometryHandler 处理数据
     sync_->registerCallback(std::bind(
         &SensorScanGeneration::laserCloudAndOdometryHandler, this, std::placeholders::_1,
         std::placeholders::_2));
 
     RCLCPP_INFO(this->get_logger(), MAG "SensorScanGeneration node is START" RST);
+  }
 
-}
-
-SensorScanGeneration::~SensorScanGeneration()
-{
+  SensorScanGeneration::~SensorScanGeneration()
+  {
     RCLCPP_INFO(this->get_logger(), MAG "SensorScanGeneration node is OVER" RST);
-}
+  }
 
-/**
- * @brief 获取 odom 和 lidar_frame 之间的变换;
- *        获取 lidar_frame 和 base_footprint 之间的变换;
- *        获取 lidar_frame 和 chassis 之间的变换;
- * 
- *        计算 odom 和 chassis 之间的变换;
- *        计算 odom 和 base_footprint 之间的变换;
- * 
- *        发布 odom 和 base_footprint 之间的变换;
- *        
- */
-void SensorScanGeneration::laserCloudAndOdometryHandler(
-    const nav_msgs::msg::Odometry::ConstSharedPtr & odometry_msg,
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pcd_msg)
-{
+  /**
+   * @brief 获取 odom 和 lidar_frame 之间的变换;
+   *        获取 lidar_frame 和 base_footprint 之间的变换;
+   *        获取 lidar_frame 和 chassis 之间的变换;
+   *
+   *        计算 odom 和 chassis 之间的变换;
+   *        计算 odom 和 base_footprint 之间的变换;
+   *
+   *        发布 odom 和 base_footprint 之间的变换;
+   *
+   */
+  void SensorScanGeneration::laserCloudAndOdometryHandler(
+      const nav_msgs::msg::Odometry::ConstSharedPtr &odometry_msg,
+      const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg)
+  {
     RCLCPP_INFO(this->get_logger(), BLU "Received synchronized odometry and point cloud messages" RST);
     tf2::Transform tf_lidar_to_chassis;
     tf2::Transform tf_odom_to_chassis;
@@ -76,87 +79,91 @@ void SensorScanGeneration::laserCloudAndOdometryHandler(
     tf_odom_to_base_footprint_ = tf_odom_to_lidar * tf_lidar_to_base_footprint_;
 
     publishTransform(
-    tf_odom_to_base_footprint_, odometry_msg->header.frame_id, base_footprint_frame_, pcd_msg->header.stamp);
+        tf_odom_to_base_footprint_, odometry_msg->header.frame_id, base_footprint_frame_, pcd_msg->header.stamp);
     publishOdometry(
-    tf_odom_to_base_footprint_, odometry_msg->header.frame_id, base_footprint_frame_, pcd_msg->header.stamp);
+        tf_odom_to_base_footprint_, odometry_msg->header.frame_id, base_footprint_frame_, pcd_msg->header.stamp);
 
     sensor_msgs::msg::PointCloud2 out;
     pcl_ros::transformPointCloud(lidar_frame_, tf_odom_to_lidar.inverse(), *pcd_msg, out);
     pub_laser_cloud_->publish(out);
-}
-
-tf2::Transform SensorScanGeneration::getTransform(
-  const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & time)
-{
-    try {
-    auto transform_stamped = tf_buffer_->lookupTransform(
-        target_frame, source_frame, rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
-    tf2::Transform transform;
-    tf2::fromMsg(transform_stamped.transform, transform);
-    return transform;
-    } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s. Returning identity.", ex.what());
-    return tf2::Transform::getIdentity();
-    }
-}
-
-void SensorScanGeneration::publishTransform(
-  const tf2::Transform & transform, const std::string & parent_frame,
-  const std::string & child_frame, const rclcpp::Time & stamp)
-{
-  geometry_msgs::msg::TransformStamped transform_msg;
-  transform_msg.header.stamp = stamp;
-  transform_msg.header.frame_id = parent_frame;
-  transform_msg.child_frame_id = child_frame;
-  transform_msg.transform = tf2::toMsg(transform);
-  br_->sendTransform(transform_msg);
-}
-
-void SensorScanGeneration::publishOdometry(
-  const tf2::Transform & transform, std::string parent_frame, const std::string & child_frame,
-  const rclcpp::Time & stamp)
-{
-  nav_msgs::msg::Odometry out;
-  out.header.stamp = stamp;
-  out.header.frame_id = parent_frame;
-  out.child_frame_id = child_frame;
-
-  const auto & origin = transform.getOrigin();
-  out.pose.pose.position.x = origin.x();
-  out.pose.pose.position.y = origin.y();
-  out.pose.pose.position.z = origin.z();
-  out.pose.pose.orientation = tf2::toMsg(transform.getRotation());
-
-  static tf2::Transform previous_transform;
-  static auto previous_time = std::chrono::steady_clock::now();
-  const auto current_time = std::chrono::steady_clock::now();
-
-  const double dt =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(current_time - previous_time).count() *
-    1e-9;
-
-  if (dt > 0) {
-    const auto linear_velocity = (transform.getOrigin() - previous_transform.getOrigin()) / dt;
-
-    const tf2::Quaternion q_diff =
-      transform.getRotation() * previous_transform.getRotation().inverse();
-    const auto angular_velocity = q_diff.getAxis() * q_diff.getAngle() / dt;
-
-    out.twist.twist.linear.x = linear_velocity.x();
-    out.twist.twist.linear.y = linear_velocity.y();
-    out.twist.twist.linear.z = linear_velocity.z();
-    out.twist.twist.angular.x = angular_velocity.x();
-    out.twist.twist.angular.y = angular_velocity.y();
-    out.twist.twist.angular.z = angular_velocity.z();
   }
 
-  previous_transform = transform;
-  previous_time = current_time;
+  tf2::Transform SensorScanGeneration::getTransform(
+      const std::string &target_frame, const std::string &source_frame, const rclcpp::Time &time)
+  {
+    try
+    {
+      auto transform_stamped = tf_buffer_->lookupTransform(
+          target_frame, source_frame, rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
+      tf2::Transform transform;
+      tf2::fromMsg(transform_stamped.transform, transform);
+      return transform;
+    }
+    catch (tf2::TransformException &ex)
+    {
+      RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s. Returning identity.", ex.what());
+      return tf2::Transform::getIdentity();
+    }
+  }
 
-  pub_base_footprint_odometry_->publish(out);
-}
+  void SensorScanGeneration::publishTransform(
+      const tf2::Transform &transform, const std::string &parent_frame,
+      const std::string &child_frame, const rclcpp::Time &stamp)
+  {
+    geometry_msgs::msg::TransformStamped transform_msg;
+    transform_msg.header.stamp = stamp;
+    transform_msg.header.frame_id = parent_frame;
+    transform_msg.child_frame_id = child_frame;
+    transform_msg.transform = tf2::toMsg(transform);
+    br_->sendTransform(transform_msg);
+  }
 
-}   // namespace sensor_scan_generation
+  void SensorScanGeneration::publishOdometry(
+      const tf2::Transform &transform, std::string parent_frame, const std::string &child_frame,
+      const rclcpp::Time &stamp)
+  {
+    nav_msgs::msg::Odometry out;
+    out.header.stamp = stamp;
+    out.header.frame_id = parent_frame;
+    out.child_frame_id = child_frame;
+
+    const auto &origin = transform.getOrigin();
+    out.pose.pose.position.x = origin.x();
+    out.pose.pose.position.y = origin.y();
+    out.pose.pose.position.z = origin.z();
+    out.pose.pose.orientation = tf2::toMsg(transform.getRotation());
+
+    static tf2::Transform previous_transform;
+    static auto previous_time = std::chrono::steady_clock::now();
+    const auto current_time = std::chrono::steady_clock::now();
+
+    const double dt =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(current_time - previous_time).count() *
+        1e-9;
+
+    if (dt > 0)
+    {
+      const auto linear_velocity = (transform.getOrigin() - previous_transform.getOrigin()) / dt;
+
+      const tf2::Quaternion q_diff =
+          transform.getRotation() * previous_transform.getRotation().inverse();
+      const auto angular_velocity = q_diff.getAxis() * q_diff.getAngle() / dt;
+
+      out.twist.twist.linear.x = linear_velocity.x();
+      out.twist.twist.linear.y = linear_velocity.y();
+      out.twist.twist.linear.z = linear_velocity.z();
+      out.twist.twist.angular.x = angular_velocity.x();
+      out.twist.twist.angular.y = angular_velocity.y();
+      out.twist.twist.angular.z = angular_velocity.z();
+    }
+
+    previous_transform = transform;
+    previous_time = current_time;
+
+    pub_base_footprint_odometry_->publish(out);
+  }
+
+} // namespace sensor_scan_generation
 
 #include "rclcpp_components/register_node_macro.hpp"
 RCLCPP_COMPONENTS_REGISTER_NODE(sensor_scan_generation::SensorScanGeneration)
