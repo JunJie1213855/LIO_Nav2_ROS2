@@ -17,8 +17,8 @@ LioInterface::LioInterface(const rclcpp::NodeOptions & options)
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-    pcd_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/registered_scan", 5);
-    odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("/registered_odometry", 5);
+    pcd_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/registered_scan", rclcpp::SensorDataQoS());
+    odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("/registered_odometry", rclcpp::SensorDataQoS());
 
     pcd_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
         "/cloud_registered", rclcpp::SensorDataQoS(), 

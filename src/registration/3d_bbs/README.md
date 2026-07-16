@@ -1,3 +1,15 @@
+# 在 3d_nav_ws 中的角色
+
+3D-BBS 是本项目的**可选全局重定位方案**，GPU 加速分支定界搜索，无需初始位姿。
+
+| 特性 | 3D-BBS | KISS-Matcher (默认) |
+|------|--------|---------------------|
+| 算法 | Branch-and-Bound | FPFH + TEASER++ |
+| GPU | 需要 CUDA 12.0+ | 不需要 |
+| 状态 | 备选 | 默认 |
+
+---
+
 <div align="center">
   <h1>3D-BBS: Global Localization for 3D Point Cloud Scan Matching Using Branch-and-Bound Algorithm</h1>
   <br>
