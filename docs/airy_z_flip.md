@@ -189,10 +189,113 @@ Pointcloud2d_3d:
 | `max_height` | `1.0` | `1.0` | `-0.3` |
 | SLAM Toolbox | ✅ | ✅ | ✅ |
 
+
+## 方案一部署指南
+
+### 数据流
+
+```
+Airy LiDAR (Z_lidar 朝上)
+  |  rslidar_sdk
+  v
+/rslidar_points + /rslidar_imu_data
+  |  FAST-LIO (extrinsic_R Z 翻转)
+  v
+/cloud_registered (camera_init 帧, Z 朝下)
+  |  airy_unflip.py (R_inv = R_ext^T)
+  v
+/cloud_registered_unflipped (camera_init 帧, Z 恢复朝上)
+  |  lio_interface (cloud_topic:=/cloud_registered_unflipped)
+  v
+/registered_scan (odom 帧, Z 朝上)
+  |  sensor_scan_generation
+  +-- /odom + odom->base_footprint TF
+  v
+pointcloud_to_laserscan
+  |  min_height=0.2, max_height=1.0  <-- 标准正常值
+  v
+/scan -> SLAM Toolbox [OK]
+```
+
+### 方式 A：使用集成脚本（推荐）
+
+```bash
+# 直接运行，已包含 airy_unflip.py + lio_interface(cloud_topic)
+./scripts/robosense_mapping_real_new.sh
+```
+
+### 方式 B：手动命令行
+
+```bash
+# 终端 1: FAST-LIO
+ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py
+
+# 终端 2: Z 轴修正
+/usr/bin/python3 scripts/airy_unflip.py --ros-args -p use_sim_time:=False
+
+# 终端 3: lio_interface（订阅修正后点云）
+ros2 launch lio_interface fastlio_lio_interface_launch.py \
+  cloud_topic:=/cloud_registered_unflipped
+```
+
+### 前提：lio_interface 支持 cloud_topic
+
+`fastlio_lio_interface_launch.py` 支持 `cloud_topic` 参数重映射硬编码的 `/cloud_registered`：
+
+```python
+# key change in fastlio_lio_interface_launch.py
+remappings=[
+    ('/cloud_registered', LaunchConfiguration('cloud_topic')),
+],
+```
+
+不传 `cloud_topic` 时默认仍为 `/cloud_registered`，向后兼容。
+
+### 验证方法
+
+```bash
+# 1. 确认 unflip 输出正常
+ros2 topic hz /cloud_registered_unflipped
+
+# 2. 确认 2D scan 有数据
+ros2 topic echo /scan --once | grep ranges
+
+# 3. SLAM Toolbox 建图
+rviz2  # 查看 /map topic
+```
+
+### airy_unflip.py 参数
+
+| 参数 | 默认值 | 说明 |
+|:---|:---|:---|
+| `input_cloud` | `/cloud_registered` | 输入点云（Z 翻转） |
+| `input_odom` | `/Odometry` | FAST-LIO 里程计 |
+| `output_cloud` | `/cloud_registered_unflipped` | 输出点云（Z 恢复朝上） |
+| `extrin_r` | Airy 默认外参 | `R_lidar->imu`，9 个浮点数逗号分隔 |
+
+### 变换步骤
+
+```
+对 /cloud_registered 中的每个点 pt_w (world 帧):
+
+  1) world -> body
+     pt_b = R_w2b @ (pt_w - T)
+
+  2) body 帧施加 R_inv（消除 Z 翻转 & X/Y 交换）
+     pt_corrected_b = R_inv @ pt_b
+     其中 R_inv = R_ext^T
+
+  3) body -> world
+     pt_corrected_w = R_b2w @ pt_corrected_b + T
+
+结果: 同一 world 帧，Z 轴恢复朝上
+```
+
 ## 注意事项
 
-1. **方案一**：需在 FAST-LIO 之后、lio_interface 之前插入 `airy_unflip.py` 节点，lio_interface 的 `cloud_topic` 指向 `/cloud_registered_unflipped`。
-2. **方案二**：如果需要在同一个 workspace 中同时支持 Livox 和 Airy，需维护两套 `Pointcloud2d_3d.yaml` 配置（或通过 launch 参数切换）。
+1. **方案一依赖**：`fastlio_lio_interface_launch.py` 需要 `cloud_topic` 参数支持（已实现）。
+2. **方案二局限**：若同时使用 `ground_ceiling_filter.py` 等依赖 Z 的节点，负 Z 会使其逻辑出错，必须用方案一。
 3. 两种方案都只影响输出点云，不影响 FAST-LIO 三维建图质量。
-4. Airy 本身 FOV 为 120°（非 360°），`angle_min/max` 建议保持 `-π ~ +π`。
-5. 如果将来重新标定 `extrinsic_R` 使 Z 轴不翻转（如第三行改为 `[0, 0, 1]`），则两种方案都无需使用。
+4. Airy 本身 FOV 为 120°，`angle_min/max` 建议保持 `-pi ~ +pi`。
+5. 如果将来重新标定 `extrinsic_R` 使 Z 轴不翻转（第三行改为 `[0, 0, 1]`），两种方案都无需使用。
+6. 统一关闭：`./scripts/kill_all.sh` 自动识别并关闭所有节点（含 `airy_unflip.py`）。
