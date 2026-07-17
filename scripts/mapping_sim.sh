@@ -53,10 +53,17 @@ ros2 launch lio_interface lio_interface_launch.py"
 # ------------------------------------------------------------------------------------
 
 # Gazebo 仿真环境
+# gnome-terminal --title="Gazebo 仿真" -- bash -c "
+# killall -9 gzserver gzclient;
+# source install/setup.bash;
+# ros2 launch get_urdf get_urdf_launch.py"
+
 gnome-terminal --title="Gazebo 仿真" -- bash -c "
 killall -9 gzserver gzclient;
 source install/setup.bash;
-ros2 launch get_urdf get_urdf_launch.py"
+ros2 launch get_urdf get_urdf_launch.py \
+world_path:=/home/ros/dataset/gazebo_models_worlds_collection/worlds/office_small.world"
+
 
 gnome-terminal --title="sensor_scan_generation" -- bash -c "
 source install/setup.bash;
