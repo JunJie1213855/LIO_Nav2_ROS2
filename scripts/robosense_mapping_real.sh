@@ -31,15 +31,14 @@ source install/setup.bash;
 ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
 
 # 地面+天花板滤波：body 帧 Z 在 (-0.4, 2.5) 之间保留，滤除地面和天花板
-gnome-terminal --title="地面+天花板滤波" -- bash -c "
-source install/setup.bash;
-/usr/bin/python3 $WORKSPACE_ROOT/scripts/ground_ceiling_filter.py \
-  --ros-args -p use_sim_time:=False"
+# gnome-terminal --title="地面+天花板滤波" -- bash -c "
+# source install/setup.bash;
+# /usr/bin/python3 $WORKSPACE_ROOT/scripts/ground_ceiling_filter.py \
+#   --ros-args -p use_sim_time:=False"
 
 gnome-terminal --title="Fast-LIO lio_interface" -- bash -c "
 source install/setup.bash;
-ros2 launch lio_interface fastlio_lio_interface_launch.py \
-  cloud_topic:=/cloud_registered_filtered use_sim_time:=False"
+ros2 launch lio_interface fastlio_lio_interface_launch.py"
 
 # ---------
 

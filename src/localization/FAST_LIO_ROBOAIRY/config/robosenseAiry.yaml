@@ -3,8 +3,8 @@
     # runtime_pos_log_enable: true
     map_file_path: ./PCD/map.pcd
     # point_filter_num: 1       # 不过滤，保留每 1 个点
-    filter_size_surf: 0.2    # 体素从 0.5m 缩到 0.2m
-    filter_size_map: 0.2
+    filter_size_surf: 0.5    # 体素从 0.5m 缩到 0.2m
+    filter_size_map: 0.5
     common:
       lid_topic: "/rslidar_points"
       imu_topic: "/rslidar_imu_data"  # /mavros/imu/data /ouster/imu /imu/data
