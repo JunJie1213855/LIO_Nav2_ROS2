@@ -54,7 +54,16 @@ ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch.py"
 # source install/setup.bash;
 # ros2 launch slam_toolbox online_async_launch.py"
 
+# gnome-terminal --title="slam_toolbox 建图" -- bash -c "
+# source install/setup.bash;
+# ros2 launch slam_toolbox online_async_launch.py \
+#     slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
+
 gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 source install/setup.bash;
 ros2 launch slam_toolbox online_async_launch.py \
     slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
+
+gnome-terminal --title="Nav2 导航" -- bash -c "
+source install/setup.bash;
+ros2 launch me_nav2_bringup my_nav2_launch.py"
