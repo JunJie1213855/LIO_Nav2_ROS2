@@ -3,8 +3,8 @@
     # runtime_pos_log_enable: true
     map_file_path: ./PCD/map.pcd
     # point_filter_num: 1       # 不过滤，保留每 1 个点
-    filter_size_surf: 0.25    # 体素从 0.5m 缩到 0.2m
-    filter_size_map: 0.25
+    filter_size_surf: 0.2    # 体素从 0.5m 缩到 0.2m
+    filter_size_map: 0.2
     common:
       lid_topic: "/rslidar_points"
       imu_topic: "/rslidar_imu_data"  # /mavros/imu/data /ouster/imu /imu/data
@@ -20,8 +20,6 @@
       ground_filter_angle: 0.0    # 过滤朝下超过 20° 的点（地面）
       ceiling_filter_angle: 0.0   # 过滤朝上超过 20° 的点（天花板）
     mapping:
-      save_voxel_size: 0.2   # 保存时体素降采样，独立于 filter_size_map
-      max_search_dist_surf: 1.0  # default: 5
       num_sub_cloud: 1  # This is int, should be fine
       acc_cov: 0.1
       gyr_cov: 0.1
