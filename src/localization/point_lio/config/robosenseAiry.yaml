@@ -1,0 +1,88 @@
+# =============================================================================
+# Point-LIO 配置文件 — RoboSense Airy 实机
+# =============================================================================
+# Airy 通过 rslidar_sdk 发布标准 PointCloud2 到 /rslidar_points，
+# 使用 lidar_type=2（VELO16 handler）解析 PointCloud2。
+#
+# Point-LIO 的 lidar_type 枚举（preprocess.h）：
+#   AVIA=1（CustomMsg）, VELO16=2（PointCloud2）, OUST64=3, HESAIxt32=4
+# ⚠️ Point-LIO 不支持 lidar_type=5（那是 FAST_LIO_ROBOAIRY 的扩展）
+#
+# timestamp_unit：Airy 驱动输出秒级时间戳 → 0 (SEC)
+
+/**:
+    ros__parameters:
+        use_imu_as_input: False
+        prop_at_freq_of_imu: True
+        check_satu: True
+        init_map_size: 10
+        point_filter_num: 4
+        space_down_sample: True
+        filter_size_surf: 0.2
+        filter_size_map: 0.2
+        ivox_nearby_type: 6
+        runtime_pos_log_enable: False
+
+        common:
+            lid_topic: "/rslidar_points"
+            imu_topic: "/rslidar_imu_data"
+            con_frame: False
+            con_frame_num: 1
+            cut_frame: False
+            cut_frame_time_interval: 0.1
+            time_diff_lidar_to_imu: 0.0
+
+        prior_pcd:
+            enable: False
+            prior_pcd_map_path: ""
+            init_pose: [ 0.0, 0.0, 0.0 ]
+
+        preprocess:
+            lidar_type: 2                 # Airy→PointCloud2→VELO16 handler
+            scan_line: 96                 # Airy 96 线
+            scan_rate: 10
+            timestamp_unit: 0             # Airy 秒级时间戳 (SEC=0)
+            blind: 0.5
+
+        mapping:
+            imu_en: True
+            extrinsic_est_en: False
+            imu_time_inte: 0.005
+            lidar_time_inte: 0.1
+            satu_acc: 3.0
+            satu_gyro: 35.0
+            acc_norm: 1.0
+            lidar_meas_cov: 0.01
+            vel_cov: 20.0
+            acc_cov_output: 500.0
+            gyr_cov_output: 1000.0
+            b_acc_cov: 0.0001
+            b_gyr_cov: 0.0001
+            imu_meas_acc_cov: 0.01
+            imu_meas_omg_cov: 0.01
+            gyr_cov_input: 0.01
+            acc_cov_input: 0.1
+            plane_thr: 0.1
+            match_s: 81.0
+            det_range: 15.0
+            fov_degree: 360.0
+            ivox_grid_resolution: 2.0
+            gravity: [-0.0010986328125, 0.0040283203125, -0.98681640625]
+            gravity_init: [-0.0010986328125, 0.0040283203125, -0.98681640625]
+            extrinsic_T: [0.0, 0.0, 0.0]
+            extrinsic_R: [0.0, -1.0, 0.0,
+                         -1.0, 0.0, 0.0,
+                          0.0, 0.0, -1.0]
+
+        odometry:
+            publish_odometry_without_downsample: False
+
+        publish:
+            path_en: True
+            scan_publish_en: True
+            scan_bodyframe_pub_en: True
+            tf_send_en: True
+
+        pcd_save:
+            pcd_save_en: True
+            interval: -1
