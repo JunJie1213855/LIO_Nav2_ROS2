@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CycloneDDS xmlns="https://cdds.io/config">
+    <Domain id="any">
+
+        <!-- Fragment 优化：MaxMessageSize 提到 2 MiB，PointCloud2 不再分片 -->
+        <General>
+            <MaxMessageSize>2 MiB</MaxMessageSize>
+            <DontRoute>false</DontRoute>
+        </General>
+
+        <!-- 兼容性 -->
+        <Compatibility>
+            <AssumeRtiHasPmdEndpoints>false</AssumeRtiHasPmdEndpoints>
+        </Compatibility>
+
+        <!-- 发现协议 -->
+        <Discovery>
+            <ParticipantIndex>auto</ParticipantIndex>
+            <MaxAutoParticipantIndex>15</MaxAutoParticipantIndex>
+        </Discovery>
+
+        <!-- 内部缓冲区：避免因窗口太小丢 sample -->
+        <Internal>
+            <Watermarks>
+                <WhcHigh>512 KiB</WhcHigh>
+            </Watermarks>
+        </Internal>
+
+        <!-- 日志：只输出严重错误 -->
+        <Tracing>
+            <Verbosity>severe</Verbosity>
+            <OutputFile>stdout</OutputFile>
+        </Tracing>
+
+    </Domain>
+</CycloneDDS>
