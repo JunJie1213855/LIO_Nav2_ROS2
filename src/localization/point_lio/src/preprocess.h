@@ -12,7 +12,7 @@ using namespace std;
 typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointCloud<PointType> PointCloudXYZI;
 
-enum LID_TYPE { AVIA = 1, VELO16, OUST64, HESAIxt32, ROAIRY};  //{1, 2, 3, 4}
+enum LID_TYPE { AVIA = 1, VELO16, OUST64, HESAIxt32, ROBOAIRY};  //{1, 2, 3, 4}
 enum TIME_UNIT { SEC = 0, MS = 1, US = 2, NS = 3 };
 enum Feature { Nor, Poss_Plane, Real_Plane, Edge_Jump, Edge_Plane, Wire, ZeroPoint };
 enum Surround { Prev, Next };
@@ -114,7 +114,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(
   (float, x, x)
   (float, y, y)
   (float, z, z)
-  (float, intensity, intensity),
+  (float, intensity, intensity)
   (uint16_t, ring, ring)
   (double, timestamp, timestamp)
 )
@@ -133,6 +133,8 @@ class Preprocess
  
   void process(const livox_ros_driver2::msg::CustomMsg::SharedPtr &msg, PointCloudXYZI::Ptr &pcl_out);
   void process(const sensor_msgs::msg::PointCloud2::SharedPtr &msg, PointCloudXYZI::Ptr &pcl_out);
+  void process(const sensor_msgs::msg::PointCloud2::SharedPtr &msg, PointCloudXYZI::Ptr &pcl_out,
+               int i_sub_cloud, int num_sub_cloud, double &start_time, double &end_time);
   void set(bool feat_en, int lid_type, double bld, int pfilt_num);
 
   // sensor_msgs::msg::PointCloud2::SharedPtr pointcloud;

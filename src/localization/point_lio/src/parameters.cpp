@@ -228,6 +228,12 @@ void readParameters(std::shared_ptr<rclcpp::Node> & nh)
 
     nh->declare_parameter<int>("ivox_nearby_type", 18);
     nh->get_parameter("ivox_nearby_type", ivox_nearby_type);
+
+    nh->declare_parameter<bool>("common.cut_frame_init", false);
+    nh->get_parameter("common.cut_frame_init", cut_frame_init);
+
+    nh->declare_parameter<int>("common.cut_frame_num", 3);
+    nh->get_parameter("common.cut_frame_num", cut_frame_num);
   } catch (const rclcpp::ParameterTypeException & e) {
     RCLCPP_ERROR(nh->get_logger(), "Parameter type exception: %s", e.what());
   } catch (const std::exception & e) {

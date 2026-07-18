@@ -52,9 +52,28 @@ void standard_pcl_cbk(const sensor_msgs::msg::PointCloud2::SharedPtr & msg)
       time_buffer.push_back(timestamp_lidar.front() / double(1000));  //unit:s
       timestamp_lidar.pop_front();
     }
+  } else if (lidar_type == ROBOAIRY && cut_frame_init) {
+    // Airy sub-cloud 拆分: 250ms 扫描拆成 cut_frame_num 个子帧, 每个 ~80ms
+    for (int i_sub = 0; i_sub < cut_frame_num; i_sub++) {
+      double start_time, end_time;
+      PointCloudXYZI::Ptr ptr(new PointCloudXYZI());
+      p_pre->process(msg, ptr, i_sub, cut_frame_num, start_time, end_time);
+      if (!ptr->points.empty()) {
+        lidar_buffer.push_back(ptr);
+        time_buffer.push_back(start_time);
+      }
+    }
+    static int sub_cnt = 0;
+    if (++sub_cnt % 10 == 1)
+      printf("[cbk-airy] split=%d sub_sizes buffer=%zu\n",
+             cut_frame_num, lidar_buffer.size());
   } else {
     PointCloudXYZI::Ptr ptr(new PointCloudXYZI(20000, 1));
     p_pre->process(msg, ptr);
+    static int cbk_cnt = 0;
+    if (++cbk_cnt % 10 == 1)
+      printf("[cbk] scan=%d lidar_type=%d ptr->size=%zu buffer=%zu\n",
+             scan_count, lidar_type, ptr->size(), lidar_buffer.size());
     if (con_frame) {
       if (frame_ct == 0) {
         time_con = last_timestamp_lidar;  //msg->header.stamp.toSec();

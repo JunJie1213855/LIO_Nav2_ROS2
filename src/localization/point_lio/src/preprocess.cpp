@@ -83,12 +83,53 @@ void Preprocess::process(
   case HESAIxt32:
     hesai_handler(msg);
     break;
-  case ROAIRY:
+
+  case ROBOAIRY:
     double start_time, end_time;
     robosense_handler(msg, 0, 1, start_time, end_time);
     break;
+
   default:
     printf("Error LiDAR Type");
+    break;
+  }
+  static int proc_cnt = 0;
+  if (++proc_cnt % 10 == 1)
+    printf("[proc2] surf=%zu\n", pl_surf.size());
+  *pcl_out = pl_surf;
+}
+
+void Preprocess::process(
+    const sensor_msgs::msg::PointCloud2::SharedPtr &msg, PointCloudXYZI::Ptr &pcl_out,
+    int i_sub_cloud, int num_sub_cloud, double &start_time, double &end_time)
+{
+  switch (time_unit)
+  {
+  case SEC:
+    time_unit_scale = 1.e3f;
+    break;
+  case MS:
+    time_unit_scale = 1.f;
+    break;
+  case US:
+    time_unit_scale = 1.e-3f;
+    break;
+  case NS:
+    time_unit_scale = 1.e-6f;
+    break;
+  default:
+    time_unit_scale = 1.f;
+    break;
+  }
+
+  switch (lidar_type)
+  {
+  case ROBOAIRY:
+    robosense_handler(msg, i_sub_cloud, num_sub_cloud, start_time, end_time);
+    break;
+  default:
+    std::cerr << "Error: lidar_type " << lidar_type
+              << " does not support sub_cloud processing" << std::endl;
     break;
   }
   *pcl_out = pl_surf;
@@ -316,10 +357,10 @@ void Preprocess::process_cut_frame_pcl2(
     }
   }
   else
-  {
-    std::cout << "Wrong LiDAR Type!!!" << '\n';
-    return;
-  }
+    {
+      std::cout << "Wrong LiDAR Type!!!" << '\n';
+      return;
+    }
 
   sort(pl_surf.points.begin(), pl_surf.points.end(), time_list_cut_frame);
 
@@ -684,6 +725,10 @@ void Preprocess::robosense_handler(const sensor_msgs::msg::PointCloud2::SharedPt
   int plsize = 0;
   double msg_time = rclcpp::Time(msg->header.stamp).seconds();
 
+  printf("[robo] w=%d h=%d fields=%zu ring=%d ts=%d i_sub=%d/%d\n",
+         msg->width, msg->height, msg->fields.size(),
+         has_ring, has_timestamp, i_sub_cloud, num_sub_cloud);
+
   // 如果点云没有 ring 和 timestamp 字段，使用标准 PointXYZI 处理
   if (!has_ring || !has_timestamp)
   {
@@ -786,7 +831,7 @@ void Preprocess::robosense_handler(const sensor_msgs::msg::PointCloud2::SharedPt
     }
   }
   std::sort(time_stamp_of_points.begin(), time_stamp_of_points.end());
-  // std::cout << " point_size_downsample: " << pl_surf.size() << std::endl;
+  printf("[robo] surf=%zu plsize=%d\n", pl_surf.size(), plsize);
 }
 void Preprocess::give_feature(pcl::PointCloud<PointType> &pl, vector<orgtype> &types)
 {
