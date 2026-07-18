@@ -1,15 +1,3 @@
-# =============================================================================
-# Point-LIO 配置文件 — RoboSense Airy 实机
-# =============================================================================
-# Airy 通过 rslidar_sdk 发布标准 PointCloud2 到 /rslidar_points，
-# 使用 lidar_type=2（VELO16 handler）解析 PointCloud2。
-#
-# Point-LIO 的 lidar_type 枚举（preprocess.h）：
-#   AVIA=1（CustomMsg）, VELO16=2（PointCloud2）, OUST64=3, HESAIxt32=4
-# ⚠️ Point-LIO 不支持 lidar_type=5（那是 FAST_LIO_ROBOAIRY 的扩展）
-#
-# timestamp_unit：Airy 驱动输出秒级时间戳 → 0 (SEC)
-
 /**:
     ros__parameters:
         use_imu_as_input: False
@@ -18,8 +6,8 @@
         init_map_size: 10
         point_filter_num: 4
         space_down_sample: True
-        filter_size_surf: 0.2
-        filter_size_map: 0.2
+        filter_size_surf: 0.25
+        filter_size_map: 0.25
         ivox_nearby_type: 6
         runtime_pos_log_enable: False
 
@@ -31,6 +19,8 @@
             cut_frame: False
             cut_frame_time_interval: 0.1
             time_diff_lidar_to_imu: 0.0
+            cut_frame_init: True      
+            cut_frame_num: 5 # 10 帧
 
         prior_pcd:
             enable: False
@@ -38,22 +28,20 @@
             init_pose: [ 0.0, 0.0, 0.0 ]
 
         preprocess:
-            lidar_type: 2                 # Airy→PointCloud2→VELO16 handler
-            scan_line: 96                 # Airy 96 线
-            scan_rate: 10
-            timestamp_unit: 0             # Airy 秒级时间戳 (SEC=0)
+            lidar_type: 5                               # 5 
+            scan_line: 96                                 # 96 线
+            timestamp_unit: 0                            # SEC=0, Airy秒级时间戳→curvature=ms
             blind: 0.5
 
         mapping:
             imu_en: True
-            extrinsic_est_en: False
+            extrinsic_est_en: False                       
             imu_time_inte: 0.005
             lidar_time_inte: 0.1
             satu_acc: 3.0
             satu_gyro: 35.0
             acc_norm: 1.0
             lidar_meas_cov: 0.01
-            vel_cov: 20.0
             acc_cov_output: 500.0
             gyr_cov_output: 1000.0
             b_acc_cov: 0.0001
@@ -64,11 +52,9 @@
             acc_cov_input: 0.1
             plane_thr: 0.1
             match_s: 81.0
-            det_range: 15.0
-            fov_degree: 360.0
             ivox_grid_resolution: 2.0
-            gravity: [-0.0010986328125, 0.0040283203125, -0.98681640625]
-            gravity_init: [-0.0010986328125, 0.0040283203125, -0.98681640625]
+            gravity: [ -0.0205, -0.0912, -9.8684 ]       # 实机：重力方向 Z 轴正方向
+            gravity_init: [ -0.0205, -0.0912, -9.8684 ]
             extrinsic_T: [0.0, 0.0, 0.0]
             extrinsic_R: [0.0, -1.0, 0.0,
                          -1.0, 0.0, 0.0,

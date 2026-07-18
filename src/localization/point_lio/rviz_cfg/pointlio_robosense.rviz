@@ -34,6 +34,8 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        camera_init:
+          Value: true
         aft_mapped:
           Value: true
         body:
@@ -44,9 +46,10 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        aft_mapped:
-          body:
-            {}
+        camera_init:
+          aft_mapped:
+            body:
+              {}
       Update Interval: 0
       Value: true
     - Angle Tolerance: 0.10000000149011612
@@ -86,7 +89,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /aft_mapped_to_init
+        Value: /camera_init_to_init
       Value: true
     - Alpha: 1
       Buffer Length: 1
@@ -221,7 +224,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
-    Fixed Frame: aft_mapped
+    Fixed Frame: camera_init
     Frame Rate: 30
   Name: root
   Tools:
