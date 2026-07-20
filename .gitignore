@@ -21,6 +21,7 @@ rosgraph*
 *.weights
 *.engine
 .vscode
+*.pcd
 
 .claude/
 .codex
