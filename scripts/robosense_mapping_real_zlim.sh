@@ -41,17 +41,10 @@ gnome-terminal --title="FAST-LIO 里程计" -- bash -c "
 source install/setup.bash;
 ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
 
-# Z 轴翻转修正：施加 extrinsic_R 逆旋转，恢复 Z 轴朝上
-gnome-terminal --title="Airy Z轴翻转修正" -- bash -c "
-source install/setup.bash;
-/usr/bin/python3 $WORKSPACE_ROOT/scripts/airy_unflip.py \
-  --ros-args -p use_sim_time:=False"
-
 # lio_interface 订阅修正后的点云（Z 轴已恢复朝上）
 gnome-terminal --title="Fast-LIO lio_interface" -- bash -c "
 source install/setup.bash;
-ros2 launch lio_interface fastlio_lio_interface_launch.py \
-  cloud_topic:=/cloud_registered_unflipped use_sim_time:=False"
+ros2 launch lio_interface fastlio_lio_interface_launch.py use_sim_time:=False"
 
 # ---------
 
@@ -67,7 +60,7 @@ ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 gnome-terminal --title="3d点云转2d" -- bash -c "
 source install/setup.bash;
-ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch.py"
+ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch_zlim.py"
 
 # gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 # source install/setup.bash;
