@@ -16,6 +16,7 @@ def generate_launch_description():
     map_yaml_file = os.path.join(me_share_path, 'map', 'test_map__2.yaml')
     rviz_file = os.path.join(me_share_path, 'rviz', 'nav2.rviz')
     
+    print("map file : ",map_yaml_file)
     # 是否使用仿真时间 (仿真=true, 实机=false)
     use_sim_time = 'true'
 
@@ -32,13 +33,14 @@ def generate_launch_description():
     )
 
     # 独立启动 Map Server
+    # 注意：不要传 params_file（nav2_params.yaml），该文件包含大量导航参数，
+    # 其中可能覆盖或干扰 map_server 的配置，导致 lifecycle configure 失败、节点僵死
     map_server_cmd = Node(
         package='nav2_map_server',
         executable='map_server',
         name='map_server',
         output='screen',
-        parameters=[params_file,
-                    {'yaml_filename': map_yaml_file},
+        parameters=[{'yaml_filename': map_yaml_file},
                     {'use_sim_time': True}]
     )
 

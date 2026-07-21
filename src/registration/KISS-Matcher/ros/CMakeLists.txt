@@ -34,14 +34,21 @@ else()
     #FetchContent_MakeAvailable(ext_kiss_matcher_core)
 endif()
 
-# Load small_gicp
-include(FetchContent)
-FetchContent_Declare(
-  small_gicp
-  GIT_REPOSITORY https://github.com/koide3/small_gicp
-  GIT_TAG master
-)
-FetchContent_MakeAvailable(small_gicp)
+# Load small_gicp: prefer the system-installed package (avoids GitHub access
+# at configure time); fall back to FetchContent when not installed.
+find_package(small_gicp QUIET)
+if(small_gicp_FOUND)
+  message(STATUS "Using system-installed small_gicp")
+  add_library(small_gicp ALIAS small_gicp::small_gicp)
+else()
+  include(FetchContent)
+  FetchContent_Declare(
+    small_gicp
+    GIT_REPOSITORY https://github.com/koide3/small_gicp
+    GIT_TAG master
+  )
+  FetchContent_MakeAvailable(small_gicp)
+endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(nav_msgs REQUIRED)

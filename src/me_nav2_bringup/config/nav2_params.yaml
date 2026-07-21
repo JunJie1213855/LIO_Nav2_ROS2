@@ -45,9 +45,11 @@ controller_server:
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
-      min_vel_x: -0.26                  # 最小线速度（不支持倒车设为0，支持可设为负）
-      min_vel_y: 0.0                  # Y方向速度（差速车为0）
-      max_vel_x: 0.26                  # 最大X线速度（m/s）
+      min_vel_x: 0.0                    # 最小线速度（滑移转向不支持主动倒车）
+      min_vel_y: 0.0                    # Y方向速度（差速车为0）
+      max_vel_x: 0.26                   # 最大X线速度（m/s）
+      trans_stopped_velocity: 0.01      # 低于此速度视为"停止"（DWB默认0.25太激进）
+      rot_stopped_velocity: 0.01        # 角速度"停止"阈值（DWB默认0.25太激进）
       max_vel_y: 0.0
       max_vel_theta: 1.0              # 最大角速度（rad/s）
       min_speed_xy: 0.0               # XY平面的最小合速度

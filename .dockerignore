@@ -1,0 +1,5 @@
+# 只把 KISS-Matcher 子目录送入 build context（Dockerfile 只 COPY 它）
+*
+!src/registration/KISS-Matcher
+# 排除可能存在的宿主机构建产物
+src/registration/KISS-Matcher/cpp/kiss_matcher/build

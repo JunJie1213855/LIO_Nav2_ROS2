@@ -9,9 +9,10 @@ def generate_launch_description():
 
     pcd_path = os.path.join(
         get_package_share_directory("me_nav2_bringup"),
-        "pcd", "nav_test_4_27.pcd"
+        "pcd", "robo_map.pcd"
     )
 
+    print("pcd path : ", pcd_path)
     node = Node(
         package="global_relocalization_kiss_matcher",
         executable="global_kiss_matcher_relocalization_exec",

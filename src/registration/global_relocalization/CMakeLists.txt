@@ -20,17 +20,21 @@ find_package(ament_cmake_auto REQUIRED)
 find_package(OpenMP REQUIRED)
 ament_auto_find_build_dependencies()
 
-# Always use FetchContent for small_gicp to avoid stale install artifacts
-message(STATUS "Fetching small_gicp via FetchContent...")
-
-include(FetchContent)
-FetchContent_Declare(
-  small_gicp
-  GIT_REPOSITORY https://github.com/koide3/small_gicp.git
-  GIT_TAG "master"
-)
-
-FetchContent_MakeAvailable(small_gicp)
+# Prefer system-installed small_gicp (avoids GitHub access at configure time)
+find_package(small_gicp QUIET)
+if(small_gicp_FOUND)
+  message(STATUS "Using system-installed small_gicp")
+  add_library(small_gicp ALIAS small_gicp::small_gicp)
+else()
+  message(STATUS "Fetching small_gicp via FetchContent...")
+  include(FetchContent)
+  FetchContent_Declare(
+    small_gicp
+    GIT_REPOSITORY https://github.com/koide3/small_gicp.git
+    GIT_TAG "master"
+  )
+  FetchContent_MakeAvailable(small_gicp)
+endif()
 
 ###########
 ## Build ##
