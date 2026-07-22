@@ -8,7 +8,7 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
 
     pkg_share = get_package_share_directory('gld_robot_description')
-    rviz_file = os.path.join(pkg_share, 'rviz', 'nav2_new.rviz')
+    rviz_file = os.path.join(pkg_share, 'rviz', 'gld_robot_description.rviz')
     urdf_file = os.path.join(pkg_share, 'model', 'gld_robot_description.urdf')
     
     with open(urdf_file, 'r') as infp:

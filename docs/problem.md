@@ -198,6 +198,63 @@ min_vel_x: 0.0        # 滑移转向不快倒车
 
 ---
 
+### P18：`airy_unflip.py` 修正后点云与位姿 XY 方向不匹配
+
+**现象**：Airy 实机运行方案一（`airy_unflip.py`）后，2D SLAM 建图和导航的 costmap
+中障碍物位置偏移，与机器人实际朝向不一致。
+
+**原因**：Airy 的 `extrinsic_R` 同时做了 **Z 翻转** 和 **X/Y 交换**：
+
+```yaml
+extrinsic_R: [0, -1, 0,
+              -1, 0, 0,
+              0, 0, -1]
+```
+
+`airy_unflip.py` 对整个矩阵取了逆（`R_inv = R_ext^T`），连 X/Y 一起改了：
+
+```python
+pt_corrected_b = R_inv @ pt_b    # ← 当前实现：XY 也被旋转了
+```
+
+以 LiDAR 正前方一点 `[1, 0, 0]` 为例：
+
+| 阶段 | world 帧坐标 | 指向 |
+| --- | --- | --- |
+| 原始（Z 翻转后） | `R_imu→world × [0, -1, 0] + T` | 左侧 |
+| unflip 后 | `R_imu→world × [1, 0, 0] + T` | **前方** |
+
+同一个物理墙壁点，unflip 前后在 world 帧下**差了 90°**。但 odometry 姿态 `R_imu→world`
+**没有被修正**，机器人朝向（TF 链 `odom → base_footprint`）仍是旧的。
+结果是点云中障碍物的方向与机器人的方向在世界帧下不一致。
+
+**后果链**：
+```
+点云 XY 旋转了   ≠   TF 链的机器人朝向
+        ↓
+  /scan 数据角度偏移
+        ↓
+  costmap 障碍物与机器人真实环境错位
+        ↓
+  Nav2 路径规划错误 / 碰撞
+```
+
+**正确修复方案**：只翻转 Z 轴，不动 XY——对外参矩阵取第一行和第三行的反，第二行保持不变：
+
+```python
+# 正确：只修正 Z，不动 XY
+pt_corrected_b = pt_b.copy()
+pt_corrected_b[2] = -pt_b[2]
+
+# 当前错误实现（XY 也被改了）：
+# pt_corrected_b = R_ext.T @ pt_b
+```
+
+**为什么方案二（翻转高度阈值）不受此影响**：方案二不改点云本身，只在 `pointcloud_to_laserscan`
+中把 `min_height/max_height` 设为负值。点云和位姿始终在同一坐标系下，XY 天然一致。
+
+---
+
 ## 三、编译/运行命令速查
 
 ```bash
@@ -261,3 +318,4 @@ docker exec -it lio_nav2 /ws/scripts/nav2_sim_docker.sh
 1. **Point-LIO 仿真适配**：需修改源码中 `N_SCANS` 匹配 50 线仿真 LiDAR，或改用 `lidar_type` 适配
 2. **NVIDIA GPU 加速**：当前走 Mesa 软件渲染，装 nvidia-container-toolkit 后可 `--gpus all`
 3. **`navigation_launch.py` 的 lifecycle_manager 未自动激活**：需排查 nav2_bringup 中 `autostart` 参数传递
+4. **`airy_unflip.py` XY 方向偏移**（P18）：`R_ext.T @ pt` 连 X/Y 一起旋转了，应改为只翻转 Z 轴
