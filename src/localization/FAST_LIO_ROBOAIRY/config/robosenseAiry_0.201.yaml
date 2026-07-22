@@ -1,9 +1,10 @@
 /**:
   ros__parameters:
+    # runtime_pos_log_enable: true
     map_file_path: ./PCD/map.pcd
-    point_filter_num: 20
-    filter_size_surf: 3.0
-    filter_size_map: 3.0
+    point_filter_num: 3       # 每 3 个点取 1 个，减少 2/3 输入点云 (4GB 内存优化)
+    filter_size_surf: 0.5    # 增大体素从 0.5→0.8，减少 ikd-Tree surf 点数 (4GB 内存优化)
+    filter_size_map: 0.5     # 增大体素从 0.5→0.8，减少 ikd-Tree map 点数 (4GB 内存优化)
     common:
       lid_topic: "/rslidar_points"
       imu_topic: "/rslidar_imu_data"  # /mavros/imu/data /ouster/imu /imu/data
@@ -15,33 +16,34 @@
       lidar_type: 5  # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 5 for RoboSense Airy
       scan_line: 96
       timestamp_unit: 0  # 0-second, 1-milisecond, 2-microsecond, 3-nanosecond.
-      blind: 1.0 # blind area for 1m 
+      blind: 0.0 # blind area for 1m 
+      ground_filter_angle: 0.0    # 过滤朝下超过 20° 的点（地面）
+      ceiling_filter_angle: 0.0   # 过滤朝上超过 20° 的点（天花板）
     mapping:
-      save_voxel_size: 0.2   # 保存时体素降采样，独立于 filter_size_map
-      max_search_dist_surf: 0.5
-      num_sub_cloud: 1
+      cube_side_length: 50.0  # 默认 200m → 50m，超出范围自动删除旧点云 (4GB 内存优化)
+      num_sub_cloud: 1  # This is int, should be fine
       acc_cov: 0.1
       gyr_cov: 0.1
       b_acc_cov: 0.0001
       b_gyr_cov: 0.0001
-      fov_degree: 120.0
-      det_range: 50.0
+      fov_degree: 180.0
+      det_range: 10.0    # 从 15.0 缩减，限制特征搜索范围 (4GB 内存优化)
       extrinsic_est_en: false  # true: enable the online estimation of IMU-LiDAR extrinsic
-      # extrinsic_T: [0.0, 0.0, 0.0]
-      # extrinsic_R: [0.0, -1.0, 0.0,
-      #               -1.0, 0.0, 0.0,
-      #               0.0, 0.0, -1.0]
-      extrinsic_T: [ 0.004250 , 0.004180  , -0.004460]
-      extrinsic_R: [-0.011259 , -0.999927 ,  0.004350,
-                    -0.999937 ,  0.011259 ,  0.000023,
-                    -0.000072 , -0.004350 , -0.999990]
+      extrinsic_T: [0.0, 0.0, 0.0]
+      extrinsic_R: [0.0, -1.0, 0.0,
+                    -1.0, 0.0, 0.0,
+                    0.0, 0.0, -1.0]
+      # extrinsic_T: [ 0.004250 , 0.004180  , -0.004460]
+      # extrinsic_R: [-0.011259 , -0.999927 ,  0.004350,
+      #               -0.999937 ,  0.011259 ,  0.000023,
+      #               -0.000072 , -0.004350 , -0.999990]
     publish:
       path_en: true
-      scan_publish_en: false
-      dense_publish_en: false
-      scan_bodyframe_pub_en: false
+      scan_publish_en: true  # false: close all the point cloud output
+      dense_publish_en: false  # 降低全局点云发布密度 (4GB 内存优化)
+      scan_bodyframe_pub_en: true  # true: output the point cloud scans in IMU-body-frame
 
     pcd_save:
-      pcd_save_en: true
+      pcd_save_en: false  # 实机关闭：4GB 内存下 pcd_save 会导致 OOM，用 rosbag 录制替代
       interval: -1  # how many LiDAR frames saved in each pcd file;
                     # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.

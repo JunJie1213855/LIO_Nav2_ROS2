@@ -142,14 +142,14 @@ add_custom_target(other SOURCES ${SOPHUS_OTHER_FILES} ${SOPHUS_HEADER_FILES})
 add_compile_definitions(SOPHUS_USE_BASIC_LOGGING)
 
 # Create 'test' make target using ctest
-option(BUILD_SOPHUS_TESTS "Build tests." ON)
+option(BUILD_SOPHUS_TESTS "Build tests." OFF)
 if(BUILD_SOPHUS_TESTS)
     enable_testing()
     add_subdirectory(test)
 endif()
 
 # Create examples make targets using ctest
-option(BUILD_SOPHUS_EXAMPLES "Build examples." ON)
+option(BUILD_SOPHUS_EXAMPLES "Build examples." OFF)
 if(BUILD_SOPHUS_EXAMPLES)
     add_subdirectory(examples)
 endif()
