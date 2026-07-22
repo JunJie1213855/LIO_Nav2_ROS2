@@ -320,6 +320,7 @@ pcl_ros::transformPointCloud("odom", tf_odom_to_lidar_odom_, *msg, *out);
 | 默认 (FAST-LIO) | `ros2 launch lio_interface lio_interface_launch.py` | `/Odometry` | 仿真 + 实机 FAST-LIO |
 | FAST-LIO (显式) | `ros2 launch lio_interface fastlio_lio_interface_launch.py` | `/Odometry` | 同上, 可指定 cloud_topic |
 | Point-LIO | `ros2 launch lio_interface pointlio_lio_interface_launch.py` | `/aft_mapped_to_init` | 实机 Point-LIO |
+| **Super-LIO** | `ros2 launch lio_interface superlio_lio_interface_launch.py` | `/lio/odom` | 实机 Super-LIO |
 
 ### 参数
 

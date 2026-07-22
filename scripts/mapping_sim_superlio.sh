@@ -19,15 +19,15 @@ source install/setup.bash;
 ros2 run gui_teleop gui_teleop_node"
 
 # -----------------------------------------------------------------------------------
-# 使用fast-lio作为里程计
-gnome-terminal --title="FAST-LIO 里程计" -- bash -c "
+# 使用 Super-LIO 作为里程计
+gnome-terminal --title="Super-LIO 里程计" -- bash -c "
 source install/setup.bash;
-ros2 launch fast_lio mapping.launch.py"
+ros2 launch super_lio Livox_mid360.py rviz:=false"
 
-# 里程计接口
+# 里程计接口 — world→odom 坐标系对齐
 gnome-terminal --title="lio_interface" -- bash -c "
 source install/setup.bash;
-ros2 launch lio_interface lio_interface_launch.py"
+ros2 launch lio_interface superlio_lio_interface_launch.py"
 
 # ------------------------------------------------------------------------------------
 
@@ -63,13 +63,10 @@ killall -9 gzserver gzclient;
 source install/setup.bash;
 ros2 launch get_urdf get_urdf_launch.py"
 
-# 中间层
 
 gnome-terminal --title="sensor_scan_generation" -- bash -c "
 source install/setup.bash;
 ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
-
-# 中间层， 3D点云转2D
 
 gnome-terminal --title="3d点云转2d" -- bash -c "
 source install/setup.bash;
@@ -79,7 +76,6 @@ ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch.py"
 # source install/setup.bash;
 # ros2 launch slam_toolbox online_async_launch.py"
 
-# slam toolbox 建图，2D代价地图
 gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 source install/setup.bash;
 ros2 launch slam_toolbox online_async_launch.py \

@@ -107,7 +107,81 @@ base_footprint → chassis              初始化时一次性读取:
 
 ---
 
-## 5. 精简版 URDF（仅 LiDAR + IMU）
+## 5. 下游消费节点与数据流
+
+### 5.1 谁在用这个 URDF
+
+```
+my_description.urdf
+       │
+       ▼
+gld_robot_description_launch.py          ← 读取 URDF 文件, 传给 robot_state_publisher
+       │
+       ▼
+robot_state_publisher                    ← 解析 URDF 关节链 → 发布 /tf_static
+       │
+       │  base_footprint → livox_frame  (含你填入的 xyz/rpy)
+       │
+       ├──→ lio_interface               ← 初始化时查 TF, 算出 odom → camera_init 对齐偏移
+       │                                    (详见 lio_interface README 第 5.2 节)
+       │
+       ├──→ sensor_scan_generation      ← 查 livox_frame → base_footprint,
+       │                                    合成 odom → base_footprint, 发布 /odom + TF
+       │                                    (详见 sensor_scan_generation README 第 3.2 节)
+       │
+       └──→ global_relocalization_kiss_matcher  ← 重定位时查 base_footprint → livox_frame
+            global_small_gicp_relocalization
+            global_relocalization
+            small_gicp_relocalization
+```
+
+### 5.2 每个节点的查询内容
+
+| 节点 | 查询的 TF | 用途 |
+|---|---|---|
+| `lio_interface` | `base_footprint → livox_frame` | 初始化 `tf_odom_to_lidar_odom_`，对齐 `odom` 和 `camera_init` |
+| `sensor_scan_generation` | `livox_frame → base_footprint` | 合成 `odom → base_footprint`，发布 `/odom` 和 TF |
+| 各重定位节点 | `base_footprint → livox_frame` | 将全局 PCD 地图对齐到当前机器人位置 |
+
+### 5.3 传递给 TF 树的完整链路
+
+```
+URDF 里你写的外参 (rpy=π, 0, -π/2)
+  │
+  ▼
+/tf_static (robot_state_publisher 发布)
+  │
+  ├──→ lio_interface 读 base_footprint → livox_frame
+  │    → tf_odom_to_lidar_odom_ (固定对齐偏移)
+  │    → /registered_odometry (odom → livox_frame)
+  │
+  ├──→ sensor_scan_generation 读 livox_frame → base_footprint
+  │    → T_{odom}^{base_footprint} = T_{odom}^{livox_frame} · T_{livox_frame}^{base_footprint}
+  │    → /odom 话题 + TF: odom → base_footprint
+  │
+  └──→ Nav2 / slam_toolbox (最终消费者)
+```
+
+**你在 URDF 里写的外参是整个导航栈 TF 链的起点。** 写对了，全系统坐标系一致；写错了，后面全歪。
+
+### 5.4 调用本 URDF 的实机启动脚本
+
+| 脚本 | 用途 |
+|---|---|
+| `scripts/mapping_real.sh` | 实机建图 (Mid360) |
+| `scripts/robosense_mapping_real.sh` | 实机建图 (RoboSense + Airy) |
+| `scripts/robosense_mapping_real_new.sh` | 实机建图 (RoboSense + Airy, unflip 方案) |
+| `scripts/robosense_mapping_lio_orin.sh` | 实机建图 (Orin 平台) |
+| `scripts/nav2_real.sh` | 实机导航 |
+
+这些脚本中都有：
+```bash
+ros2 launch gld_robot_description gld_robot_description_launch.py
+```
+
+---
+
+## 6. 精简版 URDF（仅 LiDAR + IMU）
 
 如果你的机器人只有一个 LiDAR + IMU，没有相机，建议用精简版：
 
@@ -142,7 +216,7 @@ base_footprint → chassis → livox_frame
 
 ---
 
-## 6. 实机部署检查清单
+## 7. 实机部署检查清单
 
 | 步骤 | 做什么 |
 |---|---|
@@ -155,7 +229,7 @@ base_footprint → chassis → livox_frame
 
 ---
 
-## 7. 启动
+## 8. 启动
 
 ```bash
 ros2 launch gld_robot_description gld_robot_description_launch.py

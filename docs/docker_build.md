@@ -36,7 +36,7 @@ docker exec lio_nav2_build bash -c \
 ### 2.3 限速编译（单包串行 + 每包 4 线程）
 
 ```bash
-docker exec lio_nav2_build bash -c "
+docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash &&
   cd /ws &&
   MAKEFLAGS='-j4' colcon build --symlink-install --executor sequential \
