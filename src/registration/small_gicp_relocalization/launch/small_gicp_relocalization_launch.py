@@ -27,10 +27,17 @@ def generate_launch_description():
     #              https://github.com/ros2/launch_ros/issues/56
     remappings = [("/tf", "tf"), ("/tf_static", "tf_static")]
 
-    pcd_path = os.path.join(
-        get_package_share_directory("me_nav2_bringup"),
-        "pcd", "test.pcd"
+    # 优先使用稠密地图 (Ctrl+C 时自动保存)，fallback 到旧稀疏地图
+    dense_pcd = os.path.join(
+        get_package_share_directory("fast_lio_robosense"),
+        "..", "..", "..", "..", "src", "localization",
+        "FAST_LIO_ROBOAIRY", "PCD", "dense_map.pcd"
     )
+    legacy_pcd = os.path.join(
+        get_package_share_directory("me_nav2_bringup"),
+        "pcd", "robo_map.pcd"
+    )
+    pcd_path = dense_pcd if os.path.exists(dense_pcd) else legacy_pcd
 
     node = Node(
         package="small_gicp_relocalization",
@@ -49,7 +56,7 @@ def generate_launch_description():
                 "map_frame": "map",
                 "odom_frame": "odom",
                 "base_frame": "base_footprint",
-                "lidar_frame": "livox_frame",
+                "lidar_frame": "base_footprint",
                 "robot_base_frame": "base_footprint",
                 "prior_pcd_file": pcd_path,
                 "input_cloud_topic": "/registered_scan",

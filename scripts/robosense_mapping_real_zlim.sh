@@ -36,12 +36,17 @@ cd "$WORKSPACE_ROOT" || exit 1
 # gnome-terminal --title="Livox Fast-LIO 驱动" -- bash -c "
 # source install/setup.bash;
 # ros2 launch livox_ros_driver2 fast_lio_msg_MID360_launch.py"
+gnome-terminal --title="robosense lidar SDK" -- bash -c "
+source install/setup.bash;
+ros2 launch rslidar_sdk driver_only.launch.py"
+
+sleep 3
 
 gnome-terminal --title="FAST-LIO 里程计" -- bash -c "
 source install/setup.bash;
 ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
 
-# lio_interface 订阅修正后的点云（Z 轴已恢复朝上）
+# lio_interface 
 gnome-terminal --title="Fast-LIO lio_interface" -- bash -c "
 source install/setup.bash;
 ros2 launch lio_interface fastlio_lio_interface_launch.py use_sim_time:=False"

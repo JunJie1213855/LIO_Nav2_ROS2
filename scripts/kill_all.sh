@@ -55,6 +55,7 @@ echo ""
 echo "── 阶段 1: 关闭 gnome-terminal 窗口 ──"
 
 ALL_WINDOW_TITLES=(
+    "robosense lidar SDK"
     "GUI控制"
     "FAST-LIO 里程计"
     "lio_interface"
@@ -138,6 +139,7 @@ echo ""
 echo "── 阶段 3: 按进程名终止 ──"
 
 ALL_PROCESS_NAMES=(
+    "rslidar_sdk"
     # Gazebo
     "gzserver" "gzclient" "gazebo"
     # Livox 驱动

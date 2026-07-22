@@ -1,10 +1,10 @@
 /**:
   ros__parameters:
     # runtime_pos_log_enable: true
-    map_file_path: ./PCD/map.pcd
+    map_file_path: /home/ros/rosws/3d_nav_ws/src/localization/FAST_LIO_ROBOAIRY/PCD/robo_map.pcd
     # point_filter_num: 1       # 不过滤，保留每 1 个点
-    filter_size_surf: 0.5    # 体素从 0.5m 缩到 0.2m
-    filter_size_map: 0.5
+    filter_size_surf: 0.5    # surf 点降采样体素 (m)
+    filter_size_map: 0.5   # ikd-tree 地图体素 (m) — 越小 → 保存的 PCD 越密，重定位越准
     common:
       lid_topic: "/rslidar_points"
       imu_topic: "/rslidar_imu_data"  # /mavros/imu/data /ouster/imu /imu/data
@@ -27,6 +27,7 @@
       b_gyr_cov: 0.0001
       fov_degree: 360.0
       det_range: 15.0
+      save_voxel_size: 0.5   # 保存 PCD 时的体素 (m)，比 filter_size_map 稍小保留细节
       extrinsic_est_en: false  # true: enable the online estimation of IMU-LiDAR extrinsic
       extrinsic_T: [0.0, 0.0, 0.0]
       extrinsic_R: [0.0, -1.0, 0.0,

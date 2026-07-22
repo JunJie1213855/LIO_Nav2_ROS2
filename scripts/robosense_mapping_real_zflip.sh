@@ -22,6 +22,11 @@ cd "$WORKSPACE_ROOT" || exit 1
 # source install/setup.bash;
 # ros2 launch livox_ros_driver2 point_lio_msg_MID360_launch.py"
 
+
+gnome-terminal --title="robosense lidar SDK" -- bash -c "
+source install/setup.bash;
+ros2 launch rslidar_sdk driver_only.launch.py"
+
 # gnome-terminal --title="Point-LIO 里程计" -- bash -c "
 # source install/setup.bash;
 # ros2 launch point_lio point_lio.launch.py \
@@ -30,7 +35,6 @@ cd "$WORKSPACE_ROOT" || exit 1
 # gnome-terminal --title="Point-LIO lio_interface" -- bash -c "
 # source install/setup.bash;
 # ros2 launch lio_interface pointlio_lio_interface_launch.py"
-
 
 # fast_lio
 # gnome-terminal --title="Livox Fast-LIO 驱动" -- bash -c "
@@ -51,10 +55,11 @@ source install/setup.bash;
 gnome-terminal --title="Fast-LIO lio_interface" -- bash -c "
 source install/setup.bash;
 ros2 launch lio_interface fastlio_lio_interface_launch.py \
-  cloud_topic:=/cloud_registered_unflipped use_sim_time:=False"
+  cloud_topic:=/cloud_registered_unflipped \
+  odometry_sub:=/Odometry_unflipped \
+  use_sim_time:=False"
 
 # ---------
-
 
 gnome-terminal --title="机器人描述" -- bash -c "
 killall -9 gzserver gzclient;
@@ -83,6 +88,6 @@ source install/setup.bash;
 ros2 launch slam_toolbox online_async_launch.py \
     slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
 
-gnome-terminal --title="Nav2 导航" -- bash -c "
-source install/setup.bash;
-ros2 launch me_nav2_bringup my_nav2_launch.py"
+# gnome-terminal --title="Nav2 导航" -- bash -c "
+# source install/setup.bash;
+# ros2 launch me_nav2_bringup my_nav2_launch.py"
