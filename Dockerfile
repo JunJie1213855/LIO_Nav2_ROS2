@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtbb-dev libboost-all-dev qtbase5-dev qtbase5-private-dev python3-tk \
     libeigen3-dev libflann-dev libpcl-dev libomp-dev \
     ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-slam-toolbox \
+    ros-humble-octomap-server ros-humble-octomap-rviz-plugins \
     ros-humble-pointcloud-to-laserscan ros-humble-tf2-tools \
     ros-humble-pcl-ros ros-humble-pcl-conversions \
     ros-humble-gazebo-ros-pkgs \
