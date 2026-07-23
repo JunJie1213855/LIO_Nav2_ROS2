@@ -1,0 +1,25 @@
+/**:
+  ros__parameters:
+    # ── 八叉树地图 ──
+    resolution: 0.1
+    frame_id: ""                  # 由 lio_type 运行时注入
+
+    # ── 点云过滤 ──
+    pointcloud_max_z: 3.0
+    pointcloud_min_z: 0.0
+
+    # ── 传感器模型（概率更新） ──
+    sensor_model:
+      max_range: -1.0             # -1 = 不限制传感器距离
+      hit: 0.7
+      miss: 0.4
+      min: 0.12
+      max: 0.97
+
+    # ── 占据范围 ──
+    occupancy_min_z: 0.0
+    occupancy_max_z: 3.0
+
+    # ── 其他 ──
+    filter_speckles: true
+    latch: false
