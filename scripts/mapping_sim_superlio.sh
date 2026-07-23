@@ -27,7 +27,7 @@ ros2 launch super_lio Livox_mid360.py rviz:=false"
 # 里程计接口 — world→odom 坐标系对齐
 gnome-terminal --title="lio_interface" -- bash -c "
 source install/setup.bash;
-ros2 launch lio_interface superlio_lio_interface_launch.py"
+ros2 launch lio_interface lio_interface_launch.py lio_type:=superlio"
 
 # ------------------------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ ros2 launch lio_interface superlio_lio_interface_launch.py"
 
 # gnome-terminal --title="lio_interface" -- bash -c "
 # source install/setup.bash;
-# ros2 launch lio_interface pointlio_lio_interface_launch.py"
+# ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio"
 
 # ------------------------------------------------------------------------------------
 

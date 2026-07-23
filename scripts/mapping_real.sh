@@ -18,7 +18,7 @@ cd "$WORKSPACE_ROOT" || exit 1
 
 # gnome-terminal --title="Point-LIO lio_interface" -- bash -c "
 # source install/setup.bash;
-# ros2 launch lio_interface pointlio_lio_interface_launch.py"
+# ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio"
 
 
 # fast_lio
@@ -32,7 +32,7 @@ ros2 launch fast_lio mapping.launch.py"
 
 gnome-terminal --title="Fast-LIO lio_interface" -- bash -c "
 source install/setup.bash;
-ros2 launch lio_interface fastlio_lio_interface_launch.py"
+ros2 launch lio_interface lio_interface_launch.py"
 
 # ---------
 

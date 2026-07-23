@@ -1,5 +1,9 @@
 /**:
   ros__parameters:
+    # ===== 仿真 Gazebo 专用配置 =====
+    # Gazebo 发布标准 sensor_msgs/PointCloud2, 所以 lidar_type 不能设 LIVOX(=1)
+    # VELO16(=3) 订阅标准 PointCloud2, 匹配 Gazebo ray sensor 的输出
+
     lio.map.save_map: false
     lio.map.if_filter: true
     lio.map.save_map_dir: "map"
@@ -10,22 +14,22 @@
     lio.ros.lidar_topic: "/livox/lidar"
     lio.ros.imu_topic: "/livox/imu"
 
-    lio.sensor.lidar_type: 4
+    lio.sensor.lidar_type: 3              # VELO16 — 订阅标准 sensor_msgs/PointCloud2
     lio.sensor.blind: 2.0
     lio.sensor.maxrange: 60.0
     lio.sensor.filter_rate: 3
     lio.sensor.enable_downsample: true
     lio.sensor.voxel_fliter_size: 0.5
-    lio.sensor.gravity_norm: 9.7946
-    lio.sensor.imu_type: 1
+    lio.sensor.gravity_norm: 9.81
+    lio.sensor.imu_type: 0               # 0 = 通用 IMU
     lio.sensor.imu_na: 0.1
     lio.sensor.imu_ng: 0.1
     lio.sensor.imu_nba: 0.0001
     lio.sensor.imu_nbg: 0.0001
 
-    lio.extrinsic.lidar_imu: [-0.011, -0.02329, 0.04412, 
-                              1.0, 0.0, 0.0, 
-                              0.0, 1.0, 0.0, 
+    lio.extrinsic.lidar_imu: [-0.011, -0.02329, 0.04412,
+                              1.0, 0.0, 0.0,
+                              0.0, 1.0, 0.0,
                               0.0, 0.0, 1.0]
     lio.extrinsic.odom_robo: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 

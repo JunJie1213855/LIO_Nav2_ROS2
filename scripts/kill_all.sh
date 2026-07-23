@@ -196,8 +196,6 @@ ALL_LAUNCH_PATTERNS=(
     "fast_lio_msg_MID360"
     "point_lio_msg_MID360"
     "lio_interface_launch.py"
-    "fastlio_lio_interface"
-    "pointlio_lio_interface"
     "global_kiss_matcher_relocalization"
     "global_relocalization"
     "small_gicp_relocalization"

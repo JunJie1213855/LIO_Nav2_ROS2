@@ -28,10 +28,17 @@ tmux new-session -d -s "$SESSION" -n "GUI控制" \
 
 
 # --- FAST-LIO（推荐，仿真稳定）---
-new_win "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
+# new_win "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
+# --- Super-LIO（新一代 LiDAR-惯性 SLAM）---
+# new_win "Super-LIO" "ros2 launch super_lio sim_gazebo.py"
+# --- Point-LIO（逐点处理，更高精度）---
+new_win "Point-LIO" "ros2 launch point_lio point_lio.launch.py"
 
-# lio camera -> body => /odom -> livox_frame 
-new_win "lio_interface" "ros2 launch lio_interface fastlio_lio_interface_launch.py"
+# lio camera -> body => /odom -> livox_frame
+# 根据上面选择的 LIO 算法取消对应行的注释:
+# new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py"                    # FAST-LIO (默认)
+# new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py lio_type:=superlio" # Super-LIO
+new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio" # Point-LIO
 
 # Gazebo 仿真环境
 new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"
@@ -42,8 +49,8 @@ new_win "sensor_scan" "ros2 launch sensor_scan_generation sensor_scan_generation
 # 3d点云转2d
 new_win "pc2laser" "ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch.py"
 
-# RViz 可视化（独立窗口，与 Nav2 解耦，关掉 Nav2 也不影响看 SLAM 建图）
-# new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/me_nav2_bringup/rviz/nav2.rviz"
+# RViz 可视化 slam_toolbox 建图过程
+new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/me_nav2_bringup/rviz/nav2.rviz"
 
 # slam_toolbox 建图
 new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \

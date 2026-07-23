@@ -315,20 +315,20 @@ pcl_ros::transformPointCloud("odom", tf_odom_to_lidar_odom_, *msg, *out);
 
 ## 6. 启动方式
 
-| 模式 | 启动命令 | 订阅话题 | 适用场景 |
-|---|---|---|---|
-| 默认 (FAST-LIO) | `ros2 launch lio_interface lio_interface_launch.py` | `/Odometry` | 仿真 + 实机 FAST-LIO |
-| FAST-LIO (显式) | `ros2 launch lio_interface fastlio_lio_interface_launch.py` | `/Odometry` | 同上, 可指定 cloud_topic |
-| Point-LIO | `ros2 launch lio_interface pointlio_lio_interface_launch.py` | `/aft_mapped_to_init` | 实机 Point-LIO |
-| **Super-LIO** | `ros2 launch lio_interface superlio_lio_interface_launch.py` | `/lio/odom` | 实机 Super-LIO |
+| 模式 | 启动命令 | odometry_sub | cloud_topic | 适用场景 |
+|---|---|---|---|---|---|
+| FAST-LIO (默认) | `ros2 launch lio_interface lio_interface_launch.py` | `/Odometry` | `/cloud_registered` | 仿真 + 实机 FAST-LIO |
+| Point-LIO | `ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio` | `/aft_mapped_to_init` | `/cloud_registered` | 实机 Point-LIO |
+| **Super-LIO** | `ros2 launch lio_interface lio_interface_launch.py lio_type:=superlio` | `/lio/odom` | `/lio/cloud_world` | 实机 / 仿真 Super-LIO |
 
 ### 参数
 
 | 参数 | 默认值 | 说明 |
 |---|---|---|
-| `odometry_sub` | `/Odometry` | 订阅的 LIO 里程计话题名 |
-| `use_sim_time` | `True` | 是否使用仿真时间 |
-| `cloud_topic` (fastlio 启动) | `/cloud_registered` | 点云输入话题 |
+| `lio_type` | `fastlio` | 一键选择 LIO 算法: `fastlio` / `pointlio` / `superlio` |
+| `odometry_sub` | *(自动)* | 手动覆盖 LIO 里程计话题名 (留空则根据 lio_type 自动选择) |
+| `cloud_topic` | *(自动)* | 手动覆盖 LIO 点云话题名 (留空则根据 lio_type 自动选择) |
+| `use_sim_time` | `true` | 是否使用仿真时间 |
 
 ---
 

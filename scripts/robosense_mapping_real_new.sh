@@ -29,7 +29,7 @@ cd "$WORKSPACE_ROOT" || exit 1
 
 # gnome-terminal --title="Point-LIO lio_interface" -- bash -c "
 # source install/setup.bash;
-# ros2 launch lio_interface pointlio_lio_interface_launch.py"
+# ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio"
 
 
 # fast_lio
@@ -50,7 +50,7 @@ source install/setup.bash;
 # lio_interface 订阅修正后的点云（Z 轴已恢复朝上）
 gnome-terminal --title="Fast-LIO lio_interface" -- bash -c "
 source install/setup.bash;
-ros2 launch lio_interface fastlio_lio_interface_launch.py \
+ros2 launch lio_interface lio_interface_launch.py \
   cloud_topic:=/cloud_registered_unflipped use_sim_time:=False"
 
 # ---------
