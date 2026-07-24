@@ -18,6 +18,8 @@ PCD
 *.weights
 *.engine
 .vscode
+.kiss_install
+
 
 .claude/
 .codex
