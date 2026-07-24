@@ -12,8 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build pkg-config \
     python3-pip python3-colcon-common-extensions python3-rosdep \
     libtbb-dev libboost-all-dev qtbase5-dev qtbase5-private-dev python3-tk \
-    libeigen3-dev libflann-dev libpcl-dev libomp-dev \
+    libeigen3-dev libflann-dev libpcl-dev libomp-dev libglm-dev \
     ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-slam-toolbox \
+    ros-humble-cartographer ros-humble-cartographer-ros \
     ros-humble-octomap-server ros-humble-octomap-rviz-plugins \
     ros-humble-pointcloud-to-laserscan ros-humble-tf2-tools \
     ros-humble-pcl-ros ros-humble-pcl-conversions \

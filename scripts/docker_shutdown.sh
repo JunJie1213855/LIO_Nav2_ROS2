@@ -14,7 +14,7 @@ set -euo pipefail
 # 本项目相关的容器名
 CONTAINERS=(lio_nav2 lio_nav2_build)
 # 本项目可能存在的 tmux 会话（mapping_sim_docker.sh 等创建）
-TMUX_SESSIONS=(mapping_sim nav2_sim mapping_real nav2_real)
+TMUX_SESSIONS=(mapping_sim nav2_sim mapping_real nav2_real mapping_carto nav2_carto octomap_sim)
 
 DRY_RUN=false
 STOP=false
