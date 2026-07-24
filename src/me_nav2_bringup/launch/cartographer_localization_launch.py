@@ -53,6 +53,7 @@ def generate_launch_description():
             '-configuration_directory', config_dir,
             '-configuration_basename', 'cartographer_localization.lua',
             '-load_state_filename', load_state_filename,
+            '-pure_localization',
         ],
         remappings=[
             ('scan', '/scan'),

@@ -39,7 +39,7 @@ tmux new-session -d -s "$SESSION" -n "GUI控制" \
 new_win "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
 
 # 里程计接口 (odom TF 桥接)
-new_win "lio_interface" "ros2 launch lio_interface fastlio_lio_interface_launch.py"
+new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py"
 
 # --- Gazebo 仿真 ---
 new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"

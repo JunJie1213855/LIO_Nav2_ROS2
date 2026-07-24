@@ -129,19 +129,25 @@ Cartographer 路线需要保存的文件：
 
 | 产物 | 来源 | 用途 |
 |------|------|------|
-| `.pbstream` | **Cartographer**（子图+位姿图） | Cartographer 纯定位加载 |
+| `.pbstream` | **Cartographer** `/write_state` 服务 | Cartographer 纯定位加载 |
 | `.pgm` + `.yaml` | 由 `.pbstream` 导出 | Nav2 `map_server` 加载 |
 
 > ❌ **不需要保存 PCD**。Cartographer 纯定位用 `.pbstream` 中的子图做 2D scan-to-submap 匹配，不走 FPFH 3D 全局搜索，PCD 对它没有用。
 
 ```bash
-# 步骤 1: 结束轨迹（停止接收新数据，触发最终全局优化）
+# 步骤 1: 写入 pbstream（核心——保存子图+位姿图状态）
+docker exec lio_nav2 bash -c "
+  source /opt/ros/humble/setup.bash && source install/setup.bash && \
+  ros2 service call /write_state cartographer_ros_msgs/srv/WriteState \
+    '{filename: \"/ws/src/me_nav2_bringup/map/map.pbstream\", include_unfinished_submaps: true}'"
+
+# 步骤 2: 结束轨迹（停止接收新数据）
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && source install/setup.bash && \
   ros2 service call /finish_trajectory cartographer_ros_msgs/srv/FinishTrajectory \
     '{trajectory_id: 0}'"
 
-# 步骤 2: 导出 .pbstream → .pgm + .yaml
+# 步骤 3: 导出 pbstream → .pgm + .yaml
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && source install/setup.bash && \
   ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
@@ -149,7 +155,10 @@ docker exec lio_nav2 bash -c "
     -map_filestem /ws/src/me_nav2_bringup/map/my_map"
 ```
 
-> ⚠️ 不要只用 `map_saver_cli` 保存 `/map` 话题——那样只能得到 `.pgm`，丢失了 Cartographer 的子图信息，后续纯定位效果会大打折扣。
+> ⚠️ **关键理解**：Cartographer 的三个步骤各有分工：
+> - `/write_state` → 实际**写文件**（`.pbstream` 落盘）
+> - `/finish_trajectory` → 标记轨迹完成，但**不写文件**
+> - `pbstream_to_ros_map` → 把 `.pbstream` 转成 Nav2 能用 `.pgm`
 
 **停止**
 
@@ -165,21 +174,24 @@ docker exec lio_nav2 tmux kill-session -t mapping_carto
 路线 A: SLAM Toolbox
   保存:
     SLAM Toolbox ──→ save_map ──→ .pgm + .yaml  (2D 栅格地图, Nav2 用)
-    FAST-LIO     ──→ /map_save → .pcd           (3D 点云地图, KISS-Matcher 用)
+    FAST-LIO     ──→ /map_save → .pcd           (3D 点云地图)
+                         ├── robo_map.pcd        (ikdtree 地图, 备份)
+                         └── dense_map.pcd        (稠密点云, KISS-Matcher 用)
 
 路线 B: Cartographer
   保存:
-    Cartographer ──→ /finish_trajectory ──→ .pbstream      (子图+位姿图, 纯定位用)
-                    ──→ pbstream_to_ros_map ──→ .pgm + .yaml (2D 栅格地图, Nav2 用)
-                    ❌ 不需要 .pcd
+    Cartographer ──→ /write_state ──→ .pbstream      (子图+位姿图, 纯定位用)
+                 ──→ /finish_trajectory               (结束轨迹)
+                 ──→ pbstream_to_ros_map ──→ .pgm + .yaml (Nav2 用)
+                 ❌ 不需要 .pcd
 ```
 
 | 对比维度 | 路线 A | 路线 B |
 |---------|--------|--------|
 | 2D 栅格地图 | SLAM Toolbox 直接输出 | 从 .pbstream 导出 |
-| 3D/内部地图 | FAST-LIO `.pcd`（3D 点云） | Cartographer `.pbstream`（子图+位姿图） |
-| 重定位数据 | `.pcd` 给 KISS-Matcher | `.pbstream` 给 Cartographer 纯定位 |
-| 保存命令数 | 两条（save_map + save_pcd） | 两条（finish_trajectory + pbstream_to_ros_map） |
+| 内部地图 | FAST-LIO `.pcd`（3D 点云） | Cartographer `.pbstream`（子图+位姿图） |
+| 重定位数据 | `.pcd`（dense_map.pcd）→ KISS-Matcher | `.pbstream` → Cartographer 纯定位 |
+| 保存命令数 | 两条（save_map + save_pcd） | 三条（write_state + finish_trajectory + pbstream_to_ros_map） |
 
 ---
 
@@ -207,7 +219,7 @@ docker exec lio_nav2 tmux kill-session -t mapping_carto
 | 文件 | 配置位置 | 说明 |
 |------|---------|------|
 | `my_map.pgm` + `my_map.yaml` | `my_nav2_launch.py` 中的 `map_yaml_file` | 静态占据栅格地图 |
-| `robo_map.pcd` | `global_kiss_matcher_relocalization_launch.py` 中的 `prior_pcd_file` | 3D 先验点云地图 |
+| `dense_map.pcd` | `global_kiss_matcher_relocalization_launch.py` 中的 `prior_pcd_file` | 3D 稠密点云地图 |
 
 > 建图后需用 `scripts/save_pcd.sh` 保存 PCD 先验地图给 KISS-Matcher。
 
@@ -267,7 +279,7 @@ GUI控制 | FAST-LIO | lio_interface | Gazebo | sensor_scan | pc2laser | Carto�
 
 与 2B（建图）的区别：
 - `Cartographer` 窗口换成了 `Carto定位`
-- 用的是 `cartographer_localization.lua`（`pure_localization = true`），不建图只匹配
+- 启动参数加了 `-pure_localization`，不建图只匹配
 - 不启动 `cartographer_occupancy_grid_node`（`/map` 由 Nav2 的 `map_server` 提供）
 
 **操作**
@@ -337,6 +349,8 @@ docker exec -it lio_nav2 tmux attach -t mapping_carto             # 查看
 # ... 遥控小车建图，观察 RViz ...
 # 保存地图（完成建图后）:
 docker exec lio_nav2 bash -c "source /opt/ros/humble/setup.bash && source install/setup.bash && \
+  ros2 service call /write_state cartographer_ros_msgs/srv/WriteState \
+    '{filename: \"/ws/src/me_nav2_bringup/map/map.pbstream\", include_unfinished_submaps: true}' && \
   ros2 service call /finish_trajectory cartographer_ros_msgs/srv/FinishTrajectory '{trajectory_id: 0}' && \
   ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
     -pbstream_filename /ws/src/me_nav2_bringup/map/map.pbstream \
@@ -387,7 +401,8 @@ docker exec -it lio_nav2 tmux attach -t nav2_carto                # 查看
 
 路线 B: Cartographer 全套
   建图:   /scan + /imu ──→ Cartographer ──→ /map + map→odom TF
-  保存:   ros2 service call /finish_trajectory → .pbstream
+  保存:   ros2 service call /write_state → .pbstream
+          ros2 service call /finish_trajectory
           ros2 run ... cartographer_pbstream_to_ros_map → .pgm
   导航:   /scan + /imu ──→ Cartographer 纯定位 (加载 .pbstream) ──→ map→odom TF
          map_server (加载 .pgm) ──→ /map
