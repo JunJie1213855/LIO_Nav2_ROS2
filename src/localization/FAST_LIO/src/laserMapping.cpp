@@ -53,6 +53,7 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
+#include <filesystem>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -74,6 +75,7 @@ double T1[MAXN], s_plot[MAXN], s_plot2[MAXN], s_plot3[MAXN], s_plot4[MAXN], s_pl
 double match_time = 0, solve_time = 0, solve_const_H_time = 0;
 int    kdtree_size_st = 0, kdtree_size_end = 0, add_point_size = 0, kdtree_delete_counter = 0;
 bool   runtime_pos_log = false, pcd_save_en = false, time_sync_en = false, extrinsic_est_en = true, path_en = true;
+double save_voxel_size = 0.2;
 /**************************/
 
 float res_last[100000] = {0.0};
@@ -142,6 +144,9 @@ geometry_msgs::msg::PoseStamped msg_body_pose;
 
 shared_ptr<Preprocess> p_pre(new Preprocess());
 shared_ptr<ImuProcess> p_imu(new ImuProcess());
+
+PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI());
+PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
 
 void SigHandle(int sig)
 {
@@ -484,8 +489,7 @@ void map_incremental()
     kdtree_incremental_time = omp_get_wtime() - st_time;
 }
 
-PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI());
-PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
+
 void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudFull)
 {
     if(scan_pub_en)
@@ -514,7 +518,7 @@ void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Share
     /**************** save map ****************/
     /* 1. make sure you have enough memories
     /* 2. noted that pcd save will influence the real-time performences **/
-    /*
+    /* */
     if (pcd_save_en)
     {
         int size = feats_undistort->points.size();
@@ -541,7 +545,7 @@ void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Share
             scan_wait_num = 0;
         }
     }
-    */
+    // */
 }
 
 void publish_frame_body(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudFull_body)
@@ -607,12 +611,68 @@ void publish_map(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub
     // pubLaserCloudMap->publish(laserCloudMap);
 }
 
+// void save_to_pcd()
+// {
+//     pcl::PCDWriter pcd_writer;
+//     pcd_writer.writeBinary(map_file_path, *pcl_wait_pub);
+// }
 void save_to_pcd()
 {
-    pcl::PCDWriter pcd_writer;
-    pcd_writer.writeBinary(map_file_path, *pcl_wait_pub);
-}
+    if (ikdtree.Root_Node == nullptr)
+    {
+        std::cerr << "[ERROR] Cannot save map: ikdtree is empty!" << std::endl;
+        return;
+    }
 
+    // Get all points from ikdtree
+    PointVector().swap(ikdtree.PCL_Storage);
+    ikdtree.flatten(ikdtree.Root_Node, ikdtree.PCL_Storage, NOT_RECORD);
+
+    // Convert to PCL point cloud
+    PointCloudXYZI::Ptr map_cloud(new PointCloudXYZI());
+    map_cloud->points = ikdtree.PCL_Storage;
+    map_cloud->width = map_cloud->points.size();
+    map_cloud->height = 1;
+    map_cloud->is_dense = false;
+
+    if (map_cloud->points.size() == 0)
+    {
+        std::cerr << "[ERROR] Cannot save map: no points in ikdtree!" << std::endl;
+        return;
+    }
+
+    if (save_voxel_size > 1e-6)
+    {
+        pcl::VoxelGrid<PointType> sf;
+        sf.setLeafSize(save_voxel_size, save_voxel_size, save_voxel_size);
+        auto sc = std::make_shared<PointCloudXYZI>();
+        sf.setInputCloud(map_cloud);
+        sf.filter(*sc);
+        std::cout << "[INFO] Save voxel " << save_voxel_size << "m: " << map_cloud->points.size() << " -> " << sc->points.size() << " pts" << std::endl;
+        map_cloud = sc;
+    }
+    pcl::PCDWriter pcd_writer;
+    pcd_writer.writeBinary(map_file_path, *map_cloud);
+    std::cout << "[INFO] Map saved successfully with " << map_cloud->points.size() << " points to " << map_file_path << std::endl;
+    // 同时保存稠密累积点云用于重定位（来自每帧 feats_undistort 的累积）
+    if (pcl_wait_save->size() > 0)
+    {
+        string dense_path(string(string(ROOT_DIR) + "PCD/dense_map.pcd"));
+        std::filesystem::path p(dense_path);
+        if (!p.parent_path().empty() && !std::filesystem::exists(p.parent_path()))
+            std::filesystem::create_directories(p.parent_path());
+
+        pcl::VoxelGrid<PointType> vg;
+        vg.setLeafSize(0.05, 0.05, 0.05);
+        auto filtered = std::make_shared<PointCloudXYZI>();
+        vg.setInputCloud(pcl_wait_save);
+        vg.filter(*filtered);
+        std::cout << "[INFO] Dense map: " << pcl_wait_save->size()
+                  << " -> " << filtered->size() << " pts (0.05m voxel)" << std::endl;
+        pcd_writer.writeBinary(dense_path, *filtered);
+        std::cout << "[INFO] Dense map saved to " << dense_path << std::endl;
+    }
+}
 template<typename T>
 void set_posestamp(T & out)
 {
@@ -832,6 +892,7 @@ public:
         this->declare_parameter<bool>("mapping.extrinsic_est_en", true);
         this->declare_parameter<bool>("pcd_save.pcd_save_en", false);
         this->declare_parameter<int>("pcd_save.interval", -1);
+        this->declare_parameter<double>("pcd_save.save_voxel_size", 0.2);
         this->declare_parameter<vector<double>>("mapping.extrinsic_T", vector<double>());
         this->declare_parameter<vector<double>>("mapping.extrinsic_R", vector<double>());
 
@@ -868,6 +929,7 @@ public:
         this->get_parameter_or<bool>("mapping.extrinsic_est_en", extrinsic_est_en, true);
         this->get_parameter_or<bool>("pcd_save.pcd_save_en", pcd_save_en, false);
         this->get_parameter_or<int>("pcd_save.interval", pcd_save_interval, -1);
+        this->get_parameter_or<double>("pcd_save.save_voxel_size", save_voxel_size, 0.2);
         this->get_parameter_or<vector<double>>("mapping.extrinsic_T", extrinT, vector<double>());
         this->get_parameter_or<vector<double>>("mapping.extrinsic_R", extrinR, vector<double>());
 

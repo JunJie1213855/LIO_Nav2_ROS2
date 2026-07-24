@@ -28,17 +28,17 @@ tmux new-session -d -s "$SESSION" -n "GUI控制" \
 
 
 # --- FAST-LIO（推荐，仿真稳定）---
-# new_win "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
+new_win "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
 # --- Super-LIO（新一代 LiDAR-惯性 SLAM）---
 # new_win "Super-LIO" "ros2 launch super_lio sim_gazebo.py"
 # --- Point-LIO（逐点处理，更高精度）---
-new_win "Point-LIO" "ros2 launch point_lio point_lio.launch.py"
+# new_win "Point-LIO" "ros2 launch point_lio point_lio.launch.py"
 
 # lio camera -> body => /odom -> livox_frame
 # 根据上面选择的 LIO 算法取消对应行的注释:
-# new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py"                    # FAST-LIO (默认)
+new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py"                    # FAST-LIO (默认)
 # new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py lio_type:=superlio" # Super-LIO
-new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio" # Point-LIO
+# new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio" # Point-LIO
 
 # Gazebo 仿真环境
 new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"

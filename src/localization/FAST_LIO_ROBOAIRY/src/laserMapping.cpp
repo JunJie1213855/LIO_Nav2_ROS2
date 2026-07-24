@@ -37,6 +37,7 @@
 #include <math.h>
 #include <thread>
 #include <fstream>
+#include <filesystem>
 #include <csignal>
 #include <chrono>
 #include <unistd.h>
@@ -145,6 +146,8 @@ geometry_msgs::msg::PoseStamped msg_body_pose;
 shared_ptr<Preprocess> p_pre(new Preprocess());
 shared_ptr<ImuProcess> p_imu(new ImuProcess());
 
+PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI());
+PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
 void save_to_pcd();
 
 void SigHandle(int sig)
@@ -527,8 +530,8 @@ void map_incremental()
     kdtree_incremental_time = omp_get_wtime() - st_time;
 }
 
-PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI());
-PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
+// PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI());
+// PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
 void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudFull)
 {
     if (scan_pub_en)
@@ -687,6 +690,24 @@ void save_to_pcd()
     pcl::PCDWriter pcd_writer;
     pcd_writer.writeBinary(map_file_path, *map_cloud);
     std::cout << "[INFO] Map saved successfully with " << map_cloud->points.size() << " points to " << map_file_path << std::endl;
+    // 同时保存稠密累积点云用于重定位（来自每帧 feats_undistort 的累积）
+    if (pcl_wait_save->size() > 0)
+    {
+        string dense_path(string(string(ROOT_DIR) + "PCD/dense_map.pcd"));
+        std::filesystem::path p(dense_path);
+        if (!p.parent_path().empty() && !std::filesystem::exists(p.parent_path()))
+            std::filesystem::create_directories(p.parent_path());
+
+        pcl::VoxelGrid<PointType> vg;
+        vg.setLeafSize(0.05, 0.05, 0.05);
+        auto filtered = std::make_shared<PointCloudXYZI>();
+        vg.setInputCloud(pcl_wait_save);
+        vg.filter(*filtered);
+        std::cout << "[INFO] Dense map: " << pcl_wait_save->size()
+                  << " -> " << filtered->size() << " pts (0.05m voxel)" << std::endl;
+        pcd_writer.writeBinary(dense_path, *filtered);
+        std::cout << "[INFO] Dense map saved to " << dense_path << std::endl;
+    }
 }
 
 template <typename T>

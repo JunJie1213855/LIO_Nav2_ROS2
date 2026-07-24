@@ -6,31 +6,77 @@ cd "$WORKSPACE_ROOT" || exit 1
 
 source install/setup.bash
 
-MAP_PATH="${1:-$WORKSPACE_ROOT/src/me_nav2_bringup/pcd/robo_map.pcd}"
+PCD_DEST_DIR="$WORKSPACE_ROOT/src/me_nav2_bringup/pcd"
 
-# FAST-LIO 节点名是 /laser_mapping（非 /fastlio_mapping）
-# 注意：map_file_path 只在 FAST-LIO 启动时读取一次，ros2 param set 运行时不生效
-# 因此需要确保 config/mid360.yaml 中 pcd_save.pcd_save_en: True，
-# 然后调用 /map_save service，PCD 会写到 YAML 中配置的默认路径
+# FAST-LIO 节点名: /laserMapping（注意驼峰）
+# 服务注册在节点命名空间下: /laserMapping/map_save
+# map_save 服务触发后生成两个文件：
+#   1. map_file_path  (YAML 配置，默认 "./test.pcd") → ikdtree 地图
+#   2. PCD/dense_map.pcd (pcd_save_en=true 时) → 稠密累积点云，KISS-Matcher 用
 
-# 确保目标目录存在
-mkdir -p "$(dirname "$MAP_PATH")"
+echo "等待 FAST-LIO /map_save 服务就绪..."
 
-# 触发保存
-ros2 service call /map_save std_srvs/srv/Trigger
+# 等待服务出现（最多等 30 秒）
+SERVICE=""
+for i in $(seq 1 30); do
+    for path in "/map_save" "/laserMapping/map_save"; do
+        if ros2 service list 2>/dev/null | grep -q "$path"; then
+            SERVICE="$path"
+            break 2
+        fi
+    done
+    sleep 1
+    echo -n "."
+done
+echo ""
 
-# FAST-LIO 默认配置 map_file_path: "./test.pcd"（相对于工作目录即 /ws/test.pcd）
-DEFAULT_PCD="$WORKSPACE_ROOT/test.pcd"
-if [ -f "$DEFAULT_PCD" ]; then
-    mv "$DEFAULT_PCD" "$MAP_PATH"
-    # 同步到 install 目录，供 launch 文件引用
-    # （launch 用 get_package_share_directory 读取的是 install/ 路径，不会自动去 src/ 找）
-    INSTALL_PCD="$WORKSPACE_ROOT/install/me_nav2_bringup/share/me_nav2_bringup/pcd/$(basename "$MAP_PATH")"
-    mkdir -p "$(dirname "$INSTALL_PCD")"
-    ln -sf "$MAP_PATH" "$INSTALL_PCD"
-    echo "PCD 已保存到: $MAP_PATH"
-    echo "安装目录:       $INSTALL_PCD"
-else
-    echo "错误: 未找到默认 PCD 文件 ($DEFAULT_PCD)，保存可能失败"
+if [ -z "$SERVICE" ]; then
+    echo "错误: FAST-LIO /map_save 服务未出现（等待 30 秒后超时）"
     exit 1
 fi
+
+echo "找到服务: $SERVICE"
+
+# 确保目标目录存在
+mkdir -p "$PCD_DEST_DIR"
+
+# 触发保存
+ros2 service call "$SERVICE" std_srvs/srv/Trigger
+
+# --- 处理文件 1: ikdtree 地图 (test.pcd → robo_map.pcd) ---
+IKDTREE_PCD="$WORKSPACE_ROOT/test.pcd"
+if [ -f "$IKDTREE_PCD" ]; then
+    mv "$IKDTREE_PCD" "$PCD_DEST_DIR/robo_map.pcd"
+    echo "ikdtree 地图: $PCD_DEST_DIR/robo_map.pcd"
+else
+    echo "注意: 未找到 ikdtree 地图 ($IKDTREE_PCD)，可能 map_file_path 配置了其他路径"
+fi
+
+# --- 处理文件 2: 稠密累积点云 (PCD/dense_map.pcd → dense_map.pcd) ---
+# FAST-LIO 中 ROOT_DIR 编译期固定，dense_map.pcd 保存在 PCD/dense_map.pcd
+FAST_LIO_PCD_DIR="$WORKSPACE_ROOT/src/localization/FAST_LIO/PCD"
+DENSE_SRC="$FAST_LIO_PCD_DIR/dense_map.pcd"
+if [ -f "$DENSE_SRC" ]; then
+    cp "$DENSE_SRC" "$PCD_DEST_DIR/dense_map.pcd"
+    echo "稠密点云: $PCD_DEST_DIR/dense_map.pcd"
+else
+    echo "注意: 未找到稠密点云 ($DENSE_SRC)，检查 FAST-LIO 配置中 pcd_save.pcd_save_en: true"
+fi
+
+# --- 同步到 install 目录 ---
+# launch 用 get_package_share_directory 读取 install/ 路径，需要创建软链接
+INSTALL_PCD_DIR="$WORKSPACE_ROOT/install/me_nav2_bringup/share/me_nav2_bringup/pcd"
+mkdir -p "$INSTALL_PCD_DIR"
+
+for pcd_file in robo_map.pcd dense_map.pcd; do
+    src="$PCD_DEST_DIR/$pcd_file"
+    if [ -f "$src" ]; then
+        ln -sf "$src" "$INSTALL_PCD_DIR/$pcd_file"
+        echo "安装链接: $INSTALL_PCD_DIR/$pcd_file"
+    fi
+done
+
+echo ""
+echo "===== 保存完成 ====="
+echo "KISS-Matcher 加载: $PCD_DEST_DIR/dense_map.pcd"
+echo "Nav2 导航启动:      ./scripts/nav2_sim_docker.sh"

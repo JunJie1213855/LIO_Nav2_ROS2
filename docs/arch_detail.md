@@ -1,759 +1,683 @@
-# 3d_nav_ws 仿真建图与导航 — 节点架构详解
+# LIO_Nav2_ROS2 架构详解
 
-## 1. 分层架构概览
-
-系统按职责划分为四层。每一层只依赖下一层的输出，上层不需要知道下层的内部实现。
-
-### 四层架构总图
-
-```mermaid
-flowchart TD
-    subgraph D["① 驱动层 (Driver) — 仿真/实机透明"]
-        GAZ["ros2_livox_simulation<br/>Gazebo 仿真插件"]
-        HW["livox_ros_driver2<br/>MID-360 硬件驱动"]
-        AIRY["rslidar_sdk<br/>RoboSense Airy 驱动"]
-        RSP["robot_state_publisher<br/>发布 URDF 静态 TF"]
-    end
-
-    subgraph L["② 三维建图与定位层 (3D Mapping & Localization)"]
-        FAST["FAST-LIO<br/>IEKF紧耦合里程计<br/>→ /Odometry, /cloud_registered"]
-    end
-
-    subgraph LMAP["②·建图专属"]
-        SLAM["SLAM Toolbox<br/>2D位姿图SLAM+回环<br/>→ /map, map→odom TF"]
-    end
-
-    subgraph LNAV["②·导航专属"]
-        KISS["KISS-Matcher<br/>全局重定位<br/>→ map→odom TF"]
-    end
-
-    subgraph B["③ 中间转换层 (Bridge) — 坐标系与格式归一化"]
-        LIOIF["lio_interface<br/>camera_init→odom"]
-        SENSOR["sensor_scan_generation<br/>→ /odom + odom→base TF"]
-        P2L["pointcloud_to_laserscan<br/>3D→2D → /scan"]
-    end
-
-    subgraph N["④ 导航层 (Navigation) — Nav2 标准栈"]
-        MAPSRV["map_server<br/>静态地图→ /map"]
-        GCM["global_costmap<br/>全局+膨胀(0.55m)"]
-        LCM["local_costmap<br/>6×6m滑动窗口"]
-        PLANNER["planner_server<br/>Navfn(Dijkstra)→ /plan"]
-        CTRL["controller_server<br/>DWB→ /cmd_vel"]
-        BT["bt_navigator<br/>行为树引擎"]
-        BEH["behavior_server<br/>spin/backup/wait"]
-        VEL["velocity_smoother<br/>加速度限制"]
-    end
-
-    %% ========== 跨层数据流 ==========
-
-    GAZ --> FAST
-    HW --> FAST
-    AIRY --> FAST
-    RSP -.-> LIOIF
-    RSP -.-> SENSOR
-
-    FAST -->|"/Odometry"| LIOIF
-    FAST -->|"/cloud_registered"| LIOIF
-
-    LIOIF -->|"/registered_odometry"| SENSOR
-    LIOIF -->|"/registered_scan"| P2L
-    LIOIF -->|"/registered_scan"| KISS
-
-    SENSOR -->|"/odom + odom→base TF"| SLAM
-
-    P2L -->|"/scan"| SLAM
-    P2L -->|"/scan"| GCM
-    P2L -->|"/scan"| LCM
-
-    SLAM -->|"/map"| GCM
-    SLAM -->|"map→odom TF"| GCM
-
-    KISS -->|"map→odom TF"| GCM
-    KISS -->|"map→odom TF"| LCM
-
-    MAPSRV -->|"/map"| GCM
-
-    %% ========== 导航层内部 ==========
-
-    BT -->|"ComputePath"| PLANNER
-    PLANNER -->|"/plan"| CTRL
-    BT -->|"FollowPath"| CTRL
-    CTRL -->|"/cmd_vel"| VEL
-    VEL --> GAZ
-
-    BT -.->|"卡住"| BEH
-    PLANNER -.-> GCM
-    CTRL -.-> LCM
-
-    SENSOR -->|"/odom"| CTRL
-    SENSOR -->|"/odom"| VEL
-```
-
-### 建图 vs 导航模式对比
-
-```mermaid
-flowchart TD
-    subgraph MAP["建图模式 (mapping_sim_tmux.sh)"]
-        GUI1["GUI 遥控"]
-        GAZ1["Gazebo 仿真"]
-        F1["FAST-LIO 里程计"]
-        L1["lio_interface TF桥接"]
-        S1["sensor_scan_generation"]
-        P1["3D→2D 切片"]
-        SLAM["SLAM Toolbox 在线建图"]
-        N1["Nav2 加载地图"]
-
-        GAZ1 --> F1
-        F1 --> L1
-        L1 --> S1
-        S1 --> P1
-        P1 --> SLAM
-        S1 --> SLAM
-        SLAM --> N1
-        N1 --> GAZ1
-        GUI1 --> GAZ1
-    end
-```
-
-```mermaid
-flowchart TD
-    subgraph NAV["导航模式 (nav2_sim_tmux.sh)"]
-        GUI2["GUI 遥控"]
-        GAZ2["Gazebo 仿真"]
-        F2["FAST-LIO 里程计"]
-        L2["lio_interface TF桥接"]
-        S2["sensor_scan_generation"]
-        P2["3D→2D 切片"]
-        KISS["KISS-Matcher 全局重定位"]
-        MS["map_server 静态地图"]
-        N2["Nav2 全功能导航"]
-
-        GAZ2 --> F2
-        F2 --> L2
-        L2 --> S2
-        S2 --> P2
-        S2 --> KISS
-        P2 --> N2
-        KISS --> N2
-        MS --> N2
-        N2 --> GAZ2
-        GUI2 --> GAZ2
-    end
-```
-
-### 建图 vs 导航的层差异
-
-| 层 | 建图模式 | 导航模式 |
-|----|----------|----------|
-| ① 驱动层 | Gazebo 仿真插件 | Gazebo 仿真插件 |
-| ② 定位层 | FAST-LIO + **SLAM Toolbox** | FAST-LIO + **KISS-Matcher** + **map_server** |
-| ③ 转换层 | 完全相同 | 完全相同 |
-| ④ 导航层 | Nav2 仅加载，不发送目标 | Nav2 全功能运行 |
+> 本文档从**粗到细**介绍项目架构：先理解各模块"做什么"，再深入"有哪些选项、怎么选、话题接口是什么"。
 
 ---
 
-## 2. 各层详解
+## 1. 总览：数据如何从传感器流到车轮
 
-### 2.0 驱动层 (Driver Layer)
+整个系统可看作一条四级流水线：
 
-**职责**：将物理传感器（或仿真器）的原始数据流转发为 ROS 2 标准消息，对上层完全透明。
+```mermaid
+flowchart LR
+    subgraph L1["① 数据输入"]
+        SIM["Gazebo 仿真"]
+        REAL["实机驱动"]
+    end
+    subgraph L2["② 3D 里程计"]
+        LIO["FAST-LIO / Point-LIO<br/>6-DoF 位姿估计"]
+    end
+    subgraph L3["③ 2D 建图 & 定位"]
+        SLAM["SLAM / 重定位<br/>占据栅格地图 + 全局定位"]
+    end
+    subgraph L4["④ Nav2 导航"]
+        NAV["规划 + 控制<br/>路径规划 → /cmd_vel"]
+    end
 
-**核心原则**：上层不关心数据来自真实 LiDAR 还是 Gazebo 仿真——话题名和消息类型一致。
-
+    L1 --> L2 --> L3 --> L4
 ```
-实机: RoboSense Airy → rslidar_sdk → /rslidar_points (PointCloud2)
-                                       /rslidar_imu_data (Imu)
 
-实机: Livox MID-360 → livox_ros_driver2 → /livox/lidar (PointCloud2)
-                                           /livox/imu (Imu)
+| 层 | 输入 | 输出 | 核心问题 |
+|----|------|------|----------|
+| ① 数据输入 | 物理/仿真传感器 | `/livox/lidar` ` /livox/imu` | 把原始数据变成 ROS 2 标准消息 |
+| ② 3D 里程计 | 点云 + IMU | `/Odometry` ` /cloud_registered` | 我在哪？朝向哪？（局部，每帧） |
+| ③ 2D 建图定位 | 里程计 + 3D 点云 | `/map` ` map→odom` TF | 环境长什么样？我在地图中的哪里？（全局） |
+| ④ Nav2 导航 | 地图 + 定位 + `/scan` | `/cmd_vel` | 怎么从 A 安全走到 B？ |
 
-仿真: Gazebo 世界 → ros2_livox_simulation → /livox/lidar (PointCloud2)
-                                             /livox/imu (Imu)
+**关键理解**：每层只依赖下一层的输出。第④层不知道也不关心里程计是 FAST-LIO 还是 Point-LIO——它只知道有 `odom→base_footprint` TF 和 `/scan`。
+
+---
+
+## 2. 各模块粗览 —— 谁做什么
+
+### 2.1 数据输入层 —— 传感器从哪来
+
+```mermaid
+flowchart LR
+    subgraph SIM["仿真"]
+        GAZ["Gazebo 世界"] --> SIMDRV["ros2_livox_simulation<br/>Livox 仿真插件"]
+        SIMDRV --> TOPIC_S["/livox/lidar<br/>/livox/imu"]
+    end
+    subgraph REAL_L["实机 — Livox MID-360"]
+        HW_L["MID-360 硬件"] --> DRV_L["livox_ros_driver2<br/>SDK2 封装"]
+        DRV_L --> TOPIC_L["/livox/lidar<br/>/livox/imu"]
+    end
+    subgraph REAL_A["实机 — RoboSense Airy"]
+        HW_A["Airy 硬件"] --> DRV_A["rslidar_sdk"]
+        DRV_A --> TOPIC_A["/rslidar_points<br/>/rslidar_imu_data"]
+    end
+    TOPIC_S --> NEXT["→ ② 里程计层"]
+    TOPIC_L --> NEXT
+    TOPIC_A --> NEXT
 ```
 
-**驱动层包含：**
+**任务**：让上层不管数据来自仿真还是实机，看到的话题名和消息类型一致。每类驱动只负责"把硬件数据转成 ROS 2 标准消息"，不做任何滤波或变换。
 
-| 组件 | 环境 | 功能 |
+---
+
+### 2.2 3D 里程计层 —— 实时位姿估计
+
+```mermaid
+flowchart LR
+    LIDAR["/livox/lidar<br/>PointCloud2"] --> LIO
+    IMU["/livox/imu<br/>Imu"] --> LIO
+
+    subgraph LIO["3D 里程计 — 可选算法"]
+        direction TB
+        FAST["FAST-LIO <b>(默认/推荐)</b><br/>IEKF 紧耦合<br/>每帧更新, ~10Hz<br/>→ PointCloud2 格式"]
+        POINT["Point-LIO<br/>EKF 逐点更新<br/>高频 ~200Hz<br/>→ CustomMsg 格式"]
+    end
+
+    LIO --> ODOM["/Odometry<br/>6-DoF 位姿 (camera_init 系)"]
+    LIO --> CLOUD["/cloud_registered<br/>去畸变点云"]
+```
+
+**任务**：回答"此时此刻我在哪、朝向哪"。高频（~10Hz）、局部（原点=开机位置）、6-DoF。**不建图、不做全局修正**。
+
+> **怎么选**：仿真和一般实机用 **FAST-LIO**（仿真直接可用，无需额外转换）。Point-LIO 适合高动态场景（无人机/手持），仿真下需要额外的 `ign_sim_pointcloud_tool` 做格式转换。
+
+---
+
+### 2.3 桥接转换层 —— 坐标系与格式归一化
+
+```mermaid
+flowchart LR
+    subgraph INPUT["来自 ② 里程计层"]
+        ODOM["/Odometry<br/>(camera_init 系)"]
+        CLOUD["/cloud_registered<br/>(camera_init 系)"]
+    end
+
+    ODOM --> LIOIF
+    CLOUD --> LIOIF
+
+    subgraph BRIDGE["③ 桥接转换 — 三个节点串联"]
+        direction TB
+        LIOIF["<b>lio_interface</b><br/>camera_init → odom<br/>坐标系变换"]
+        LIOIF -->|"/registered_odometry<br/>/registered_scan"| SENSOR
+        SENSOR["<b>sensor_scan_generation</b><br/>LiDAR 位姿 → 机器人位姿<br/>发布 odom→base TF + /odom"]
+        SENSOR --> P2L
+        P2L["<b>pointcloud_to_laserscan</b><br/>3D → 2D 高度切片<br/>→ /scan (LaserScan)"]
+    end
+
+    BRIDGE --> OUT_TF["odom→base_footprint TF"]
+    BRIDGE --> OUT_ODOM["/odom (Odometry)"]
+    BRIDGE --> OUT_SCAN["/scan (LaserScan)"]
+```
+
+**任务**：把"传感器中心"的输出转成"机器人中心"的格式。三个节点像流水线一样串联——`lio_interface` 做坐标系变换，`sensor_scan_generation` 发布机器人 TF，`pointcloud_to_laserscan` 把 3D 点云切成 2D 扫描。
+
+> ⚠️ 这是整个栈最容易出问题的一层——`sensor_scan_generation` 发布的 `odom→base_footprint` TF 和 `/odom` 是 Nav2 的直接依赖，断了导航全挂。
+
+---
+
+### 2.4 2D 建图 & 定位层 —— 全局一致性
+
+#### 建图模式
+
+```mermaid
+flowchart LR
+    SCAN["/scan + /odom<br/>+ /livox/imu"] --> CHOICE
+
+    subgraph CHOICE["2D 建图 — 二选一"]
+        direction TB
+        SLAM["<b>SLAM Toolbox</b><br/>Karto 位姿图 SLAM<br/>地图: .pgm + .yaml<br/>纯定位: ❌ 需额外 KISS-Matcher"]
+        CARTO["<b>Cartographer</b><br/>子图+回环图优化 SLAM<br/>地图: .pbstream → 导出 .pgm<br/>纯定位: ✅ 同一框架切换"]
+    end
+
+    CHOICE --> MAP["/map<br/>OccupancyGrid"]
+    CHOICE --> TF["map→odom TF<br/>回环修正"]
+```
+
+#### 导航模式
+
+```mermaid
+flowchart LR
+    subgraph RELOC["重定位方案 — 二选一（与建图后端配套）"]
+        direction TB
+        KISS["<b>方案 A: KISS-Matcher</b><br/>配 SLAM Toolbox 建图<br/>加载 .pcd 先验地图<br/>FPFH+TEASER++ 全局匹配<br/>订阅 /registered_scan (3D 点云)<br/>↓<br/>map→odom TF"]
+        CARTO_LOC["<b>方案 B: Cartographer 纯定位</b><br/>配 Cartographer 建图<br/>加载 .pbstream 地图<br/>实时 scan-to-submap 匹配<br/>订阅 /scan (2D 激光)<br/>↓<br/>map→odom TF"]
+    end
+
+    MAPSRV["map_server<br/>加载 .pgm 静态地图<br/>→ /map"]
+    RELOC --> TF2["map→odom TF"]
+    MAPSRV --> MAP2["/map"]
+```
+
+> **怎么配**：建图用 SLAM Toolbox → 导航用 **KISS-Matcher**（方案 A）。建图用 Cartographer → 导航用 **Cartographer 纯定位**（方案 B）。跨配不行——KISS 不认识 `.pbstream`，Cartographer 不认识 `.pcd`。
+
+**任务**：回答"环境长什么样"（地图）和"我在这张地图的哪个位置"（全局定位）。建图模式下边跑边画地图；导航模式下加载已有地图，实时推算机器人在图中的位姿。
+
+---
+
+### 2.5 Nav2 导航层 —— 规划与控制
+
+```mermaid
+flowchart TD
+    GOAL["/navigate_to_pose<br/>Action (目标位姿)"] --> BT
+
+    subgraph NAV2["④ Nav2 标准导航栈"]
+        BT["<b>bt_navigator</b><br/>行为树引擎<br/>任务总指挥"]
+        BT -->|"ComputePathToPose"| PLANNER["<b>planner_server</b><br/>全局路径规划<br/>Navfn (Dijkstra)"]
+        PLANNER -->|"/plan (Path)"| CTRL["<b>controller_server</b><br/>局部路径跟随<br/>DWB 控制器"]
+        CTRL -->|"/cmd_vel (Twist)"| VEL["<b>velocity_smoother</b><br/>加速度限制"]
+
+        GCM["global_costmap<br/>全局视野 (map 系)<br/>static+obstacle+inflation"]
+        LCM["local_costmap<br/>近场视野 (odom 系)<br/>6×6m 滑动窗口"]
+
+        PLANNER -.->|"查询路径"| GCM
+        CTRL -.->|"实时避障"| LCM
+
+        BT -->|"卡住时"| BEH["<b>behavior_server</b><br/>spin / backup / wait"]
+        BEH -.->|"恢复后"| BT
+    end
+
+    VEL --> CHASSIS["/cmd_vel → 底盘"]
+    GCM <--"/map"--> MAPSRV2["map_server<br/>/map"]
+    LCM <--"/scan"--> SCAN2["/scan"]
+```
+
+**任务**：给定目标位姿，规划无碰路径并控制机器人沿路径行驶。planner 看全局地图规划最优路径，controller 看局部代价地图实时避障。卡住时 behavior_server 自动执行 spin/backup 恢复动作。
+
+---
+
+## 3. 各模块细览 —— 选项、话题、参数
+
+### 3.1 数据输入：仿真 vs 实机
+
+#### 选项一览
+
+| 选项 | 环境 | LiDAR 驱动 | 话题前缀 |
+|------|------|-----------|----------|
+| Gazebo 仿真 | 仿真 | `ros2_livox_simulation` | `/livox/` |
+| Livox MID-360 | 实机 | `livox_ros_driver2` | `/livox/` |
+| RoboSense Airy | 实机 | `rslidar_sdk` | `/rslidar_` |
+
+#### 关键话题
+
+| 话题 | 类型 | 频率 | 说明 |
+|------|------|------|------|
+| `/livox/lidar` | `PointCloud2` | ~10Hz | 3D 点云，~30,000 点/帧 |
+| `/livox/imu` | `sensor_msgs/Imu` | ~200Hz | 6 轴 IMU（加速度+角速度） |
+| `/clock` | `rosgraph_msgs/Clock` | 仿真特有 | Gazebo 仿真时钟 |
+
+#### `use_sim_time` 规则
+
+| 环境 | `use_sim_time` | 时钟源 |
+|------|---------------|--------|
+| 仿真 | `true` | `/clock` (Gazebo) |
+| 实机 | `false` | 系统时钟 |
+
+> **所有节点必须一致**，否则 TF 时间戳不匹配，出现 `Transform data too old` 错误。
+
+---
+
+### 3.2 3D 里程计：FAST-LIO vs Point-LIO
+
+#### 选项对比
+
+| | FAST-LIO | Point-LIO |
+|--|----------|-----------|
+| **算法** | IEKF (迭代卡尔曼滤波) | EKF (逐点更新) |
+| **更新频率** | 每帧一次（~10Hz） | 逐点更新（~200Hz） |
+| **LiDAR 格式要求** | `PointCloud2` (`xfer_format=0`) | `CustomMsg` (`xfer_format=1`) |
+| **输出话题** | `/Odometry` | `/Odometry` (经 `ign_sim_pointcloud_tool` 后) |
+| **仿真适配** | 直接可用 | 需 `ign_sim_pointcloud_tool` 做格式转换 |
+| **适用场景** | 通用，仿真+实机 | 高动态场景（无人机、手持设备） |
+
+> **推荐**：仿真和一般实机场景用 **FAST-LIO**。Point-LIO 的高频优势在低速地面机器人上不显著，且仿真需要额外的格式转换节点。
+
+#### FAST-LIO 核心话题
+
+| 方向 | 话题 | 类型 | 说明 |
+|------|------|------|------|
+| 订阅 | `/livox/lidar` | `PointCloud2` | 原始 LiDAR 点云 |
+| 订阅 | `/livox/imu` | `Imu` | IMU 测量 |
+| 发布 | `/Odometry` | `nav_msgs/Odometry` | 6-DoF 位姿，在 `camera_init` 坐标系 |
+| 发布 | `/cloud_registered` | `PointCloud2` | 去畸变+配准后的点云 |
+| 发布 | `/path` | `nav_msgs/Path` | 轨迹可视化 |
+
+#### 关键参数（FAST-LIO `mapping.launch.py`）
+
+| 参数 | 典型值 | 说明 |
+|------|--------|------|
+| `filter_size_surf` | 0.5m | 体素降采样，控制计算量 |
+| `filter_size_map` | 0.5m | KD-Tree 地图体素分辨率 |
+| `cube_side_length` | 1000m | 局部地图立方体边长 |
+| `imu_en` | `true` | 启用 IMU 紧耦合 |
+
+---
+
+### 3.3 桥接转换：三个节点的职责链
+
+#### 3.3.1 lio_interface —— 坐标系变换
+
+**解决什么问题**：FAST-LIO 在 `camera_init` 系（开机时 LiDAR 位姿为原点）输出位姿，但 ROS 生态用 `odom` 坐标系。
+
+**做法**：开机第一帧捕获 `camera_init→base_footprint` 的偏移，建立 `camera_init→odom` 的初始对齐，后续每帧做坐标变换。
+
+| 方向 | 话题 | 说明 |
 |------|------|------|
-| `ros2_livox_simulation` | 仿真 | Gazebo 插件，模拟 Livox MID-360 非重复扫描模式 |
-| `livox_ros_driver2` | 实机 | Livox SDK2 封装，支持 PointCloud2 和 CustomMsg 两种格式 |
-| `rslidar_sdk` | 实机 (Airy) | RoboSense 官方驱动 |
-| `robot_state_publisher` | 仿真+实机 | 从 URDF 发布 `base_footprint→chassis→livox_frame` 静态 TF |
-| `ign_sim_pointcloud_tool` | 仿真 (Point-LIO) | PointCloud2→Velodyne 格式转换，为 Point-LIO 补齐 ring/time 字段 |
+| 订阅 | `/Odometry` | FAST-LIO 位姿（`camera_init` 系） |
+| 订阅 | `/cloud_registered` | 去畸变点云（`camera_init` 系） |
+| 发布 | `/registered_odometry` | 位姿（`odom` 系） |
+| 发布 | `/registered_scan` | 点云（`odom` 系） |
 
-**驱动层不做什么**：不做任何坐标变换、不融合传感器数据、不做滤波。这些全是上层的事。
+#### 3.3.2 sensor_scan_generation —— 机器人位姿发布
+
+**解决什么问题**：FAST-LIO 只知道 LiDAR 在哪，Nav2 需要知道**机器人中心**（`base_footprint`）在哪。
+
+**做法**：查 URDF 的静态 TF `livox_frame→base_footprint`，链式乘法算出 `odom→base_footprint`，同时差分计算速度发布 `/odom` 话题。
+
+| 方向 | 话题/TF | 说明 |
+|------|---------|------|
+| 订阅 | `/registered_scan` | 用于时间戳对齐 |
+| 订阅 | `/registered_odometry` | LiDAR 在 odom 系的位姿 |
+| **发布** | **`odom→base_footprint` TF** | **Nav2 直接依赖，断了导航全挂** |
+| **发布** | **`/odom`** | **Nav2 controller/velocity_smoother 的必读话题** |
+
+> ⚠️ 这是整个栈最关键的节点。如果它挂了，Nav2 所有 TF 查询超时。
+
+#### 3.3.3 pointcloud_to_laserscan —— 3D→2D
+
+**解决什么问题**：Nav2 代价地图需要 `LaserScan`，但上游只有 3D `PointCloud2`。
+
+**做法**：在 Z 轴 `[min_height, max_height]` 范围内取高度切片，XY 平面按角度分桶，每桶取最近点。
+
+| 方向 | 话题 | 说明 |
+|------|------|------|
+| 订阅 | `/registered_scan` | 3D 点云 |
+| **发布** | **`/scan`** | **2D LaserScan，costmap 直接消费** |
+
+**切片参数 (`Pointcloud2d_3d.yaml`)**：
+
+| 参数 | 值 | 含义 |
+|------|-----|------|
+| `min_height` | 0.2~0.3m | 底部裁剪（去掉地面） |
+| `max_height` | 1.0~2.0m | 顶部裁剪（去掉天花板） |
+| `angle_increment` | 0.0087 rad | ~0.5° 角分辨率，约 720 个角度桶 |
+| `range_max` | 40~70m | 最远有效距离 |
+| `target_frame` | `livox_frame` | 在 LiDAR 坐标系下做切片 |
 
 ---
 
-### 2.1 三维建图与定位层 (3D Mapping & Localization Layer)
+### 3.4 2D 建图：SLAM Toolbox vs Cartographer
 
-**职责**：从原始 LiDAR/IMU 数据中估计机器人的 6-DoF 位姿，构建环境地图，提供全局定位。
+#### 选项对比
 
-这一层是整个系统的核心——它的精度直接决定导航的成败。
+| | SLAM Toolbox | Cartographer |
+|--|-------------|-------------|
+| **算法** | Karto 位姿图 SLAM | 子图+回环检测的图优化 SLAM |
+| **回环检测** | ✅ 基于 scan matching | ✅ 基于分支定界的快速回环 |
+| **地图格式** | `.pgm` + `.yaml` | `.pbstream`（内部）→ 导出 `.pgm` |
+| **纯定位模式** | ❌ 需额外 KISS-Matcher | ✅ 自带（加载 `.pbstream`） |
+| **建图+导航统一** | 分离（建图=slam_toolbox, 定位=KISS） | 统一（同一框架，切换模式即可） |
+| **内存占用** | 较低 | 较高（需存子图） |
+| **大场景表现** | 中等（回环依赖参数调优） | 良好（子图机制天然适合大场景） |
 
-#### 2.1.1 FAST-LIO — LiDAR-IMU 紧耦合里程计
+> **推荐**：大范围建图、需要建图和定位用同一框架时选 **Cartographer**。小范围快速建图、资源受限时 **SLAM Toolbox** 够用。
 
-**解决什么问题**：单独用 LiDAR 或 IMU 估计位姿都有致命缺陷。LiDAR 在退化场景（长走廊、开阔地）会发散；IMU 积分累积漂移。FAST-LIO 把两者紧耦合在同一个迭代卡尔曼滤波器中，互补短处。
+#### SLAM Toolbox 话题
 
-**核心算法**：IEKF (Iterated Error-State Kalman Filter) + ikd-Tree 增量 KD 树
+| 方向 | 话题 | 说明 |
+|------|------|------|
+| 订阅 | `/scan` | 2D 激光扫描 |
+| 发布 | `/map` | OccupancyGrid 建图结果 |
+| 发布 | `map→odom` TF | 回环修正后的全局位姿 |
 
-```
-IMU 数据 (200Hz)                     LiDAR 数据 (10Hz)
-     │                                      │
-     ▼                                      ▼
- 中值积分前向传播                     去畸变 (反向传播)
- (预测当前位姿)                       │
-     │                                ▼
-     │                          ikd-Tree 最近邻搜索
-     │                          平面拟合 + 点面残差
-     │                                │
-     └──────── IEKF 迭代更新 ─────────┘
-              (4 次迭代)
-                   │
-         ┌────────┴────────┐
-         ▼                 ▼
-    /Odometry        /cloud_registered
-   (camera_init→body)  (去畸变后点云)
-```
+#### Cartographer 话题
 
-**为什么叫"紧耦合"**：IMU 的预积分项和 LiDAR 的点面距离残差在同一个优化目标函数中联合求解，不是先积分 IMU 再拿 IMU 结果去校正 LiDAR。
+| 方向 | 话题 | 说明 |
+|------|------|------|
+| 订阅 | `/scan` | 2D 激光扫描 |
+| 订阅 | `/livox/imu` | IMU（辅助 scan matching） |
+| 订阅 | `/odom` | 里程计运动先验 |
+| 发布 | `/map` | OccupancyGrid（通过 `cartographer_occupancy_grid_node`） |
+| 发布 | `map→odom` TF | 图优化后的全局位姿 |
 
-#### 2.1.2 SLAM Toolbox — 2D 在线建图（建图模式）
+#### Cartographer 关键参数（建图 `.lua`）
 
-**解决什么问题**：FAST-LIO 只有局部里程计，没有全局一致性。机器人在大环境中走了几百米后，里程计漂移累积了几十厘米，地图必然变形。SLAM Toolbox 通过回环检测发现"这个地方我来过"，用图优化消除累积漂移。
+| 参数 | 典型值 | 说明 |
+|------|--------|------|
+| `tracking_frame` | `base_footprint` | 机器人基准帧 |
+| `published_frame` | `odom` | 里程计帧 |
+| `provide_odom_frame` | `false` | 不发布 odom→base（FAST-LIO 已发布） |
+| `use_odometry` | `true` | 使用 FAST-LIO 里程计作为运动先验 |
+| `TRAJECTORY_BUILDER_2D.use_imu_data` | `true` | 使用 IMU 辅助方向估计 |
+| `POSE_GRAPH.optimize_every_n_nodes` | `90` | 每 90 个节点触发一次全局优化 |
+| `submap_publish_period_sec` | `0.3` | 子图发布频率 |
 
-**核心算法**：基于 Karto 的位姿图 SLAM
+---
 
-```
-/scan (LaserScan) + odom TF
-        │
-        ▼
-   Scan Matcher (关联当前帧与局部子图)
-        │
-        ▼
-   位姿图 (Pose Graph)
-   ├── 节点: 机器人历史位姿
-   ├── 边 (odom): 里程计约束
-   └── 边 (loop): 回环检测约束
-        │
-        ▼
-   SPA 求解器 (Sparse Pose Adjustment)
-        │
-   ┌────┴────┐
-   ▼         ▼
-  /map    map→odom TF
-```
+### 3.5 全局重定位：KISS-Matcher vs Cartographer 纯定位
 
-**建图 vs 导航的关键区别**：建图时 SLAM Toolbox 实时构建并发布 `/map` 和 `map→odom` TF。导航时 SLAM Toolbox 不启动——`/map` 由 map_server 从磁盘文件加载，`map→odom` 由 KISS-Matcher 发布。
-
-#### 2.1.3 KISS-Matcher — 全局重定位（导航模式）
-
-**解决什么问题**：导航启动时，机器人物理位置和地图坐标系没有任何几何关系。KISS-Matcher 回答"机器人在已知地图中的哪个位置"——把当前的 LiDAR 扫描和历史 PCD 地图对齐，输出 `map→odom` TF。
+#### KISS-Matcher（建图用 SLAM Toolbox 时的配套方案）
 
 **两阶段策略**：
 
 ```
-阶段 1: 全局粗配准 (无初值)
-    FPFH 特征提取 → TEASER++ 鲁棒匹配 → small_gicp 精配准
-    相当于"在整张地图中搜索当前扫描的最佳匹配位置"
+阶段 1 — 全局初始化 (无初值, KISS-Matcher):
+  FPFH 特征提取 → TEASER++ 鲁棒匹配 → small_gicp 精配准
+  日志: "KISSMatcher initialization succeeded"
 
-阶段 2: 连续跟踪 (有初值)
-    以上一帧 map→odom 为初值 → small_gicp 局部配准
-    相当于"已知大致位置，微调对齐"
+阶段 2 — 连续跟踪 (有初值, small_gicp):
+  以上一帧位姿为初值做 GICP 局部配准
+  连续失败 → 自动触发 KISS 全局恢复
 ```
 
-**为什么需要两阶段**：全局配准慢但不需要初值，连续跟踪快但需要初值。两者互补，启动时跑一次全局初始化，之后持续跟踪即可。
-
----
-
-### 2.2 中间转换层 (Bridge Layer)
-
-**职责**：把定位层的"传感器中心"输出转换为导航层的"机器人中心"标准格式。
-
-这一层解决了定位层和导航层之间的 **坐标系不匹配** 和 **消息格式不匹配**。
-
-#### 2.2.1 lio_interface — 坐标系归一化
-
-```
-问题：FAST-LIO 输出 /Odometry 在 camera_init 坐标系
-      Nav2 期望位姿在 odom 坐标系
-
-解决：查 base_footprint→livox_frame 静态 TF（URDF）
-     在启动第一帧建立 camera_init→odom 的初始对齐
-     后续每帧把 LIO 位姿转到 odom 系
-```
-
-**为什么不直接在 FAST-LIO 里改坐标系**：解耦。换用 Point-LIO、换传感器型号、换机器人，只改这一层，导航层完全不受影响。
-
-#### 2.2.2 sensor_scan_generation — 发布 odom→base_footprint TF 和 /odom
-
-```
-问题：FAST-LIO 只发布 LiDAR 的位姿 (odom→livox_frame)
-     Nav2 需要机器人的位姿 (odom→base_footprint)
-
-解决：TF 链式乘法
-     odom→base_footprint = odom→livox_frame × livox_frame→base_footprint
-     (LIO 输出)            (URDF 静态 TF)
-```
-
-同时通过相邻帧位姿差分计算机器人速度，发布 `/odom`（Nav2 controller_server 的必读话题）。
-
-**这一层是整个系统中最关键的节点**：如果它挂了，Nav2 的所有 TF 查询超时，整个导航栈不可用。
-
-#### 2.2.3 pointcloud_to_laserscan — 3D → 2D 切片
-
-```
-问题：FAST-LIO 输出 3D 点云 (PointCloud2, ~30,000 点/帧)
-     Nav2 代价地图需要 2D 激光扫描 (LaserScan, ~720 角度/帧)
-
-解决：在 livox_frame 坐标系下
-     1) 高度裁剪 [0.2m, 1.0m]（去掉地面和天花板）
-     2) 360° 按角度分 720 个桶 (0.5° 一个)
-     3) 每个桶取最近点到原点的距离 → ranges[i]
-```
-
----
-
-### 2.3 导航层 (Navigation Layer)
-
-**职责**：给定目标位姿，规划无碰路径并控制机器人沿路径行驶。
-
-这一层是 ROS 2 Nav2 框架的标准实现，8 个子节点各司其职。
-
-#### 架构全景
-
-```
-                       /navigate_to_pose (Action)
-                              │
-                              ▼
-                      bt_navigator (行为树)
-                       ├── ComputePathToPose ──→ planner_server
-                       │                              │
-                       │                          /plan (Path)
-                       │                              │
-                       ├── FollowPath ──────────→ controller_server
-                       │                              │
-                       │                          /cmd_vel (Twist)
-                       │                              │
-                       └── Recovery (如果卡住)
-                            ├── spin (旋转清代价地图)
-                            ├── backup (倒车)
-                            └── wait (等待)
-```
-
-#### 各子节点角色
-
-| 子节点 | 角色 | 类比 |
-|--------|------|------|
-| `bt_navigator` | 总指挥，管理导航任务的完整生命周期 | 大脑 |
-| `planner_server` | 在全局代价地图上计算最优路径 | 导航软件 |
-| `controller_server` | 在线执行路径跟随，实时避障 | 司机 |
-| `map_server` | 加载静态占据栅格地图 | GPS 地图 |
-| `global_costmap` | 全局地图 + 动态障碍物 + 膨胀 | 全局视野 |
-| `local_costmap` | 机器人周围 6×6m 滑动窗口 | 近场视野 |
-| `behavior_server` | 卡住时执行恢复动作 | 脱困模式 |
-| `smoother_server` | 平滑 planner 输出的折线路径 | 路径美化 |
-| `waypoint_follower` | 依次导航到多个航点 | 多目的地 |
-| `velocity_smoother` | 加速度限制，防急加速 | 缓启动 |
-
-#### 代价地图的双层设计
-
-```
-global_costmap                  local_costmap
-─────────────                   ─────────────
-坐标系: map                     坐标系: odom
-大小: 覆盖整个地图               大小: 6×6m 滑动窗口
-图层: static+obstacle+inflation 图层: obstacle+inflation
-用途: planner 全局路径规划       用途: controller 局部避障
-更新: 5Hz                       更新: 20Hz
-```
-
-**为什么需要两层**：planner 需要全局视野来规划"绕一大圈"的长路径；controller 只需要局部视野来做高速避障。两者在不同坐标系、不同频率下独立更新，互不干扰。
-
-**膨胀层的作用**：在障碍物周围生成 cost 衰减梯度——
-
-```
-障碍物边缘 → cost=254 (致命)
-    0.2m   → cost=128
-    0.35m  → cost=64
-    0.55m  → cost=0   (安全)
-```
-
-planner 规划时避开高 cost 区域而非严格避开障碍物边缘，这样路径离墙有一定安全距离。
-
----
-
-## 3. 节点详解（逐节点参考）
-
-### 2.1 Gazebo 仿真环境
-
-| 属性 | 值 |
-|------|-----|
-| **启动方式** | `ros2 launch get_urdf get_urdf_launch.py` |
-| **必要性** | 🔴 仿真模式必备，实机无需 |
-
-**输入/输出：**
-
-| 方向 | 话题/实体 | 格式 |
-|------|-----------|------|
-| 生成 | `robot_description` (topic) | URDF 字符串 |
-| 生成 | LiDAR 射线传感器 | Gazebo 插件，输出 `/livox/lidar` (PointCloud2) |
-| 生成 | IMU 传感器 | Gazebo 插件，输出 `/livox/imu` (sensor_msgs/Imu) |
-| 接收 | `/cmd_vel` | geometry_msgs/Twist（驱动底盘） |
-
-**内部流程：**
-
-1. `robot_state_publisher` 加载 `simple_car.urdf`，发布静态 TF (`base_footprint→chassis→livox_frame`)
-2. Gazebo 启动指定 `.world` 文件，加载环境模型
-3. `spawn_entity.py` 在 Gazebo 中生成机器人模型
-4. Livox 仿真插件模拟 MID-360 扫描，发布 `/livox/lidar` (PointCloud2, ~10Hz)
-
----
-
-### 2.2 FAST-LIO（里程计核心）
-
-| 属性 | 值 |
-|------|-----|
-| **包名** | `fast_lio_robosense`（也支持 `fast_lio`） |
-| **可执行文件** | `fastlio_mapping` |
-| **频率** | timer 100Hz，实际处理 ~10Hz（每帧 LiDAR 数据触发一次） |
-| **必要性** | 🔴 整个系统的里程计核心 |
-
-**输入：**
-
-| 话题 | 格式 | 频率 | 用途 |
-|------|------|------|------|
-| `/livox/lidar` (仿真) / `/rslidar_points` (实机 Airy) | PointCloud2, ~20,000-30,000 点/帧 | ~10Hz | LiDAR 扫描 |
-| `/livox/imu` (仿真) / `/rslidar_imu_data` (实机 Airy) | sensor_msgs/Imu | ~200Hz | IMU 加速度+角速度 |
-
-**输出：**
-
-| 话题 | 格式 | 频率 | 用途 |
-|------|------|------|------|
-| `/Odometry` | nav_msgs/Odometry | ~10Hz | LIO 估计位姿 (camera_init→body) |
-| `/cloud_registered` | PointCloud2 | ~10Hz | 去畸变后的点云 |
-| `/path` | nav_msgs/Path | ~1Hz | 轨迹可视化 |
-
-**内部处理管线（timer_callback，实际约 10Hz 触发）：**
-
-```
-standard_pcl_cbk  (IMU callback 也在并行写 buffer)
-    │
-    ▼
-sync_packages(Measures)
-    │ 从 lidar_buffer 取一帧 + 对应的 imu_buffer 数据
-    ▼
-p_imu->Process(Measures, kf, feats_undistort)
-    │  ① IMU 前向传播（中值积分）→ 预测位姿
-    │  ② 反向传播去畸变 → feats_undistort
-    ▼
-lasermap_fov_segment()
-    │  滑动窗口管理：机器人移出局部地图范围时删除远处 KD-Tree 节点
-    ▼
-downSizeFilterSurf.filter()  // 体素降采样 filter_size_surf=0.5m
-    │  ~30,000 点 → ~3,000 点
-    ▼
-kf.update_iterated_dyn_share_modified()  // IEKF 迭代更新（默认 4 次）
-    │  h_share_model():
-    │    ├── ikdtree.Nearest_Search → 5 个最近邻
-    │    ├── esti_plane() → 平面拟合
-    │    └── 雅可比矩阵 H 构造
-    ▼
-publish_odometry()    → /Odometry + camera_init→body TF
-map_incremental()     → ikdtree.Add_Points()
-publish_frame_world() → /cloud_registered
-```
-
-**必要性举例：** 如果没有 FAST-LIO，系统就没有里程计——不知道机器人在哪、朝什么方向。Nav2 的代价地图、KISS-Matcher 的重定位、SLAM Toolbox 的建图全部依赖 FAST-LIO 输出的 `/Odometry` 和 `/cloud_registered`。
-
----
-
-### 2.3 lio_interface（TF 桥接 + 点云转发）
-
-| 属性 | 值 |
-|------|-----|
-| **包名** | `lio_interface` |
-| **可执行文件** | `lio_interface_node` |
-| **必要性** | 🟡 解耦传感器和导航的标准桥接层 |
-
-**输入：**
-
-| 话题 | 格式 | 用途 |
+| 方向 | 话题 | 说明 |
 |------|------|------|
-| `/Odometry` | nav_msgs/Odometry (camera_init→body) | FAST-LIO 原始位姿 |
-| `/cloud_registered` | PointCloud2（camera_init 系） | FAST-LIO 输出去畸变点云 |
+| 订阅 | `/registered_scan` | 3D 注册点云 |
+| 订阅 | `/initialpose` | RViz "2D Pose Estimate" 手动初始位姿 |
+| **发布** | **`map→odom` TF** | 全局定位修正 |
+| 参数 | `prior_pcd_file` | 先验 3D 点云地图路径（.pcd） |
 
-**输出：**
+#### Cartographer 纯定位（建图用 Cartographer 时的配套方案）
 
-| 话题 | 格式 | 用途 |
+**与 KISS-Matcher 的区别**：不单独加载 PCD 点云地图，而是在建图阶段保存的 `.pbstream`（含子图+位姿图）上做实时 scan-to-submap 匹配。
+
+```
+当前 /scan ──→ 与 .pbstream 中子图做 CSM 匹配 ──→ map→odom TF
+              （不需要 FPFH/TEASER++ 全局搜索，子图本身就提供了空间索引）
+```
+
+| 方向 | 话题 | 说明 |
 |------|------|------|
-| `/registered_odometry` | nav_msgs/Odometry (odom→livox_frame) | 标准 odom 系位姿 |
-| `/registered_scan` | PointCloud2（odom 系） | 转换后的点云 |
+| 订阅 | `/scan` | 2D 激光扫描 |
+| 订阅 | `/livox/imu` | IMU |
+| 订阅 | `/odom` | 里程计运动先验 |
+| **发布** | **`map→odom` TF** | 全局定位修正 |
+| 参数 | `load_state_filename` | `.pbstream` 地图路径 |
 
-**内部流程：**
+**关键参数（纯定位 `.lua`）**：
 
-```
-odometryCallback()
-    │  首次：查 base_footprint→livox_frame 静态 TF → tf_odom_to_lidar_odom_
-    │  此后：tf_lidar_odom * tf_odom_to_lidar_odom_ → odom 系位姿
-    ▼  publish /registered_odometry
-
-pointCloudCallback()
-    │  pcl_ros::transformPointCloud("odom", tf, cloud_registered → registered_scan)
-    │  逐个点应用 4×4 刚体变换（~30,000 点 × 矩阵乘法）
-    ▼  publish /registered_scan
-```
-
-**为什么需要这个节点：** FAST-LIO 输出在 `camera_init` 坐标系（世界原点即开机位置），但 Nav2 使用 `odom` 坐标系。`lio_interface` 做两件事：(1) 把 LIO 内部坐标映射到 `odom` 系，(2) 统一输出接口——无论后端是 FAST-LIO 还是 Point-LIO，下游节点看到的话题名不变。
+| 参数 | 建图值 | 纯定位值 | 说明 |
+|------|--------|---------|------|
+| `TRAJECTORY_BUILDER.pure_localization` | `false` | **`true`** | 不建图，只匹配 |
+| `CSM linear_search_window` | 0.15m | **0.2m** | 扩大搜索窗口提升鲁棒性 |
+| `CSM angular_search_window` | 20° | **30°** | 同上 |
+| `POSE_GRAPH.optimize_every_n_nodes` | 90 | **20** | 纯定位不过度优化 |
 
 ---
 
-### 2.4 sensor_scan_generation（里程计 + TF 发布）
+### 3.6 Nav2 导航栈
 
-| 属性 | 值 |
-|------|-----|
-| **包名** | `sensor_scan_generation` |
-| **可执行文件** | `sensor_scan_generation` |
-| **必要性** | 🔴 发布 `odom→base_footprint` TF 和 `/odom`，Nav2 直接依赖 |
+#### 8 个子节点速览
 
-**输入：**
+| 子节点 | 做什么 | 类比 |
+|--------|--------|------|
+| `map_server` | 加载 `.pgm` 静态地图 → `/map` | 离线地图 |
+| `bt_navigator` | 行为树引擎，管理导航任务生命周期 | 总指挥 |
+| `planner_server` | 在 `global_costmap` 上搜索全局路径 → `/plan` | 导航软件 |
+| `controller_server` | 在 `local_costmap` 上实时跟随路径 → `/cmd_vel` | 司机 |
+| `global_costmap` | 全局代价地图：静态地图 + 障碍物 + 膨胀层 | 全局视野 |
+| `local_costmap` | 局部代价地图：6×6m 滑动窗口 | 近场视野 |
+| `behavior_server` | 卡住时 spin/backup/wait 恢复行为 | 脱困模式 |
+| `velocity_smoother` | 对 `/cmd_vel` 做加速度限制，防急加速 | 缓启动器 |
 
-| 话题 | 格式 | 用途 |
-|------|------|------|
-| `/registered_scan` | PointCloud2 (odom 系) | 用于时间戳对齐 |
-| `/registered_odometry` | nav_msgs/Odometry (odom→livox_frame) | LiDAR 在 odom 系位姿 |
+#### 核心话题
 
-**输出：**
+| 话题 | 类型 | 发布者 → 订阅者 |
+|------|------|----------------|
+| `/map` | `OccupancyGrid` | `map_server` → `global_costmap` |
+| `/scan` | `LaserScan` | `pointcloud_to_laserscan` → 两个 `costmap` |
+| `/odom` | `Odometry` | `sensor_scan_generation` → `controller_server`, `velocity_smoother` |
+| `/plan` | `Path` | `planner_server` → `controller_server` + RViz |
+| `/cmd_vel` | `Twist` | `controller_server` → `velocity_smoother` → 底盘 |
 
-| 话题/TF | 格式 | 用途 |
-|---------|------|------|
-| `odom→base_footprint` TF | TransformStamped, ~10Hz | **Nav2 直接依赖** |
-| `/odom` | nav_msgs/Odometry | Nav2 里程计输入 |
-| `/lidar_frame_pcd` | PointCloud2 | 可视化用 |
-
-**内部流程：**
-
-```
-laserCloudAndOdometryHandler()   // message_filter ApproximateTime 同步后触发
-    │
-    ├── tf_buffer->lookupTransform(livox_frame→base_footprint)
-    │       查询 URDF 提供的静态 TF
-    │
-    ├── tf_odom_to_base = tf_odom_to_livox × tf_livox_to_base
-    │       链式 TF 乘法
-    │
-    ├── publishTransform(odom→base_footprint)   ← Nav2 等这一条
-    ├── publishOdometry(odom→base_footprint)
-    │       static 变量存上一帧位姿，差分计算线速度/角速度
-    │
-    └── pcl_ros::transformPointCloud(livox_frame)
-            点云从 odom 系转回 livox_frame 系
-```
-
-**必要性举例：** 如果注释掉 `sensor_scan_generation`，Nav2 的 controller_server 和 planner_server 全部报错——它们订阅 `/odom` 并查询 `odom→base_footprint` TF 来获取机器人实时位姿。
-
----
-
-### 2.5 3D→2D 切片 (pointcloud_to_laserscan)
-
-| 属性 | 值 |
-|------|-----|
-| **包名** | `pointcloud_to_laserscan` (ROS 2 内置包) |
-| **启动文件** | `me_nav2_bringup/launch/pointcloud_to_laserscan_launch.py` |
-| **必要性** | 🔴 Nav2 costmap 需要 LaserScan 格式 |
-
-**输入：**
-
-| 话题 | 格式 | 用途 |
-|------|------|------|
-| `/registered_scan` | PointCloud2 (odom 系) | 3D 点云 |
-
-**输出：**
-
-| 话题 | 格式 | 用途 |
-|------|------|------|
-| `/scan` | sensor_msgs/LaserScan | 2D 激光扫描 |
-
-**切片参数 (Pointcloud2d_3d.yaml)：**
-
-| 参数 | 值 | 含义 |
-|------|-----|------|
-| `target_frame` | `livox_frame` | 在 LiDAR 坐标系下切片 |
-| `min_height` | 0.2m | 切掉地面 |
-| `max_height` | 1.0m | 切掉车顶以上 |
-| `angle_increment` | 0.0087 rad (~0.5°) | 角分辨率 |
-| `range_max` | 70m | 最远距离 |
-
-**内部原理：** 对 3D 点云取 `[min_height, max_height]` 高度范围的 z 轴切片，在 XY 平面按角度分桶，每个桶取最近点作为距离值，输出标准 LaserScan。
-
----
-
-### 2.6 SLAM Toolbox（建图模式专属）
-
-| 属性 | 值 |
-|------|-----|
-| **包名** | `slam_toolbox` |
-| **模式** | online_async（在线异步 SLAM） |
-| **必要性** | 🔴 建图模式必备，导航模式**不需要** |
-
-**输入：** `/scan` (LaserScan), `odom→base_footprint` TF
-
-**输出：** `/map` (OccupancyGrid), `map→odom` TF (回环修正)
-
-**内部原理：** 基于 Karto 的图优化 SLAM。接收 LaserScan + 里程计构建位姿图，scan matching 检测回环，SPA 求解器优化全局一致性。
-
-**保存地图：**
-```bash
-./scripts/save_map.sh    # → src/me_nav2_bringup/map/
-./scripts/save_pcd.sh    # → src/me_nav2_bringup/pcd/
-```
-
----
-
-### 2.7 KISS-Matcher 全局重定位（导航模式专属）
-
-| 属性 | 值 |
-|------|-----|
-| **包名** | `global_relocalization_kiss_matcher` |
-| **可执行文件** | `global_kiss_matcher_relocalization_exec` |
-| **必要性** | 🔴 导航模式必备（无初始位姿时），建图模式**不需要** |
-
-**输入：** `/registered_scan` (PointCloud2), 参数 `prior_pcd_file` (.pcd 先验地图), `base_footprint→livox_frame` TF
-
-**输出：** `map→odom` TF（全局重定位修正）
-
-**内部流程（两阶段）：**
-
-```
-阶段 1: 全局初始化 (KISS-Matcher)
-    │  累计 /registered_scan，加载先验 PCD 地图
-    │  FPFH 特征提取 + TEASER++ 鲁棒粗配准 + small_gicp 精配准
-    │  日志: "KISSMatcher initialization succeeded"
-
-阶段 2: 连续跟踪 (small_gicp)
-    │  以上一帧位姿为初值，/registered_scan vs prior_pcd 的 GICP 配准
-    │  持续更新 map→odom TF
-    │  连续失败 → 自动重新全局初始化
-```
-
-**必要性举例：** 导航启动时，机器人物理位置 (`odom` 系) 和地图 (`map` 系) 没有对齐关系。KISS-Matcher 通过匹配 LiDAR 扫描和历史 PCD 地图算出 `map→odom` 变换，Nav2 才能把里程计位姿转到 map 系做路径规划。
-
----
-
-### 2.8 Nav2 导航栈
-
-| 属性 | 值 |
-|------|-----|
-| **启动文件** | `me_nav2_bringup/launch/my_nav2_launch.py` |
-| **配置文件** | `config/nav2_params.yaml` |
-| **必要性** | 🔴 导航核心 |
-
-包含 8 个子节点：
-
-**map_server** — 从文件加载 `/map` (OccupancyGrid)。建图模式由 SLAM Toolbox 替代。
-
-**planner_server** — Navfn (Dijkstra) 全局规划器。在 global_costmap 上搜索避障路径，输出 `/plan` (Path)。
-
-**controller_server** — DWB 局部控制器。在 local_costmap (6×6m 滑动窗口) 内采样 400 条轨迹，7 个评价函数打分（避障/路径对齐/目标对齐/距离/旋转），选最优轨迹发 `/cmd_vel` (Twist)。参数: max_vel_x=0.26 m/s, max_vel_theta=1.0 rad/s, xy_goal_tolerance=0.035m。
-
-**bt_navigator** — 行为树引擎。`/navigate_to_pose` Action → ComputePathToPose → FollowPath → 卡住则 Recovery (Spin/BackUp/Wait) → 重规划。
-
-**behavior_server** — spin(原地旋转清代价地图), backup(倒车), wait(等待)。
-
-**smoother_server** — 对全局路径做样条平滑。
-
-**waypoint_follower** — 顺序导航途经多航点。
-
-**velocity_smoother** — OPEN_LOOP 模式，对 cmd_vel 做加速度限制。
-
----
-
-### 2.9 代价地图
+#### global_costmap vs local_costmap
 
 | | global_costmap | local_costmap |
-|---|---|---|
+|--|--|--|
 | 坐标系 | `map` | `odom` |
-| 大小 | 由 `/map` 决定 | 6×6m 滑动窗口 |
-| 分辨率 | 0.05m | 0.05m |
+| 大小 | 等于 `/map` 地图 | 6×6m 滑动窗口 |
 | 图层 | static + obstacle + inflation | obstacle + inflation |
+| 更新 | 5Hz | 20Hz |
 | 膨胀半径 | 0.55m | 0.55m |
-| 更新频率 | 5Hz | 20Hz |
+| 用途 | planner 全局规划 | controller 局部避障 |
 
----
+#### 关键参数（`nav2_params.yaml`）
 
-### 2.10 GUI 遥控 (gui_teleop)
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| `controller_server.max_vel_x` | 0.26 m/s | 最大线速度 |
+| `controller_server.max_vel_theta` | 1.0 rad/s | 最大角速度 |
+| `controller_server.xy_goal_tolerance` | 0.035m | 目标位置容差 |
+| `local_costmap.rolling_window` | `true` | 以机器人为中心滑动 |
+| `global_costmap.robot_radius` | 0.22m | 机器人底盘半径 |
 
-| 属性 | 值 |
-|------|-----|
-| **包名** | `gui_teleop` |
-| **实现** | Python tkinter |
-| **必要性** | 🟢 非必须，可用键盘替代 |
-
-**输出：** `/cmd_vel` (Twist)。WASD=移动，Shift=加速，空格=急停。GUI 滑块实时调节速度倍率 (0.1x~3.0x)。
-
----
-
-## 3. 数据格式速查
-
-| 消息类型 | 关键字段 | 典型大小 |
-|---------|---------|---------|
-| `PointCloud2` | `data` (序列化点数组), `fields`, `height`, `width` | 降采样 ~50KB, 全量 ~500KB |
-| `LaserScan` | `ranges[]`, `angle_min/max/increment`, `range_min/max` | ~4KB |
-| `Odometry` | `pose.pose`, `twist.twist`, `child_frame_id` | ~200B |
-| `OccupancyGrid` | `data[]` (0-100), `info.resolution/origin/width/height` | 按地图大小 |
-| `Twist` | `linear.x/y/z`, `angular.x/y/z` | ~100B |
-| `Imu` | `angular_velocity`, `linear_acceleration`, `orientation` | ~200B |
-| `TransformStamped` | `transform.translation/rotation`, `child_frame_id` | ~150B |
-
----
-
-## 4. TF 树完整链路
+#### 行为树流程
 
 ```
-map ──(KISS-Matcher/SLAM)──→ odom ──(sensor_scan_generation)──→ base_footprint
-                                                                     │
-                                                (robot_state_publisher, URDF)
-                                                                     │
-                                                                     ▼
-                                                                  chassis
-                                                                     │
-                                                (robot_state_publisher, URDF)
-                                                                     │
-                                                                     ▼
-                                                                livox_frame
+/navigate_to_pose (Action)
+        │
+        ▼
+  ComputePathToPose ──→ planner_server ──→ /plan
+        │
+        ▼
+  FollowPath ──→ controller_server ──→ /cmd_vel
+        │
+        │ (卡住/超时)
+        ▼
+  Recovery ──→ behavior_server
+   ├── spin (原地旋转清代价地图)
+   ├── backup (倒车)
+   └── wait (等待)
+        │
+        ▼
+  重新 ComputePathToPose (重规划)
 ```
 
-| TF 边 | 发布者 | 类型 | 含义 |
+---
+
+## 4. 当前项目架构：全套管线
+
+### 4.1 建图模式
+
+```
+                         ┌────────────────────────┐
+                         │    ① 数据输入           │
+                         │  Gazebo / Livox 驱动    │
+                         │  → /livox/lidar + /imu │
+                         └───────────┬────────────┘
+                                     │
+                         ┌───────────▼────────────┐
+                         │    ② 3D 里程计          │
+                         │    FAST-LIO             │
+                         │  → /Odometry            │
+                         │  → /cloud_registered    │
+                         └───────────┬────────────┘
+                                     │
+                         ┌───────────▼────────────┐
+                         │    ③ 桥接转换          │
+                         │  lio_interface          │
+                         │  sensor_scan_generation │
+                         │  pointcloud_to_laserscan│
+                         │  → odom→base TF + /odom │
+                         │  → /scan                │
+                         └───────────┬────────────┘
+                                     │
+                    ┌────────────────┼────────────────┐
+                    │                                  │
+         ┌──────────▼──────────┐          ┌───────────▼──────────┐
+         │  ③a SLAM Toolbox    │          │  ③b Cartographer      │
+         │  2D 位姿图 SLAM     │          │  子图+回环 SLAM        │
+         │  → /map + map→odom  │          │  → /map + map→odom    │
+         └──────────┬──────────┘          └───────────┬──────────┘
+                    │                                  │
+                    └────────────────┬─────────────────┘
+                                     │
+                         ┌───────────▼────────────┐
+                         │    ④ Nav2 (可选)        │
+                         │  加载地图，不发送目标    │
+                         │  rviz2 可视化建图结果    │
+                         └────────────────────────┘
+```
+
+**启动脚本**：
+
+| 脚本 | SLAM 后端 | 环境 |
+|------|-----------|------|
+| `mapping_sim_tmux.sh` | SLAM Toolbox | 仿真（宿主机，gnome-terminal） |
+| `mapping_sim_docker.sh` | SLAM Toolbox | 仿真（Docker，tmux） |
+| **`mapping_sim_carto_docker.sh`** | **Cartographer** | **仿真（Docker，tmux）** |
+
+### 4.2 导航模式
+
+```
+                         ┌────────────────────────┐
+                         │    ①②③ 同上            │
+                         │  (到 /scan 输出)        │
+                         └───────────┬────────────┘
+                                     │
+         ┌───────────────────────────┼───────────────────────────┐
+         │                           │                           │
+         ▼                           ▼                           ▼
+  ┌──────────────┐          ┌──────────────────┐        ┌──────────────┐
+  │ map_server   │          │ 重定位            │        │ Nav2 导航    │
+  │ 加载静态     │          │                  │        │              │
+  │ .pgm 地图    │          │                  │        │              │
+  │ → /map       │          │                  │        │              │
+  └──────┬───────┘          └────────┬─────────┘        └──────┬───────┘
+         │                           │                         │
+         ▼                           ▼                         │
+  global_costmap  ◄─── /map    map→odom TF ──────────→ global_costmap
+                                        ──────────→ local_costmap
+                                                           │
+                                                           ▼
+                                                      /cmd_vel → 底盘
+```
+
+**重定位方案对比**：
+
+| 方案 | 建图时用 | 导航时加载 | 发布 |
+|------|---------|-----------|------|
+| KISS-Matcher | SLAM Toolbox | `.pcd` 先验地图 | `map→odom` TF |
+| Cartographer 纯定位 | Cartographer | `.pbstream` 地图 | `map→odom` TF |
+
+> ⚠️ `map→odom` TF **同一时间只能有一个发布者**——用了 KISS 就不要开 Cartographer 定位，反之亦然。
+
+**启动脚本**：
+
+| 脚本 | 重定位方案 | 环境 |
+|------|-----------|------|
+| `nav2_sim_tmux.sh` | KISS-Matcher | 仿真（宿主机） |
+| `nav2_sim_docker.sh` | KISS-Matcher | 仿真（Docker，tmux） |
+| **`nav2_sim_carto_docker.sh`** | **Cartographer 纯定位** | **仿真（Docker，tmux）** |
+
+### 4.3 完整 TF 树
+
+```
+map ──(重定位节点发布)──→ odom ──(sensor_scan_generation)──→ base_footprint
+                                                                  │
+                                             (robot_state_publisher, URDF)
+                                                                  │
+                                                          ┌───────┴───────┐
+                                                          ▼               ▼
+                                                       chassis        livox_frame
+                                                          │
+                                             (URDF 静态变换)
+                                                          │
+                                                          ▼
+                                                   left/right_wheel ...
+```
+
+| TF 边 | 发布者 | 频率 | 含义 |
 |--------|--------|------|------|
-| `map→odom` | KISS-Matcher (导航) / SLAM Toolbox (建图) | 动态 | 全局修正 |
-| `odom→base_footprint` | sensor_scan_generation | 动态 ~10Hz | 实时里程计 |
-| `base_footprint→chassis` | robot_state_publisher (URDF) | 静态 | 几何中心 |
-| `chassis→livox_frame` | robot_state_publisher (URDF) | 静态 | LiDAR 外参 |
+| `map → odom` | KISS-Matcher / Cartographer / SLAM Toolbox | 动态 | 全局定位修正，漂移补偿 |
+| `odom → base_footprint` | sensor_scan_generation | ~10Hz | 里程计累积位姿 |
+| `base_footprint → chassis` | robot_state_publisher (URDF) | 静态 | 机器人中心到底盘 |
+| `chassis → livox_frame` | robot_state_publisher (URDF) | 静态 | LiDAR 安装外参 |
+
+### 4.4 选型决策树
+
+```
+需要建图？
+├── 大场景 (>500m²)，需要回环检测？  → Cartographer
+├── 小场景，快速测试？                → SLAM Toolbox
+└── 需要建图和定位统一框架？          → Cartographer
+
+需要导航？
+├── 建图用了 SLAM Toolbox？
+│   └── KISS-Matcher 重定位（加载 .pcd）+ map_server（加载 .pgm）
+├── 建图用了 Cartographer？
+│   └── Cartographer 纯定位（加载 .pbstream）+ map_server（加载 .pgm）
+└── 不确定？
+    └── Cartographer 全套（建图+纯定位），框架统一，维护成本低
+
+运行环境？
+├── Docker？    → 用 *_docker.sh (tmux版)
+└── 宿主机？    → 用 *_tmux.sh 或 *_sim.sh (gnome-terminal版)
+```
+
+### 4.5 脚本-模式-会话速查
+
+| 脚本 | 模式 | tmux 会话 | 里程计 | SLAM/定位 | 环境 |
+|------|------|-----------|--------|-----------|------|
+| `mapping_sim_docker.sh` | 建图 | `mapping_sim` | FAST-LIO | SLAM Toolbox | Docker |
+| `mapping_sim_carto_docker.sh` | 建图 | `mapping_carto` | FAST-LIO | Cartographer | Docker |
+| `nav2_sim_docker.sh` | 导航 | `nav2_sim` | FAST-LIO | KISS-Matcher | Docker |
+| `nav2_sim_carto_docker.sh` | 导航 | `nav2_carto` | FAST-LIO | Cartographer 纯定位 | Docker |
+| `octomap_sim_docker.sh` | 3D建图 | `octomap_sim` | FAST-LIO | OctoMap | Docker |
+| `mapping_sim_superlio_docker.sh` | 建图 | — | Super-LIO | — | Docker |
 
 ---
 
-## 5. 操作指南
+## 5. 常见架构问题与排错
 
-### 建图流程
+### Q1：Nav2 报 "Transform data too old"
+
+**原因**：`use_sim_time` 不一致（仿真必须全 `true`），或某个发布 TF 的节点挂了。
 
 ```bash
-source install/setup.bash
-./scripts/mapping_sim_tmux.sh
-# 驾驶机器人遍历环境后：
-./scripts/save_map.sh    # → src/me_nav2_bringup/map/
-./scripts/save_pcd.sh    # → src/me_nav2_bringup/pcd/
-./scripts/kill_mapping_sim.sh
+# 检查各节点的 use_sim_time
+ros2 param get /cartographer_node use_sim_time
+ros2 param get /controller_server use_sim_time
 ```
 
-### 导航流程
+### Q2：建图不更新 / 地图漂移
+
+**原因**：里程计质量差（FAST-LIO 初始化不充分），或 Cartographer 的 scan matching 参数不匹配。
+
+**排查**：
+```bash
+# 检查 /scan 是否正常
+ros2 topic hz /scan
+# 检查 TF 是否完整
+ros2 run tf2_tools view_frames
+# 检查 Cartographer 是否有 scan matching 日志
+docker exec lio_nav2 tmux attach -t mapping_carto  # 看 Cartographer 窗口
+```
+
+### Q3：KISS-Matcher 一直显示 "initializing"
+
+**原因**：累计的 `/registered_scan` 点云不够，或 `prior_pcd_file` 路径错误。
+
+**解决**：让机器人原地缓慢旋转几圈加速初始化；检查 `.pcd` 文件是否存在。
+
+### Q4：Cartographer 纯定位无法初始化
+
+**解决**：
+1. 确认 `.pbstream` 路径正确
+2. 在 RViz 中用 "2D Pose Estimate" 给初始位姿
+3. 让机器人原地旋转几圈
+
+### Q5：两个节点同时发布 `map→odom` TF
+
+**现象**：机器人位姿在 RViz 中来回跳动。
+
+**解决**：检查是否有 KISS-Matcher 和 Cartographer 同时运行——两者只能有一个。
 
 ```bash
-# 确保地图和 PCD 路径正确
-vim src/me_nav2_bringup/launch/my_nav2_launch.py  # map_yaml_file
-vim src/registration/global_relocalization_kiss_matcher/launch/...py  # prior_pcd_file
-
-source install/setup.bash
-./scripts/nav2_sim_tmux.sh
-# RViz "Nav2 Goal" 或命令行：
-ros2 run me_nav2_bringup send_goal.py --ros-args -p x:=3.0 -p y:=-1.0 -p yaw:=0.0
+# 列出所有发布 map→odom TF 的节点
+ros2 run tf2_tools view_frames  # 查看 frames.pdf
 ```
