@@ -48,7 +48,7 @@ ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch_zlim.py"
 
 gnome-terminal --title="KISS + GICP 重定位" -- bash -c "
 source install/setup.bash;
-ros2 launch global_relocalization_kiss_matcher global_kiss_matcher_relocalization_launch.py"
+ros2 launch global_relocalization_kiss_matcher global_kiss_matcher_relocalization_launch_real.py"
 
 
 # ========== nav2 导航 ==========
