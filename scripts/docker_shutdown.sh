@@ -12,9 +12,9 @@
 set -euo pipefail
 
 # 本项目相关的容器名
-CONTAINERS=(lio_nav2 lio_nav2_build)
+CONTAINERS=(lio_nav2 lio_nav2_build robo_mapping_superlio robo_mapping_pointlio)
 # 本项目可能存在的 tmux 会话（mapping_sim_docker.sh 等创建）
-TMUX_SESSIONS=(mapping_sim nav2_sim mapping_real nav2_real mapping_carto nav2_carto robo_mapping robo_mapping_carto robo_nav2 octomap_sim)
+TMUX_SESSIONS=(mapping_sim nav2_sim mapping_real nav2_real mapping_carto nav2_carto robo_mapping robo_mapping_carto robo_nav2 octomap_sim robo_mapping_superlio robo_mapping_pointlio)
 
 DRY_RUN=false
 STOP=false
@@ -22,18 +22,18 @@ REMOVE=false
 
 for arg in "$@"; do
     case $arg in
-        --dry-run) DRY_RUN=true ;;
-        --stop)    STOP=true ;;
-        --rm)      REMOVE=true; STOP=true ;;
-        -h|--help)
+        --dry-run robo_mapping_superlio robo_mapping_pointlio) DRY_RUN=true ;;
+        --stop robo_mapping_superlio robo_mapping_pointlio)    STOP=true ;;
+        --rm robo_mapping_superlio robo_mapping_pointlio)      REMOVE=true; STOP=true ;;
+        -h|--help robo_mapping_superlio robo_mapping_pointlio)
             echo "用法: $0 [--dry-run] [--stop] [--rm]"
             echo ""
             echo "  关闭 Docker 容器内仿真/建图/导航的所有节点"
             echo ""
             echo "  选项:"
             echo "    --dry-run  只列出将要执行的操作，不实际执行"
-            echo "    --stop     清理节点后停止容器 (docker stop)"
-            echo "    --rm       清理节点后删除容器 (docker rm -f，隐含 --stop)"
+            echo "    --stop     清理节点后停止容器 (docker stop robo_mapping_superlio robo_mapping_pointlio)"
+            echo "    --rm       清理节点后删除容器 (docker rm -f，隐含 --stop robo_mapping_superlio robo_mapping_pointlio)"
             echo ""
             echo "  示例:"
             echo "    $0            # 杀掉容器内所有节点，容器保留（下次启动快）"
@@ -56,13 +56,13 @@ for c in "${CONTAINERS[@]}"; do
         continue
     fi
 
-    RUNNING=$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null || echo false)
-    echo "══ 容器: $c (running=$RUNNING) ══"
+    RUNNING=$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null || echo false robo_mapping_superlio robo_mapping_pointlio)
+    echo "══ 容器: $c (running=$RUNNING robo_mapping_superlio robo_mapping_pointlio) ══"
 
     if [ "$RUNNING" = "true" ]; then
         # ── 阶段 1: 关闭 tmux 会话（等价于关闭 gnome-terminal 窗口）──
         echo "── 阶段 1: 关闭 tmux 会话 ──"
-        OPEN_SESSIONS=$(docker exec "$c" tmux ls 2>/dev/null | cut -d: -f1 || true)
+        OPEN_SESSIONS=$(docker exec "$c" tmux ls 2>/dev/null | cut -d: -f1 || true robo_mapping_superlio robo_mapping_pointlio)
         if [ -n "$OPEN_SESSIONS" ]; then
             for s in "${TMUX_SESSIONS[@]}"; do
                 if echo "$OPEN_SESSIONS" | grep -qx "$s"; then
@@ -75,11 +75,11 @@ for c in "${CONTAINERS[@]}"; do
                 fi
             done
         else
-            echo "  (无 tmux 会话)"
+            echo "  (无 tmux 会话 robo_mapping_superlio robo_mapping_pointlio)"
         fi
 
         # ── 阶段 2: 复用容器内 kill_all.sh 清理 ROS 节点 ──
-        echo "── 阶段 2: 清理容器内 ROS 节点 (kill_all.sh -f) ──"
+        echo "── 阶段 2: 清理容器内 ROS 节点 (kill_all.sh -f robo_mapping_superlio robo_mapping_pointlio) ──"
         KILL_ARGS="-f"
         [ "$DRY_RUN" = true ] && KILL_ARGS="-f --dry-run"
         if docker exec "$c" test -x /ws/scripts/kill_all.sh 2>/dev/null; then
@@ -97,7 +97,7 @@ for c in "${CONTAINERS[@]}"; do
             fi
         fi
     else
-        echo "  (容器未运行，跳过节点清理)"
+        echo "  (容器未运行，跳过节点清理 robo_mapping_superlio robo_mapping_pointlio)"
     fi
 
     # ── 阶段 3: 停止 / 删除容器 ──
@@ -126,10 +126,10 @@ FOUND=false
 for c in "${CONTAINERS[@]}"; do
     if docker inspect "$c" &>/dev/null; then
         FOUND=true
-        STATUS=$(docker inspect -f '{{.State.Status}}' "$c")
+        STATUS=$(docker inspect -f '{{.State.Status}}' "$c" robo_mapping_superlio robo_mapping_pointlio)
         echo "  - $c: $STATUS"
     fi
 done
-[ "$FOUND" = false ] && echo "  (无本项目容器)"
+[ "$FOUND" = false ] && echo "  (无本项目容器 robo_mapping_superlio robo_mapping_pointlio)"
 [ "$DRY_RUN" = true ] && echo "DRY-RUN 完成，以上为将要执行的操作"
 exit 0

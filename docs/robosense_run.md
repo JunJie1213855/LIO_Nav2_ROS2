@@ -6,21 +6,50 @@
 
 ## 1. 架构概览
 
-```
-rslidar_sdk → /rslidar_points (PointCloud2) → FAST-LIO → /Odometry + /cloud_registered
-            → /rslidar_imu_data (Imu)       →                │
-                                                              ↓
-                    lio_interface → sensor_scan_generation → pointcloud_to_laserscan
-                           │               │                       │
-                           │         odom→base TF               /scan
-                           │            + /odom                   │
-                           └───────────────┼──────────────────────┘
-                                           │
-                          ┌────────────────┴────────────────┐
-                          │                                  │
-                     建图模式                             导航模式
-                  SLAM Toolbox                   KISS-Matcher + Nav2
-             或 Cartographer 建图            或 Cartographer 纯定位 + Nav2
+```mermaid
+flowchart LR
+    SDK["rslidar_sdk"] --> RP["/rslidar_points<br/>PointCloud2"]
+    SDK --> RI["/rslidar_imu_data<br/>Imu"]
+
+    RP --> LIO
+    RI --> LIO
+
+    subgraph LIO["3D 里程计 — 三选一"]
+        FAST["FAST-LIO<br/>(默认) → /Odometry"]
+        SUPER["Super-LIO<br/>→ /lio/odom"]
+        POINT["Point-LIO<br/>→ /aft_mapped_to_init"]
+    end
+
+    LIO --> LIOIF["lio_interface<br/>坐标系归一化"]
+    LIOIF --> SENSOR["sensor_scan_generation<br/>odom→base TF + /odom"]
+    SENSOR --> P2L["pointcloud_to_laserscan<br/>3D→2D → /scan"]
+
+    P2L -->|"/scan"| SLAM
+    SENSOR -->|"/odom"| SLAM
+
+    subgraph MAP["2D 建图 — 二选一"]
+        SLAM["SLAM Toolbox<br/>→ .pgm + .yaml"]
+        CARTO["Cartographer<br/>→ .pbstream → .pgm"]
+    end
+
+    subgraph NAV["导航重定位 — 二选一"]
+        KISS["KISS-Matcher<br/>加载 .pcd"]
+        CARTO_LOC["Cartographer 纯定位<br/>加载 .pbstream"]
+    end
+
+    SLAM --> KISS
+    CARTO --> CARTO_LOC
+    KISS -->|"map→odom TF"| NAV2
+    CARTO_LOC -->|"map→odom TF"| NAV2
+
+    subgraph NAV2["Nav2 导航栈"]
+        MAPSRV["map_server<br/>加载 .pgm"]
+        PLANNER["planner_server"]
+        CTRL["controller_server<br/>→ /cmd_vel"]
+    end
+
+    MAPSRV -->|"/map"| PLANNER
+    PLANNER --> CTRL
 ```
 
 **与 Livox 仿真的关键差异：**
@@ -198,7 +227,55 @@ docker exec lio_nav2 bash -c "
     -map_filestem /ws/src/me_nav2_bringup/map/airy_map"
 ```
 
-### 4.4 关闭
+### 4.4 KISS-Matcher + Nav2 导航
+
+导航模式加载已建好的地图（.pgm + .pcd），通过 KISS-Matcher 全局重定位，Nav2 执行路径规划和控制。
+
+**前置文件（由建图阶段生成）：**
+
+| 文件 | 来源 | 用途 |
+|------|------|------|
+| `.pgm` + `.yaml` | `save_map.sh` | Nav2 map_server 静态地图 |
+| `dense_map.pcd` | `save_pcd.sh` | KISS-Matcher 全局重定位先验地图 |
+
+> 导航前确认 `my_nav2_launch.py` 中 `map_yaml_file` 指向正确的 `.yaml` 文件。
+
+```bash
+# 启动
+docker exec -it lio_nav2 /ws/scripts/robo_nav2_real_docker.sh /dataset/robosense/nav1
+
+# 查看输出
+docker exec -it lio_nav2 tmux attach -t robo_nav2
+
+# 停止
+docker exec lio_nav2 tmux kill-session -t robo_nav2
+```
+
+tmux 窗口：
+
+| 窗口 | 内容 |
+|------|------|
+| `bag播放` | 回放数据集 `--clock` |
+| `FAST-LIO` | 3D 里程计 + **3D RViz** |
+| `robot_desc` | URDF → 静态 TF |
+| `lio_if` | 坐标系转换 |
+| `sensor` | odom→base TF + /odom |
+| `pc2laser` | 3D→2D 切片 → /scan |
+| `KISS+GICP` | KISS-Matcher 全局重定位 → `map→odom` TF |
+| `Nav2` | planner + controller + behavior server |
+| `RViz` | **导航 RViz**（`/map` + `/scan` + `/plan` + `/global_costmap` + `/local_costmap` + TF） |
+
+**操作步骤：**
+
+1. `docker exec -it lio_nav2 tmux attach -t robo_nav2` 查看输出
+2. 等待 `KISS+GICP` 窗口打印 `KISSMatcher initialization succeeded`
+   - 如果一直 `initializing`：bag 数据开始后 KISS 需要几帧点云做全局匹配
+3. RViz 中 Fixed Frame 设为 `map`
+4. 用 **"2D Pose Estimate"** 工具在机器人真实位置点击 + 拖动方向
+5. KISS-Matcher 对齐后，`map→odom` TF 开始发布，机器人模型对齐到地图
+6. 用 **"Nav2 Goal"** 工具点击目标位姿，机器人开始自主导航
+
+### 4.5 关闭
 
 ```bash
 ./scripts/docker_shutdown.sh            # 清理节点，容器保留
@@ -214,13 +291,18 @@ docker exec lio_nav2 bash -c "
 |------|------|
 | 实机建图（SLAM Toolbox） | `./scripts/robo_mapping_real.sh` |
 | 实机导航（KISS-Matcher） | `./scripts/robo_nav2_real.sh` |
-| Docker SLAM Toolbox | `docker exec -it lio_nav2 /ws/scripts/robo_mapping_real_docker.sh` |
-| Docker Cartographer | `docker exec -it lio_nav2 /ws/scripts/robo_mapping_carto_docker.sh` |
+| Docker 建图（FAST-LIO） | `docker exec -it lio_nav2 /ws/scripts/robo_mapping_real_docker.sh` |
+| Docker 建图（Point-LIO） | `docker exec -it lio_nav2 /ws/scripts/robo_mapping_pointlio_docker.sh` |
+| Docker 建图（Super-LIO） | `docker exec -it lio_nav2 /ws/scripts/robo_mapping_superlio_docker.sh` |
+| Docker 建图（Cartographer） | `docker exec -it lio_nav2 /ws/scripts/robo_mapping_carto_docker.sh` |
+| Docker 导航（KISS-Matcher） | `docker exec -it lio_nav2 /ws/scripts/robo_nav2_real_docker.sh` |
 
-| Docker 脚本 | 会话 | 窗口数 | SLAM 后端 |
-|------------|------|--------|-----------|
-| `robo_mapping_real_docker.sh` | `robo_mapping` | 9 | SLAM Toolbox |
-| `robo_mapping_carto_docker.sh` | `robo_mapping_carto` | 9 | Cartographer |
+| Docker 脚本 | 会话 | 里程计 | 建图 |
+|------------|------|--------|------|
+| `robo_mapping_real_docker.sh` | `robo_mapping` | FAST-LIO | SLAM Toolbox |
+| `robo_mapping_superlio_docker.sh` | `robo_mapping_superlio` | Super-LIO | SLAM Toolbox |
+| `robo_mapping_carto_docker.sh` | `robo_mapping_carto` | FAST-LIO | Cartographer |
+| `robo_nav2_real_docker.sh` | `robo_nav2` | FAST-LIO | KISS-Matcher + Nav2 |
 
 ---
 
