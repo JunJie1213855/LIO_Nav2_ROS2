@@ -13,18 +13,21 @@
   <img src="docs/KISS%20show_2.gif" alt="KISS demo 2" width="48%">
 </p>
 
-**Nav2_3D** 是一个面向四轮滑移转向机器人的 ROS 2 Humble 导航工作空间。系统以 Livox MID-360 3D LiDAR 和 IMU 为核心传感器，集成 LiDAR-Inertial Odometry (LIO) 里程计、3D 点云重定位和 Nav2 导航框架，支持 **Gazebo 仿真**与**实机部署**，仅需切换启动脚本即可在两种模式间无缝切换。
+**LIO_Nav2_ROS2** 是一个面向四轮滑移转向机器人的 ROS 2 Humble 导航工作空间。系统以 Livox MID-360 / RoboSense Airy 3D LiDAR 和 IMU 为核心传感器，集成 LiDAR-Inertial Odometry (LIO) 里程计、2D SLAM 建图、3D 点云重定位和 Nav2 导航框架。支持 **Gazebo 仿真**、**实机部署**和 **数据集回放**，支持 **Docker 容器化编译与运行**。
 
 核心特性：
 
-- **3D 重定位** — 基于 small_gicp + KISS-Matcher 的全局重定位
-- **双 LIO 后端** — FAST-LIO2 与 Point-LIO 可灵活切换
+- **多种 LIO 后端** — FAST-LIO2、Point-LIO、**Super-LIO** 可灵活切换
+- **双 SLAM 后端** — SLAM Toolbox 与 **Cartographer** 可选，Cartographer 自带回环检测和纯定位
+- **3D 重定位** — KISS-Matcher + small_gicp 全局重定位，或 Cartographer 纯定位
+- **传感器兼容** — 同时支持 Livox MID-360 和 **RoboSense Airy**
 - **仿真-实机一致性** — 同一套导航栈，仅传感器驱动和 URDF 不同
+- **Docker 支持** — 提供完整 Docker 镜像构建、编译和运行方案
 - **完整工具链** — 构建、建图、保存地图、导航全流程脚本化
 
 数据管线：
 
-> LiDAR/IMU &rarr; LIO (FAST-LIO 或 Point-LIO) &rarr; TF 桥接 (`lio_interface`) &rarr; odom TF &amp; `/registered_scan` (`sensor_scan_generation`) &rarr; 3D&rarr;2D 切片 (`pointcloud_to_laserscan`) &rarr; 重定位 (`small_gicp_relocalization` 或 `global_relocalization_kiss_matcher`) &rarr; Nav2 (DWB + Navfn)
+> LiDAR/IMU &rarr; LIO (FAST-LIO / Point-LIO / Super-LIO) &rarr; TF 桥接 (`lio_interface`) &rarr; odom TF &amp; `/registered_scan` (`sensor_scan_generation`) &rarr; 3D&rarr;2D 切片 (`pointcloud_to_laserscan`) &rarr; 2D SLAM 建图 (SLAM Toolbox / Cartographer) &rarr; 重定位 (KISS-Matcher / Cartographer 纯定位) &rarr; Nav2 (DWB + Navfn)
 
 TF 坐标树：**`map` &rarr; `odom` &rarr; `base_footprint` &rarr; `chassis` &rarr; `livox_frame`**
 
@@ -55,54 +58,55 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 ## 3. 快速开始
 
+> 完整运行指南请参考 [`docs/docker_run.md`](docs/docker_run.md)（Docker）和 [`docs/robosense_run.md`](docs/robosense_run.md)（RoboSense Airy）。
+
 ### 3.1 仿真建图
 
 ```bash
 source install/setup.bash
 cd scripts
+
+# SLAM Toolbox 建图
 ./mapping_sim.sh
+
+# 或 Cartographer 建图（带回环检测）
+./mapping_sim_carto.sh
 ```
 
-此命令启动 Gazebo、FAST-LIO、SLAM Toolbox、Nav2 和 GUI 遥控窗口。使用 WASD 键驾驶机器人遍历环境。覆盖足够面积后保存地图：
+保存地图：
 
 ```bash
-./save_map.sh       # 保存 2D 占用栅格地图至 src/me_nav2_bringup/map/
-./save_pcd.sh       # 保存 3D 点云，手动移至 src/me_nav2_bringup/pcd/
+./save_map.sh       # 2D 栅格地图 → src/me_nav2_bringup/map/
+./save_pcd.sh       # 3D 点云地图 → src/me_nav2_bringup/pcd/（KISS-Matcher 用）
 ```
 
 ### 3.2 仿真导航
 
-修改以下文件，指向新保存的地图和点云：
+```bash
+cd scripts
+./nav2_sim.sh              # KISS-Matcher + Nav2
+# 或
+./nav2_sim_carto.sh        # Cartographer 纯定位 + Nav2
+```
 
-- `src/me_nav2_bringup/launch/my_nav2_launch.py` — 设置 `map_yaml_file`
-- `src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py` — 设置 `prior_pcd_file`
+在 RViz 中用 "2D Pose Estimate" 给初始位姿，然后用 "Nav2 Goal" 发送导航目标。
 
-然后启动：
+### 3.3 实机 (RoboSense Airy)
 
 ```bash
 cd scripts
-./nav2_sim.sh
+./robo_mapping_real.sh     # 建图（FAST-LIO + SLAM Toolbox）
+./robo_mapping_real.sh     # 建图（修改最后一行为 Cartographer）
+./robo_nav2_real.sh        # 导航（KISS-Matcher + Nav2）
 ```
 
-在 RViz 中使用 **"Nav2 Goal"** 发送导航目标。
-
-### 3.3 实机建图
+### 3.4 Docker
 
 ```bash
-cd scripts
-./mapping_real.sh
+docker build -t lio_nav2:humble .
+docker run -d --name lio_nav2 ... lio_nav2:humble sleep infinity
+docker exec -it lio_nav2 /ws/scripts/mapping_sim_carto_docker.sh
 ```
-
-将 Gazebo 替换为 Livox MID-360 硬件驱动 (`livox_ros_driver2`) 和实机 URDF (`gld_robot_description`)。
-
-### 3.4 实机导航
-
-```bash
-cd scripts
-./nav2_real.sh
-```
-
-包含 `small_gicp_relocalization`，基于先验 PCD 地图进行重定位。
 
 ### 3.5 全局重定位：三种方案
 
@@ -346,10 +350,12 @@ cd scripts
 
 - [FAST-LIO2](https://github.com/hku-mars/FAST_LIO) — 紧耦合 LiDAR-IMU 里程计
 - [Point-LIO](https://github.com/hku-mars/Point-LIO) — 高带宽 LiDAR-IMU 里程计
+- [Super-LIO](https://github.com/hku-mars/Super-LIO) — 自监督 LiDAR-IMU 里程计
+- [Cartographer](https://github.com/cartographer-project/cartographer) — 2D/3D 图优化 SLAM
 - [Nav2](https://github.com/ros-planning/navigation2) — ROS 2 导航框架
 - [small_gicp](https://github.com/koide3/small_gicp) — 高效并行化 GICP 配准
 - [KISS-Matcher](https://github.com/MIT-SPARK/KISS-Matcher) — 快速全局点云配准 (ICRA 2025)
-- [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox) — 2D SLAM
+- [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox) — 2D 位姿图 SLAM
 - [Livox SDK2](https://github.com/Livox-SDK/Livox-SDK2) — Livox LiDAR SDK
 - [Sophus](https://github.com/strasdat/Sophus) — 李群 C++ 库
 

@@ -11,18 +11,21 @@ A ROS 2-based 3D LiDAR autonomous navigation system
   <img src="docs/KISS%20show_2.gif" alt="KISS demo 2" width="48%">
 </p>
 
-**Nav2_3D** is a ROS 2 Humble navigation workspace for four-wheel skid-steering robots. The system uses a Livox MID-360 3D LiDAR and IMU as its core sensors, integrating LiDAR-Inertial Odometry (LIO), 3D point-cloud relocalization, and the Nav2 navigation framework. It supports both **Gazebo simulation** and **real-robot deployment**, and the two modes can be switched by changing only the launch scripts.
+**LIO_Nav2_ROS2** is a ROS 2 Humble navigation workspace for four-wheel skid-steering robots. The system uses a Livox MID-360 / RoboSense Airy 3D LiDAR and IMU as its core sensors, integrating LiDAR-Inertial Odometry (LIO), 2D SLAM mapping, 3D point-cloud relocalization, and the Nav2 navigation framework. It supports **Gazebo simulation**, **real-robot deployment**, and **dataset playback**, with full **Docker containerized** build and run support.
 
 Key features:
 
-- **3D relocalization** - Global relocalization based on small_gicp and KISS-Matcher
-- **Dual LIO backends** - Flexible switching between FAST-LIO2 and Point-LIO
-- **Simulation-to-real consistency** - The same navigation stack is used; only the sensor driver and URDF differ
-- **Complete toolchain** - Scripted workflow for build, mapping, map saving, and navigation
+- **Multiple LIO backends** — FAST-LIO2, Point-LIO, **Super-LIO** with flexible switching
+- **Dual SLAM backends** — SLAM Toolbox and **Cartographer**; Cartographer includes loop closure and pure localization
+- **3D relocalization** — KISS-Matcher + small_gicp global relocalization, or Cartographer pure localization
+- **Multi-sensor** — Supports both Livox MID-360 and **RoboSense Airy**
+- **Simulation-to-real consistency** — The same navigation stack is used; only the sensor driver and URDF differ
+- **Docker support** — Complete Docker image build, compile, and run workflow
+- **Complete toolchain** — Scripted workflow for build, mapping, map saving, and navigation
 
 Data pipeline:
 
-> LiDAR/IMU &rarr; LIO (FAST-LIO or Point-LIO) &rarr; TF bridge (`lio_interface`) &rarr; odom TF and `/registered_scan` (`sensor_scan_generation`) &rarr; 3D-to-2D slicing (`pointcloud_to_laserscan`) &rarr; relocalization (`small_gicp_relocalization` or `global_relocalization_kiss_matcher`) &rarr; Nav2 (DWB + Navfn)
+> LiDAR/IMU &rarr; LIO (FAST-LIO / Point-LIO / Super-LIO) &rarr; TF bridge (`lio_interface`) &rarr; odom TF and `/registered_scan` (`sensor_scan_generation`) &rarr; 3D-to-2D slicing (`pointcloud_to_laserscan`) &rarr; 2D SLAM (SLAM Toolbox / Cartographer) &rarr; relocalization (KISS-Matcher / Cartographer localization) &rarr; Nav2 (DWB + Navfn)
 
 TF tree: **`map` &rarr; `odom` &rarr; `base_footprint` &rarr; `chassis` &rarr; `livox_frame`**
 
@@ -53,54 +56,54 @@ Rebuild after every source-code change. Before launching any node, make sure `so
 
 ## 3. Quick Start
 
+> Full run guides: [`docs/docker_run.md`](docs/docker_run.md) (Docker), [`docs/robosense_run.md`](docs/robosense_run.md) (RoboSense Airy).
+
 ### 3.1 Simulation Mapping
 
 ```bash
 source install/setup.bash
 cd scripts
+
+# SLAM Toolbox
 ./mapping_sim.sh
+
+# Or Cartographer (with loop closure)
+./mapping_sim_carto.sh
 ```
 
-This command starts Gazebo, FAST-LIO, SLAM Toolbox, Nav2, and the GUI teleoperation window. Use the WASD keys to drive the robot through the environment. After enough area has been covered, save the maps:
+Save the maps:
 
 ```bash
-./save_map.sh       # Save the 2D occupancy grid map to src/me_nav2_bringup/map/
-./save_pcd.sh       # Save the 3D point cloud, then move it manually to src/me_nav2_bringup/pcd/
+./save_map.sh       # 2D grid map → src/me_nav2_bringup/map/
+./save_pcd.sh       # 3D point cloud → src/me_nav2_bringup/pcd/ (for KISS-Matcher)
 ```
 
 ### 3.2 Simulation Navigation
 
-Edit the following files so they point to the newly saved map and point cloud:
+```bash
+cd scripts
+./nav2_sim.sh              # KISS-Matcher + Nav2
+# or
+./nav2_sim_carto.sh        # Cartographer localization + Nav2
+```
 
-- `src/me_nav2_bringup/launch/my_nav2_launch.py` - Set `map_yaml_file`
-- `src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py` - Set `prior_pcd_file`
+In RViz, use "2D Pose Estimate" to give an initial pose, then "Nav2 Goal" to send a target.
 
-Then start:
+### 3.3 Real Robot (RoboSense Airy)
 
 ```bash
 cd scripts
-./nav2_sim.sh
+./robo_mapping_real.sh     # Mapping (FAST-LIO + SLAM Toolbox)
+./robo_nav2_real.sh        # Navigation (KISS-Matcher + Nav2)
 ```
 
-Use **"Nav2 Goal"** in RViz to send a navigation goal.
-
-### 3.3 Real-Robot Mapping
+### 3.4 Docker
 
 ```bash
-cd scripts
-./mapping_real.sh
+docker build -t lio_nav2:humble .
+docker run -d --name lio_nav2 ... lio_nav2:humble sleep infinity
+docker exec -it lio_nav2 /ws/scripts/mapping_sim_carto_docker.sh
 ```
-
-This replaces Gazebo with the Livox MID-360 hardware driver (`livox_ros_driver2`) and the real-robot URDF (`gld_robot_description`).
-
-### 3.4 Real-Robot Navigation
-
-```bash
-cd scripts
-./nav2_real.sh
-```
-
-This includes `small_gicp_relocalization` and performs relocalization against a prior PCD map.
 
 ### 3.5 Global Relocalization: Three Options
 
@@ -344,10 +347,12 @@ This project is built on the following open-source projects:
 
 - [FAST-LIO2](https://github.com/hku-mars/FAST_LIO) - Tightly coupled LiDAR-IMU odometry
 - [Point-LIO](https://github.com/hku-mars/Point-LIO) - High-bandwidth LiDAR-IMU odometry
+- [Super-LIO](https://github.com/hku-mars/Super-LIO) - Self-supervised LiDAR-IMU odometry
+- [Cartographer](https://github.com/cartographer-project/cartographer) - 2D/3D graph-optimized SLAM
 - [Nav2](https://github.com/ros-planning/navigation2) - ROS 2 navigation framework
 - [small_gicp](https://github.com/koide3/small_gicp) - Efficient parallelized GICP registration
 - [KISS-Matcher](https://github.com/MIT-SPARK/KISS-Matcher) - Fast global point-cloud registration (ICRA 2025)
-- [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox) - 2D SLAM
+- [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox) - 2D pose-graph SLAM
 - [Livox SDK2](https://github.com/Livox-SDK/Livox-SDK2) - Livox LiDAR SDK
 - [Sophus](https://github.com/strasdat/Sophus) - Lie group C++ library
 
