@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="go2_control_joint" params="name initial:=0.0">
+    <joint name="${name}">
+      <command_interface name="position">
+        <param name="min">-3.14</param>
+        <param name="max">3.14</param>
+      </command_interface>
+      <state_interface name="position">
+        <param name="initial_value">${initial}</param>
+      </state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="go2_ros2_control">
+    <ros2_control name="Go2GazeboSystem" type="system">
+      <hardware>
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
+      <xacro:go2_control_joint name="FL_hip_joint"/>
+      <xacro:go2_control_joint name="FL_thigh_joint" initial="0.8"/>
+      <xacro:go2_control_joint name="FL_calf_joint" initial="-1.5"/>
+      <xacro:go2_control_joint name="FR_hip_joint"/>
+      <xacro:go2_control_joint name="FR_thigh_joint" initial="0.8"/>
+      <xacro:go2_control_joint name="FR_calf_joint" initial="-1.5"/>
+      <xacro:go2_control_joint name="RL_hip_joint"/>
+      <xacro:go2_control_joint name="RL_thigh_joint" initial="0.8"/>
+      <xacro:go2_control_joint name="RL_calf_joint" initial="-1.5"/>
+      <xacro:go2_control_joint name="RR_hip_joint"/>
+      <xacro:go2_control_joint name="RR_thigh_joint" initial="0.8"/>
+      <xacro:go2_control_joint name="RR_calf_joint" initial="-1.5"/>
+    </ros2_control>
+  </xacro:macro>
+</robot>

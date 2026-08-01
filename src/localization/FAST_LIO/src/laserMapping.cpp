@@ -519,32 +519,32 @@ void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Share
     /* 1. make sure you have enough memories
     /* 2. noted that pcd save will influence the real-time performences **/
     /* */
-    if (pcd_save_en)
-    {
-        int size = feats_undistort->points.size();
-        PointCloudXYZI::Ptr laserCloudWorld( \
-                        new PointCloudXYZI(size, 1));
+    // if (pcd_save_en)
+    // {
+    //     int size = feats_undistort->points.size();
+    //     PointCloudXYZI::Ptr laserCloudWorld( \
+    //                     new PointCloudXYZI(size, 1));
 
-        for (int i = 0; i < size; i++)
-        {
-            RGBpointBodyToWorld(&feats_undistort->points[i], \
-                                &laserCloudWorld->points[i]);
-        }
-        *pcl_wait_save += *laserCloudWorld;
+    //     for (int i = 0; i < size; i++)
+    //     {
+    //         RGBpointBodyToWorld(&feats_undistort->points[i], \
+    //                             &laserCloudWorld->points[i]);
+    //     }
+    //     *pcl_wait_save += *laserCloudWorld;
 
-        static int scan_wait_num = 0;
-        scan_wait_num ++;
-        if (pcl_wait_save->size() > 0 && pcd_save_interval > 0  && scan_wait_num >= pcd_save_interval)
-        {
-            pcd_index ++;
-            string all_points_dir(string(string(ROOT_DIR) + "PCD/scans_") + to_string(pcd_index) + string(".pcd"));
-            pcl::PCDWriter pcd_writer;
-            cout << "current scan saved to /PCD/" << all_points_dir << endl;
-            pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
-            pcl_wait_save->clear();
-            scan_wait_num = 0;
-        }
-    }
+    //     static int scan_wait_num = 0;
+    //     scan_wait_num ++;
+    //     if (pcl_wait_save->size() > 0 && pcd_save_interval > 0  && scan_wait_num >= pcd_save_interval)
+    //     {
+    //         pcd_index ++;
+    //         string all_points_dir(string(string(ROOT_DIR) + "PCD/scans_") + to_string(pcd_index) + string(".pcd"));
+    //         pcl::PCDWriter pcd_writer;
+    //         cout << "current scan saved to /PCD/" << all_points_dir << endl;
+    //         pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
+    //         pcl_wait_save->clear();
+    //         scan_wait_num = 0;
+    //     }
+    // }
     // */
 }
 
@@ -611,67 +611,10 @@ void publish_map(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub
     // pubLaserCloudMap->publish(laserCloudMap);
 }
 
-// void save_to_pcd()
-// {
-//     pcl::PCDWriter pcd_writer;
-//     pcd_writer.writeBinary(map_file_path, *pcl_wait_pub);
-// }
 void save_to_pcd()
 {
-    if (ikdtree.Root_Node == nullptr)
-    {
-        std::cerr << "[ERROR] Cannot save map: ikdtree is empty!" << std::endl;
-        return;
-    }
-
-    // Get all points from ikdtree
-    PointVector().swap(ikdtree.PCL_Storage);
-    ikdtree.flatten(ikdtree.Root_Node, ikdtree.PCL_Storage, NOT_RECORD);
-
-    // Convert to PCL point cloud
-    PointCloudXYZI::Ptr map_cloud(new PointCloudXYZI());
-    map_cloud->points = ikdtree.PCL_Storage;
-    map_cloud->width = map_cloud->points.size();
-    map_cloud->height = 1;
-    map_cloud->is_dense = false;
-
-    if (map_cloud->points.size() == 0)
-    {
-        std::cerr << "[ERROR] Cannot save map: no points in ikdtree!" << std::endl;
-        return;
-    }
-
-    if (save_voxel_size > 1e-6)
-    {
-        pcl::VoxelGrid<PointType> sf;
-        sf.setLeafSize(save_voxel_size, save_voxel_size, save_voxel_size);
-        auto sc = std::make_shared<PointCloudXYZI>();
-        sf.setInputCloud(map_cloud);
-        sf.filter(*sc);
-        std::cout << "[INFO] Save voxel " << save_voxel_size << "m: " << map_cloud->points.size() << " -> " << sc->points.size() << " pts" << std::endl;
-        map_cloud = sc;
-    }
     pcl::PCDWriter pcd_writer;
-    pcd_writer.writeBinary(map_file_path, *map_cloud);
-    std::cout << "[INFO] Map saved successfully with " << map_cloud->points.size() << " points to " << map_file_path << std::endl;
-    // 同时保存稠密累积点云用于重定位（来自每帧 feats_undistort 的累积）
-    if (pcl_wait_save->size() > 0)
-    {
-        string dense_path(string(string(ROOT_DIR) + "PCD/dense_map.pcd"));
-        std::filesystem::path p(dense_path);
-        if (!p.parent_path().empty() && !std::filesystem::exists(p.parent_path()))
-            std::filesystem::create_directories(p.parent_path());
-
-        pcl::VoxelGrid<PointType> vg;
-        vg.setLeafSize(0.05, 0.05, 0.05);
-        auto filtered = std::make_shared<PointCloudXYZI>();
-        vg.setInputCloud(pcl_wait_save);
-        vg.filter(*filtered);
-        std::cout << "[INFO] Dense map: " << pcl_wait_save->size()
-                  << " -> " << filtered->size() << " pts (0.05m voxel)" << std::endl;
-        pcd_writer.writeBinary(dense_path, *filtered);
-        std::cout << "[INFO] Dense map saved to " << dense_path << std::endl;
-    }
+    pcd_writer.writeBinary(map_file_path, *pcl_wait_pub);
 }
 template<typename T>
 void set_posestamp(T & out)

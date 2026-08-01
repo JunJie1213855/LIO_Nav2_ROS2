@@ -1,0 +1,6 @@
+image: /ws/src/me_nav2_bringup/map/my_map.pgm
+resolution: 0.050000
+origin: [-15.454480, -2.922537, 0.0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196

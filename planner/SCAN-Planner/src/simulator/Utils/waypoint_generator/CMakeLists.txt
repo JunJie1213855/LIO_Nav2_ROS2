@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.8)
+project(waypoint_generator)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_compile_options(-Wall -Wextra -Wpedantic)
+find_package(ament_cmake REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+
+add_executable(waypoint_generator src/waypoint_generator.cpp)
+ament_target_dependencies(waypoint_generator geometry_msgs nav_msgs rclcpp)
+install(TARGETS waypoint_generator DESTINATION lib/${PROJECT_NAME})
+ament_package()

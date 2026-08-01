@@ -92,7 +92,7 @@ double res_mean_last = 0.05, total_residual = 0.0;
 double last_timestamp_lidar = 0, last_timestamp_imu = -1.0;
 double gyr_cov = 0.1, acc_cov = 0.1, b_gyr_cov = 0.0001, b_acc_cov = 0.0001;
 double filter_size_corner_min = 0, filter_size_surf_min = 0, filter_size_map_min = 0, fov_deg = 0;
-double save_voxel_size = 0.2;
+double save_voxel_size = 0.0;
 double cube_len = 0, HALF_FOV_COS = 0, FOV_DEG = 0, total_distance = 0, lidar_end_time = 0, first_lidar_time = 0.0;
 int effct_feat_num = 0, time_log_counter = 0, scan_count = 0, publish_count = 0;
 int iterCount = 0, feats_down_size = 0, NUM_MAX_ITERATIONS = 0, laserCloudValidNum = 0, pcd_save_interval = -1, pcd_index = 0;
@@ -654,60 +654,73 @@ void publish_map(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub
 
 void save_to_pcd()
 {
-    if (ikdtree.Root_Node == nullptr)
-    {
-        std::cerr << "[ERROR] Cannot save map: ikdtree is empty!" << std::endl;
-        return;
-    }
-
-    // Get all points from ikdtree
-    PointVector().swap(ikdtree.PCL_Storage);
-    ikdtree.flatten(ikdtree.Root_Node, ikdtree.PCL_Storage, NOT_RECORD);
-
-    // Convert to PCL point cloud
-    PointCloudXYZI::Ptr map_cloud(new PointCloudXYZI());
-    map_cloud->points = ikdtree.PCL_Storage;
-    map_cloud->width = map_cloud->points.size();
-    map_cloud->height = 1;
-    map_cloud->is_dense = false;
-
-    if (map_cloud->points.size() == 0)
-    {
-        std::cerr << "[ERROR] Cannot save map: no points in ikdtree!" << std::endl;
-        return;
-    }
-
-    if (save_voxel_size > 1e-6)
-    {
-        pcl::VoxelGrid<PointType> sf;
-        sf.setLeafSize(save_voxel_size, save_voxel_size, save_voxel_size);
-        auto sc = std::make_shared<PointCloudXYZI>();
-        sf.setInputCloud(map_cloud);
-        sf.filter(*sc);
-        std::cout << "[INFO] Save voxel " << save_voxel_size << "m: " << map_cloud->points.size() << " -> " << sc->points.size() << " pts" << std::endl;
-        map_cloud = sc;
-    }
     pcl::PCDWriter pcd_writer;
-    pcd_writer.writeBinary(map_file_path, *map_cloud);
-    std::cout << "[INFO] Map saved successfully with " << map_cloud->points.size() << " points to " << map_file_path << std::endl;
-    // 同时保存稠密累积点云用于重定位（来自每帧 feats_undistort 的累积）
-    if (pcl_wait_save->size() > 0)
+    std::cout << "size of pcl_wait_pub : " << pcl_wait_pub->points.size() << "\n";
+    // 保存 pcl_wait_pub（实时发布用点云）
+    if (pcl_wait_pub->points.size() > 0)
     {
-        string dense_path(string(string(ROOT_DIR) + "PCD/dense_map.pcd"));
-        std::filesystem::path p(dense_path);
-        if (!p.parent_path().empty() && !std::filesystem::exists(p.parent_path()))
-            std::filesystem::create_directories(p.parent_path());
-
-        pcl::VoxelGrid<PointType> vg;
-        vg.setLeafSize(0.05, 0.05, 0.05);
-        auto filtered = std::make_shared<PointCloudXYZI>();
-        vg.setInputCloud(pcl_wait_save);
-        vg.filter(*filtered);
-        std::cout << "[INFO] Dense map: " << pcl_wait_save->size()
-                  << " -> " << filtered->size() << " pts (0.05m voxel)" << std::endl;
-        pcd_writer.writeBinary(dense_path, *filtered);
-        std::cout << "[INFO] Dense map saved to " << dense_path << std::endl;
+        std::cout << "save pcl_wait_pub" << "\n";
+        pcd_writer.writeBinary(map_file_path, *pcl_wait_pub);
+        std::cout << "[INFO] Map saved: " << pcl_wait_pub->points.size()
+                  << " points to " << map_file_path << std::endl;
     }
+    else
+    {
+        std::cout << "[WARN] pcl_wait_pub is empty, saving ikdtree map instead." << std::endl;
+        if (ikdtree.Root_Node == nullptr)
+        {
+            std::cerr << "[ERROR] Cannot save map: ikdtree is empty!" << std::endl;
+            return;
+        }
+        PointVector().swap(ikdtree.PCL_Storage);
+        ikdtree.flatten(ikdtree.Root_Node, ikdtree.PCL_Storage, NOT_RECORD);
+        PointCloudXYZI::Ptr map_cloud(new PointCloudXYZI());
+        map_cloud->points = ikdtree.PCL_Storage;
+        map_cloud->width = map_cloud->points.size();
+        map_cloud->height = 1;
+        map_cloud->is_dense = false;
+        if (map_cloud->points.size() == 0)
+        {
+            std::cerr << "[ERROR] Cannot save map: no points in ikdtree!" << std::endl;
+            return;
+        }
+        if (save_voxel_size > 1e-6)
+        {
+            pcl::VoxelGrid<PointType> sf;
+            sf.setLeafSize(save_voxel_size, save_voxel_size, save_voxel_size);
+            auto sc = std::make_shared<PointCloudXYZI>();
+            sf.setInputCloud(map_cloud);
+            sf.filter(*sc);
+            std::cout << "[INFO] Save voxel " << save_voxel_size
+                      << "m: " << map_cloud->points.size()
+                      << " -> " << sc->points.size() << " pts" << std::endl;
+            map_cloud = sc;
+        }
+        pcd_writer.writeBinary(map_file_path, *map_cloud);
+        std::cout << "[INFO] Map saved: " << map_cloud->points.size()
+                  << " points to " << map_file_path << std::endl;
+    }
+
+    // 同时保存稠密累积点云用于重定位
+    // if (pcl_wait_save->size() > 0)
+    // {
+    //     string dense_path(string(string(ROOT_DIR) + "PCD/dense_map.pcd"));
+    //     std::filesystem::path p(dense_path);
+    //     if (!p.parent_path().empty() && !std::filesystem::exists(p.parent_path()))
+    //         std::filesystem::create_directories(p.parent_path());
+    //     pcl::VoxelGrid<PointType> vg;
+    //     vg.setLeafSize(0.05, 0.05, 0.05);
+    //     auto filtered = std::make_shared<PointCloudXYZI>();
+    //     vg.setInputCloud(pcl_wait_save);
+    //     vg.filter(*filtered);
+    //     std::cout << "[INFO] Dense map: " << pcl_wait_save->size()
+    //               << " -> " << filtered->size() << " pts (0.05m voxel)" << std::endl;
+    //     if (filtered->points.size() > 0)
+    //     {
+    //         pcd_writer.writeBinary(dense_path, *filtered);
+    //         std::cout << "[INFO] Dense map saved to " << dense_path << std::endl;
+    //     }
+    // }
 }
 
 template <typename T>

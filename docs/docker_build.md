@@ -38,14 +38,14 @@ docker build -t lio_nav2:humble .
 ### 2.1 启动编译容器（限 4 核）
 
 ```bash
-docker run -d --name lio_nav2_build --cpus 4 --network host \
+docker run -d --name lio_nav2 --cpus 4 --network host \
   -v $PWD:/ws lio_nav2:humble sleep infinity
 ```
 
 ### 2.2 rosdep 兜底安装（正常几秒）
 
 ```bash
-docker exec lio_nav2_build bash -c \
+docker exec lio_nav2 bash -c \
   "rosdep update && cd /ws && rosdep install --from-paths src --ignore-src --rosdistro humble -r -y"
 ```
 

@@ -1,0 +1,73 @@
+mockamap_node:
+  ros__parameters:
+    use_sim_time: false
+    seed: 127
+    update_freq: 0.5
+    resolution: 0.1
+    x_length: 40
+    y_length: 40
+    z_length: 5
+    type: 2
+    complexity: 0.05
+    fill: 0.12
+    fractal: 1
+    attenuation: 0.1
+    width_min: 0.2
+    width_max: 0.8
+    height_min: 2.0
+    height_max: 2.0
+    obstacle_number: 500
+    surface_resolution: 0.05
+
+pcl_render_node:
+  ros__parameters:
+    use_sim_time: false
+    quadrotor_name: quad_0
+    sensor_type: lidar
+    body_pose_topic: body_pose
+    map.resolution: 0.1
+    map.x_size: 40.0
+    map.y_size: 40.0
+    map.z_size: 5.0
+    sensing_horizon: 40.0
+    sensing_rate: 10.0
+    estimation_rate: 10.0
+    polar_resolution: 0.2
+    yaw_fov: 360.0
+    vertical_fov: 90.0
+    min_raylength: 1.0
+    downsample_res: 0.1
+    lidar_pitch: 45.0
+    is_360lidar: 1
+    use_minicf_pattern: 1
+    use_avia_pattern: 0
+    use_vlp32_pattern: 0
+    use_os64_pattern: 0
+    use_os128_pattern: 0
+    cam_width: 640
+    cam_height: 480
+    cam_fx: 387.229248046875
+    cam_fy: 387.229248046875
+    cam_cx: 321.04638671875
+    cam_cy: 243.44969177246094
+    dynamic.enable: 0
+    dynamic.object_size: 0.0
+    dynamic.object_count: 0
+    dynamic.mode: 0
+    dynamic.velocity: 0.0
+    collision_check.enable: 0
+    collision_check.range: 0.3
+    use_global_map_topic: true
+    pcd_map_file: ''
+
+odom_visualization:
+  ros__parameters:
+    use_sim_time: false
+    frame_id: world
+    child_frame_id: base
+    publish_tf: true
+    robot_scale: 1.0
+    color.r: 0.0
+    color.g: 0.0
+    color.b: 0.0
+    color.a: 1.0
