@@ -38,28 +38,26 @@ Visualization Manager:
         Z: 0
       Plane: XY
       Plane Cell Count: 20
-      Reference Frame: camera_init
+      Reference Frame: odom
       Value: true
-    # SCAN-Planner 体素占据地图
-    - Alpha: 0.7
-      Class: rviz_default_plugins/Map
-      Color Scheme: map
-      Draw Behind: false
+    # SCAN-Planner 体素占据地图 (PointCloud2, 不是 OccupancyGrid)
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Class: rviz_default_plugins/PointCloud2
+      Color Transformer: FlatColor
+      Color: 200; 200; 200
       Enabled: true
-      Name: OccupancyGrid
+      Name: OccupancyVoxels
+      Size (Pixels): 2
+      Size (m): 0.1
+      Style: Flat Squares
       Topic:
-        Depth: 1
+        Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
-        Reliability Policy: Best Effort
+        Reliability Policy: Reliable
         Value: /grid_map/occupancy
-      Update Topic:
-        Depth: 1
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Best Effort
-        Value: /grid_map/occupancy
-      Use Timestamp: false
+      Use Fixed Frame: true
       Value: true
     # SCAN-Planner 膨胀体素图 (PointCloud2, 不是 OccupancyGrid)
     - Alpha: 1
@@ -76,7 +74,7 @@ Visualization Manager:
         Depth: 1
         Durability Policy: Volatile
         History Policy: Keep Last
-        Reliability Policy: Best Effort
+        Reliability Policy: Reliable
         Value: /grid_map/occupancy_inflate
       Use Fixed Frame: true
       Value: true
@@ -95,7 +93,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /LIO/clouds_lidar
+        Value: /registered_scan
       Use Fixed Frame: true
       Value: true
     # B-spline 规划轨迹
@@ -156,10 +154,30 @@ Visualization Manager:
       Show Names: true
       Update Interval: 0
       Value: true
+    # 机器人模型 (URDF)
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: camera_init
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:
@@ -194,7 +212,7 @@ Visualization Manager:
       Name: Current View
       Near Clip Distance: 0.01
       Pitch: 0.5
-      Target Frame: camera_init
+      Target Frame: odom
       Value: Orbit (rviz)
       Yaw: 0.5
     Saved: ~

@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<robot name="airy_mapping">
+
+  <!-- base_footprint = IMU = 机器人机身参照系 -->
+  <link name="base_footprint" />
+
+  <!-- chassis = 底盘中间帧（lio_interface / sensor_scan_generation 需要此帧）-->
+  <link name="chassis" />
+
+  <!-- LiDAR 传感器帧 -->
+  <link name="livox_frame" />
+
+  <!-- base_footprint → chassis (重合) -->
+  <joint name="base_to_chassis" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="chassis"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+  </joint>
+
+  <!-- chassis → livox_frame (重合，坐标校正由 FAST-LIO 内部处理) -->
+  <joint name="chassis_to_lidar" type="fixed">
+    <parent link="chassis"/>
+    <child link="livox_frame"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+  </joint>
+
+</robot>
