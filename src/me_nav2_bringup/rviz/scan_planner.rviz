@@ -96,32 +96,38 @@ Visualization Manager:
         Value: /registered_scan
       Use Fixed Frame: true
       Value: true
-    # B-spline 规划轨迹
-    - Alpha: 1
-      Buffer Length: 1
-      Class: rviz_default_plugins/Path
-      Color: 25; 255; 0
+    # SCAN-Planner 最优轨迹 (Marker)
+    - Class: rviz_default_plugins/Marker
       Enabled: true
-      Head Diameter: 0.3
-      Head Length: 0.2
-      Length: 0.3
-      Line Style: Lines
-      Line Width: 0.05
-      Name: BSpline Path
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Pose Color: 255; 85; 255
-      Pose Style: None
-      Shaft Diameter: 0.1
-      Shaft Length: 0.1
+      Name: OptimalTraj
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /planning/bspline
+        Value: /optimal_list
+      Value: true
+    # 全局路径 (Marker)
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: GlobalPath
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /global_list
+      Value: true
+    # 目标点 (Marker)
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: GoalPoint
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /goal_point
       Value: true
     # 规划数据可视化
     - Alpha: 0.5

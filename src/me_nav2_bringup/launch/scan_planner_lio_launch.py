@@ -78,11 +78,21 @@ def generate_launch_description():
         ],
     )
 
+    # SCAN-Planner 可视化硬编码 "world" 帧, 发布 world→odom identity TF 桥接
+    world_tf = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="world_to_odom_tf",
+        arguments=["0", "0", "0", "0", "0", "0", "world", "odom"],
+        parameters=[{"use_sim_time": use_sim_time}],
+    )
+
     return LaunchDescription([
         declare_use_sim_time,
         declare_navi_mode,
         declare_use_pcd_map,
         declare_pcd_map_file,
+        world_tf,
         scan_planner_node,
         closed_loop_controller,
     ])
