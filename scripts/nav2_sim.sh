@@ -22,7 +22,7 @@ ros2 run gui_teleop gui_teleop_node"
 # # 使用fast-lio作为里程计
 gnome-terminal --title="FAST-LIO 里程计" -- bash -c "
 source install/setup.bash;
-ros2 launch fast_lio mapping.launch.py"
+ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py config_file:=mid360.yaml"
 
 # 里程计接口
 gnome-terminal --title="lio_interface" -- bash -c "
@@ -77,4 +77,4 @@ ros2 launch global_relocalization_kiss_matcher global_kiss_matcher_relocalizatio
 
 gnome-terminal --title="Nav2 导航" -- bash -c "
 source install/setup.bash;
-ros2 launch me_nav2_bringup my_nav2_launch.py"
+ros2 launch me_nav2_bringup my_nav2_launch.py use_sim_time:=True"
