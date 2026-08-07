@@ -47,7 +47,7 @@ ros2 launch slam_toolbox online_async_launch.py \
     slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
 
 
-# ================ slam toolbox 建图 ================
+# ================ slam toolbox 建图可视化 ================
 gnome-terminal --title="slam_toolbox 建图可视化" -- bash -c "
 source install/setup.bash;
 rviz2 -d src/gld_robot_description/rviz/nav2.rviz"
