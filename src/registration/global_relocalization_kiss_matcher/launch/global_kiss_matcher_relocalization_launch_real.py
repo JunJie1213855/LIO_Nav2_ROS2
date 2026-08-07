@@ -28,12 +28,12 @@ def generate_launch_description():
         parameters=[
             {
                 "use_sim_time": False,
-                "num_threads": 4,
-                "num_neighbors": 10,
-                "global_leaf_size": 0.25,
-                "registered_leaf_size": 0.25,
+                "num_threads": 1,
+                "num_neighbors": 5,
+                "global_leaf_size": 0.5,
+                "registered_leaf_size": 0.5,
                 "max_dist_sq": 1.0,
-                "voxel_resolution": 0.25,
+                "voxel_resolution": 0.5,
                 "use_global_initialization": True,
                 "use_kiss_recovery": True,
                 "gicp_max_consecutive_failures": 2,

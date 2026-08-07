@@ -71,7 +71,7 @@ ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch_zlim.py"
 gnome-terminal --title="机器人描述" -- bash -c "
 killall -9 gzserver gzclient;
 source install/setup.bash;
-ros2 launch gld_robot_description gld_robot_description_launch.py"
+ros2 launch gld_robot_description robosense_description_launch.py"
 
 
 

@@ -29,7 +29,7 @@ ros2 launch me_nav2_bringup middleware_launch.py use_sim_time:=False"
 gnome-terminal --title="机器人描述" -- bash -c "
 killall -9 gzserver gzclient;
 source install/setup.bash;
-ros2 launch gld_robot_description gld_robot_description_launch.py"
+ros2 launch gld_robot_description robosense_description_launch.py"
 
 
 # ========== 重定位 ==========

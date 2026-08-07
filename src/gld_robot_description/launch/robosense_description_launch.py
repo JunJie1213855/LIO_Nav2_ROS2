@@ -9,7 +9,7 @@ def generate_launch_description():
 
     pkg_share = get_package_share_directory('gld_robot_description')
     # rviz_file = os.path.join(pkg_share, 'rviz', 'nav2_new.rviz')
-    urdf_file = os.path.join(pkg_share, 'model', 'gld_robot_description.urdf')
+    urdf_file = os.path.join(pkg_share, 'model', 'robodog.urdf')
     
     with open(urdf_file, 'r') as infp:
         robot_desc = infp.read()
