@@ -37,6 +37,23 @@ def generate_launch_description():
     declare_pcd_map_file = DeclareLaunchArgument(
         "pcd_map_file", default_value="")
 
+    # Z 轴过滤节点: 去除天花板和地面，只保留机器人高度范围的点云
+    z_filter = Node(
+        package="me_nav2_bringup",
+        executable="cloud_z_filter.py",
+        name="cloud_z_filter",
+        output="screen",
+        parameters=[{
+            "use_sim_time": use_sim_time,
+            "z_min": -1.0,
+            "z_max": 2.0,
+        }],
+        remappings=[
+            ("cloud_in", "/registered_scan"),
+            ("cloud_out", "/registered_scan_filtered"),
+        ],
+    )
+
     # SCAN-Planner 核心规划节点
     # 将 LIO 管线话题映射到 SCAN-Planner 的输入
     scan_planner_node = Node(
@@ -57,9 +74,9 @@ def generate_launch_description():
         }],
         remappings=[
             # LIO 管线 → SCAN-Planner 输入
-            ("body_pose", "/odom"),                  # odom→base_footprint (sensor_scan_generation)
-            ("sensor_pose", "/odom"),                 # IMU≈body, 共用
-            ("cloud", "/registered_scan"),            # odom 系点云 (lio_interface)
+            ("body_pose", "/odom"),                       # odom→base_footprint (sensor_scan_generation)
+            ("sensor_pose", "/odom"),                      # IMU≈body, 共用
+            ("cloud", "/registered_scan_filtered"),        # Z 轴过滤后的点云
         ],
     )
 
@@ -93,6 +110,7 @@ def generate_launch_description():
         declare_use_pcd_map,
         declare_pcd_map_file,
         world_tf,
+        z_filter,
         scan_planner_node,
         closed_loop_controller,
     ])
