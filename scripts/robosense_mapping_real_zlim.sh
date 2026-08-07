@@ -17,78 +17,42 @@ cd "$WORKSPACE_ROOT" || exit 1
 # ║  Pointcloud2d_3d.yaml 使用标准正值：min_height=0.2, max_height=1.0  ║
 # ╚══════════════════════════════════════════════════════════════════════╝
 
-# point_lio
-# gnome-terminal --title="Livox Point-LIO 驱动" -- bash -c "
-# source install/setup.bash;
-# ros2 launch livox_ros_driver2 point_lio_msg_MID360_launch.py"
 
-# gnome-terminal --title="Point-LIO 里程计" -- bash -c "
-# source install/setup.bash;
-# ros2 launch point_lio point_lio.launch.py \
-#   point_lio_cfg_dir:=/home/pio/Nav2_3D_ws/src/localization/point_lio/config/mid360_real.yaml"
-
-# gnome-terminal --title="Point-LIO lio_interface" -- bash -c "
-# source install/setup.bash;
-# ros2 launch lio_interface pointlio_lio_interface_launch.py"
-
-
-# fast_lio
-# gnome-terminal --title="Livox Fast-LIO 驱动" -- bash -c "
-# source install/setup.bash;
-# ros2 launch livox_ros_driver2 fast_lio_msg_MID360_launch.py"
+# ================ rslidar 驱动 ================
 # gnome-terminal --title="robosense lidar SDK" -- bash -c "
 # source install/setup.bash;
 # ros2 launch rslidar_sdk driver_only.launch.py"
 
-# sleep 3
-
+# ================ fast-lio2 ================
 gnome-terminal --title="FAST-LIO 里程计" -- bash -c "
 source install/setup.bash;
 ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
 
-
-# 中间层
-gnome-terminal --title="中间层(lio+sensor+pc2l)" -- bash -c "
-source install/setup.bash;
-ros2 launch me_nav2_bringup middleware_launch.py use_sim_time:=False"
-
-gnome-terminal --title="sensor_scan_generation" -- bash -c "
-source install/setup.bash;
-ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
-
-gnome-terminal --title="3d点云转2d" -- bash -c "
-source install/setup.bash;
-ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch_zlim.py"
-
-# lio_interface 
-# gnome-terminal --title="Fast-LIO lio_interface" -- bash -c "
-# source install/setup.bash;
-# ros2 launch lio_interface fastlio_lio_interface_launch.py use_sim_time:=False"
-
-# ---------
-
-
+# ================ robosense airy 描述 ================
 gnome-terminal --title="机器人描述" -- bash -c "
 killall -9 gzserver gzclient;
 source install/setup.bash;
 ros2 launch gld_robot_description robosense_description_launch.py"
 
+# ================ 中间层 ================
+gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
+source install/setup.bash;
+ros2 launch me_nav2_bringup middleware_launch.py use_sim_time:=False"
 
 
-# gnome-terminal --title="slam_toolbox 建图" -- bash -c "
-# source install/setup.bash;
-# ros2 launch slam_toolbox online_async_launch.py"
-
-# gnome-terminal --title="slam_toolbox 建图" -- bash -c "
-# source install/setup.bash;
-# ros2 launch slam_toolbox online_async_launch.py \
-#     slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
-
+# ================ slam toolbox 建图 ================
 gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 source install/setup.bash;
 ros2 launch slam_toolbox online_async_launch.py \
     slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
 
+
+# ================ slam toolbox 建图 ================
+gnome-terminal --title="slam_toolbox 建图可视化" -- bash -c "
+source install/setup.bash;
+rviz2 -d src/gld_robot_description/rviz/nav2.rviz"
+
+# ================ Nav2 导航 ================
 # gnome-terminal --title="Nav2 导航" -- bash -c "
 # source install/setup.bash;
 # ros2 launch me_nav2_bringup my_nav2_launch.py"
