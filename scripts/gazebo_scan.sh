@@ -30,8 +30,10 @@ W "SCAN"      "ros2 launch me_nav2_bringup scan_planner_lio_launch.py \
     double_cylinder_radius:=0.30 double_cylinder_offset:=0.0 \
     body_height:=0.25 obstacles_inflation_z_down:=0.1 \
     optimization.lambda_collision:=10.0 optimization.dist0:=0.2 \
+    grid_map.p_occ:=0.3 grid_map.p_hit:=0.9 grid_map.p_miss:=0.1 \
     grid_map.sliding_map_size_x:=50.0 grid_map.sliding_map_size_y:=50.0 \
-    grid_map.local_update_range_x:=25.0 grid_map.local_update_range_y:=25.0"
+    grid_map.local_update_range_x:=25.0 grid_map.local_update_range_y:=25.0 \
+    use_pcd_map:=true pcd_map_file:=/ws/PCD/map.pcd"
 sleep 2
 W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d /ws/src/me_nav2_bringup/rviz/scan_planner.rviz"
 

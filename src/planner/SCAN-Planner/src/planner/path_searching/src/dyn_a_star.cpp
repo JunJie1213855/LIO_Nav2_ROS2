@@ -279,10 +279,10 @@ ASTAR_RET AStar::AstarSearch(const double step_size, Vector3d start_pt, Vector3d
                 }
             }
         const auto time_2 = std::chrono::steady_clock::now();
-        if (std::chrono::duration<double>(time_2 - time_1).count() > 0.2)
+        if (std::chrono::duration<double>(time_2 - time_1).count() > 0.5)
         {
             RCLCPP_WARN(rclcpp::get_logger("path_searching"),
-                        "Failed in A-star path search: 0.2 second time limit exceeded");
+                        "Failed in A-star path search: 0.5 second time limit exceeded");
             return ASTAR_RET::SEARCH_ERR;
         }
     }

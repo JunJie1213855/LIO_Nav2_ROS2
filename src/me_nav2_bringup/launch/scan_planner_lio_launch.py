@@ -44,6 +44,9 @@ def generate_launch_description():
     declare_inf_d = DeclareLaunchArgument("obstacles_inflation_z_down", default_value="0.4")
     declare_lambda_col = DeclareLaunchArgument("optimization.lambda_collision", default_value="1.0")
     declare_dist0 = DeclareLaunchArgument("optimization.dist0", default_value="0.2")
+    declare_p_occ = DeclareLaunchArgument("grid_map.p_occ", default_value="0.8")
+    declare_p_hit = DeclareLaunchArgument("grid_map.p_hit", default_value="0.85")
+    declare_p_miss = DeclareLaunchArgument("grid_map.p_miss", default_value="0.30")
 
     # Z 轴过滤节点: 去除天花板和地面，只保留机器人高度范围的点云
     z_min = LaunchConfiguration("z_min", default="-1.0")
@@ -71,6 +74,9 @@ def generate_launch_description():
     inflate_z_down = LaunchConfiguration("obstacles_inflation_z_down", default="0.4")
     lambda_collision = LaunchConfiguration("optimization.lambda_collision", default="1.0")
     dist0 = LaunchConfiguration("optimization.dist0", default="0.2")
+    p_occ = LaunchConfiguration("grid_map.p_occ", default="0.8")
+    p_hit = LaunchConfiguration("grid_map.p_hit", default="0.85")
+    p_miss = LaunchConfiguration("grid_map.p_miss", default="0.30")
 
     # SCAN-Planner 核心规划节点
     # 将 LIO 管线话题映射到 SCAN-Planner 的输入
@@ -97,6 +103,9 @@ def generate_launch_description():
             # B-spline 优化
             "optimization.lambda_collision": lambda_collision,
             "optimization.dist0": dist0,
+            "grid_map.p_occ": p_occ,
+            "grid_map.p_hit": p_hit,
+            "grid_map.p_miss": p_miss,
         }],
         remappings=[
             # LIO 管线 → SCAN-Planner 输入
@@ -143,6 +152,9 @@ def generate_launch_description():
         declare_inf_d,
         declare_lambda_col,
         declare_dist0,
+        declare_p_occ,
+        declare_p_hit,
+        declare_p_miss,
         world_tf,
         z_filter,
         scan_planner_node,
