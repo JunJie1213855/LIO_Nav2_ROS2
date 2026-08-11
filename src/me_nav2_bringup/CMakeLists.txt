@@ -17,6 +17,7 @@ install(DIRECTORY
 install(PROGRAMS
   scripts/send_goal.py
   scripts/cloud_z_filter.py
+  scripts/tf_to_odom.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
