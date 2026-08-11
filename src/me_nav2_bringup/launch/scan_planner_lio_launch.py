@@ -36,8 +36,18 @@ def generate_launch_description():
         "use_pcd_map", default_value="false")
     declare_pcd_map_file = DeclareLaunchArgument(
         "pcd_map_file", default_value="")
+    declare_z_min = DeclareLaunchArgument("z_min", default_value="-1.0")
+    declare_z_max = DeclareLaunchArgument("z_max", default_value="2.0")
+    declare_body_h = DeclareLaunchArgument("body_height", default_value="0.4")
+    declare_cyl_r = DeclareLaunchArgument("double_cylinder_radius", default_value="0.25")
+    declare_cyl_o = DeclareLaunchArgument("double_cylinder_offset", default_value="0.18")
+    declare_inf_d = DeclareLaunchArgument("obstacles_inflation_z_down", default_value="0.4")
+    declare_lambda_col = DeclareLaunchArgument("optimization.lambda_collision", default_value="1.0")
+    declare_dist0 = DeclareLaunchArgument("optimization.dist0", default_value="0.2")
 
     # Z 轴过滤节点: 去除天花板和地面，只保留机器人高度范围的点云
+    z_min = LaunchConfiguration("z_min", default="-1.0")
+    z_max = LaunchConfiguration("z_max", default="2.0")
     z_filter = Node(
         package="me_nav2_bringup",
         executable="cloud_z_filter.py",
@@ -45,14 +55,22 @@ def generate_launch_description():
         output="screen",
         parameters=[{
             "use_sim_time": use_sim_time,
-            "z_min": -1.0,
-            "z_max": 2.0,
+            "z_min": z_min,
+            "z_max": z_max,
         }],
         remappings=[
             ("cloud_in", "/registered_scan"),
             ("cloud_out", "/registered_scan_filtered"),
         ],
     )
+
+    # 自碰撞模型参数（可通过 launch 覆盖，适配不同机器人）
+    body_height = LaunchConfiguration("body_height", default="0.4")
+    cylinder_radius = LaunchConfiguration("double_cylinder_radius", default="0.25")
+    cylinder_offset = LaunchConfiguration("double_cylinder_offset", default="0.18")
+    inflate_z_down = LaunchConfiguration("obstacles_inflation_z_down", default="0.4")
+    lambda_collision = LaunchConfiguration("optimization.lambda_collision", default="1.0")
+    dist0 = LaunchConfiguration("optimization.dist0", default="0.2")
 
     # SCAN-Planner 核心规划节点
     # 将 LIO 管线话题映射到 SCAN-Planner 的输入
@@ -71,6 +89,14 @@ def generate_launch_description():
             # PCD 全局地图（可选）
             "grid_map.use_pcd_map": use_pcd_map,
             "grid_map.pcd_map_file": pcd_map_file,
+            # 自碰撞模型
+            "grid_map.double_cylinder_radius": cylinder_radius,
+            "grid_map.double_cylinder_offset": cylinder_offset,
+            "grid_map.body_height": body_height,
+            "grid_map.obstacles_inflation_z_down": inflate_z_down,
+            # B-spline 优化
+            "optimization.lambda_collision": lambda_collision,
+            "optimization.dist0": dist0,
         }],
         remappings=[
             # LIO 管线 → SCAN-Planner 输入
@@ -109,6 +135,14 @@ def generate_launch_description():
         declare_navi_mode,
         declare_use_pcd_map,
         declare_pcd_map_file,
+        declare_z_min,
+        declare_z_max,
+        declare_body_h,
+        declare_cyl_r,
+        declare_cyl_o,
+        declare_inf_d,
+        declare_lambda_col,
+        declare_dist0,
         world_tf,
         z_filter,
         scan_planner_node,
