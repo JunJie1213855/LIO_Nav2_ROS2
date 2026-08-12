@@ -31,8 +31,8 @@
             b_gyr_cov: 0.0001
             fov_degree:    360.0
             det_range:     100.0
-            extrinsic_est_en:  true      # true: enable the online estimation of IMU-LiDAR extrinsic
-            extrinsic_T: [ -0.011, -0.02329, 0.04412 ]
+            extrinsic_est_en:  false     # Gazebo 中关闭在线估计避免 Z 发散
+            extrinsic_T: [ 0.0, 0.0, 0.0 ]  # Gazebo: IMU 物理在 livox_frame, 与 LiDAR 同位
             extrinsic_R: [ 1., 0., 0.,
                             0., 1., 0.,
                             0., 0., 1.]

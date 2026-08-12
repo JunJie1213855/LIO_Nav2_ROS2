@@ -74,7 +74,7 @@ namespace scan_planner
     int in_id = -1, out_id = -1;
     vector<std::pair<int, int>> segment_ids;
     int same_occ_state_times = ENOUGH_INTERVAL + 1;
-    bool occ, last_occ = false;
+    int occ; bool last_occ = false;
     bool flag_got_start = false, flag_got_end = false, flag_got_end_maybe = false;
     int i_end = (int)init_points.cols() - order_; // check all points (was only 2/3)
     for (int i = order_; i <= i_end; ++i)
@@ -84,6 +84,7 @@ namespace scan_planner
         Eigen::Vector3d sample_pt = a * init_points.col(i - 1) + (1 - a) * init_points.col(i);
         double sample_yaw = estimateSegmentYaw(init_points.col(i - 1), init_points.col(i));
         occ = grid_map_->getInflateOccupancy(sample_pt, sample_yaw);
+        if (occ == -1) occ = 0; // unknown/outside-map → treat as free, not occupied
         // cout << setprecision(5);
         // cout << (a * init_points.col(i-1) + (1-a) * init_points.col(i)).transpose() << " occ1=" << occ << endl;
 
@@ -131,25 +132,30 @@ namespace scan_planner
 
     /*** a star search ***/
     vector<vector<Eigen::Vector3d>> a_star_paths;
+    RCLCPP_INFO(rclcpp::get_logger("bspline_opt"), "[DIAG] detected %zu collision segments", segment_ids.size());
     for (size_t i = 0; i < segment_ids.size(); ++i)
     {
-      //cout << "in=" << in.transpose() << " out=" << out.transpose() << endl;
       Eigen::Vector3d in(init_points.col(segment_ids[i].first)), out(init_points.col(segment_ids[i].second));
+      RCLCPP_INFO(rclcpp::get_logger("bspline_opt"), "[DIAG] segment %zu: in[%d]=(%.2f,%.2f,%.2f) out[%d]=(%.2f,%.2f,%.2f)",
+                  i, segment_ids[i].first, in(0), in(1), in(2), segment_ids[i].second, out(0), out(1), out(2));
       ASTAR_RET ret = a_star_->AstarSearch(grid_map_->getResolution(), in, out);
       if (ret == ASTAR_RET::SUCCESS)
       {
         vector<Eigen::Vector3d> path = a_star_->getPath();
         if (path.size() < 2)
         {
-          RCLCPP_WARN(rclcpp::get_logger("bspline_opt"), "A-star path has fewer than 2 points");
-          return a_star_paths;
+          RCLCPP_WARN(rclcpp::get_logger("bspline_opt"), "A-star path has fewer than 2 points; skip segment %zu", i);
+          a_star_paths.push_back(vector<Eigen::Vector3d>()); // empty placeholder, keep index alignment
         }
-        a_star_paths.push_back(path);
+        else
+        {
+          a_star_paths.push_back(path);
+        }
       }
       else
       {
-        RCLCPP_ERROR(rclcpp::get_logger("bspline_opt"), "A-star failed; aborting optimization");
-        return a_star_paths;
+        RCLCPP_WARN(rclcpp::get_logger("bspline_opt"), "A-star failed for segment %zu; skip it", i);
+        a_star_paths.push_back(vector<Eigen::Vector3d>()); // empty placeholder, keep index alignment
       }
     }
 
@@ -728,7 +734,8 @@ namespace scan_planner
     for (int i = order_ - 1; i <= i_end; ++i)
     {
 
-      bool occ = grid_map_->getInflateOccupancy(cps_.points.col(i), estimateControlPointYaw(cps_.points, i));
+      int occ = grid_map_->getInflateOccupancy(cps_.points.col(i), estimateControlPointYaw(cps_.points, i));
+      if (occ == -1) occ = 0; // unknown/outside-map → treat as free
 
       /*** check if the new collision will be valid ***/
       if (occ)
@@ -752,6 +759,7 @@ namespace scan_planner
         for (j = i - 1; j >= 0; --j)
         {
           occ = grid_map_->getInflateOccupancy(cps_.points.col(j), estimateControlPointYaw(cps_.points, j));
+          if (occ == -1) occ = 0; // unknown/outside-map → treat as free
           if (!occ)
           {
             in_id = j;
@@ -767,6 +775,7 @@ namespace scan_planner
         for (j = i + 1; j < cps_.size; ++j)
         {
           occ = grid_map_->getInflateOccupancy(cps_.points.col(j), estimateControlPointYaw(cps_.points, j));
+          if (occ == -1) occ = 0; // unknown/outside-map → treat as free
 
           if (!occ)
           {
@@ -1015,7 +1024,7 @@ namespace scan_planner
         double tm, tmp;
         traj.getTimeSpan(tm, tmp);
         double t_step = (tmp - tm) / ((traj.evaluateDeBoorT(tmp) - traj.evaluateDeBoorT(tm)).norm() / grid_map_->getResolution());
-        for (double t = tm; t < tmp * 2 / 3; t += t_step) // Only check the closest 2/3 partition of the whole trajectory.
+        for (double t = tm; t < tmp; t += t_step) // Check the whole trajectory
         {
           Eigen::Vector3d pos = traj.evaluateDeBoorT(t);
           Eigen::Vector3d pos_next = traj.evaluateDeBoorT(std::min(t + t_step, tmp));

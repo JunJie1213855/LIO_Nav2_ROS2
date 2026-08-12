@@ -27,9 +27,9 @@ W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.
 sleep 2
 W "SCAN"      "ros2 launch me_nav2_bringup scan_planner_lio_launch.py \
     z_min:=0.15 z_max:=3.0 \
-    double_cylinder_radius:=0.30 double_cylinder_offset:=0.0 \
+    double_cylinder_radius:=0.45 double_cylinder_offset:=0.18 \
     body_height:=0.25 obstacles_inflation_z_down:=0.1 \
-    optimization.lambda_collision:=10.0 optimization.dist0:=0.2 \
+    optimization.lambda_collision:=50.0 optimization.dist0:=1.0 \
     grid_map.p_occ:=0.3 grid_map.p_hit:=0.9 grid_map.p_miss:=0.1 \
     grid_map.sliding_map_size_x:=50.0 grid_map.sliding_map_size_y:=50.0 \
     grid_map.local_update_range_x:=25.0 grid_map.local_update_range_y:=25.0 \
