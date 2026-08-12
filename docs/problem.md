@@ -319,3 +319,77 @@ docker exec -it lio_nav2 /ws/scripts/nav2_sim_docker.sh
 2. **NVIDIA GPU 加速**：当前走 Mesa 软件渲染，装 nvidia-container-toolkit 后可 `--gpus all`
 3. **`navigation_launch.py` 的 lifecycle_manager 未自动激活**：需排查 nav2_bringup 中 `autostart` 参数传递
 4. **`airy_unflip.py` XY 方向偏移**（P18）：`R_ext.T @ pt` 连 X/Y 一起旋转了，应改为只翻转 Z 轴
+
+---
+
+## 七、TARE Planner ROS 2 编译与 Gazebo 仿真管线（P20）
+
+### 背景
+
+TARE (Technically-Aware Robotic Exploration) 是一个自主探索规划器，让机器人在未知环境中自主决定探索路径。
+
+需要将 TARE 从 ROS 1 (melodic-noetic) 迁移到 ROS 2 Humble 并适配 Gazebo + FAST-LIO。
+
+### 编译
+
+官方仓库 `caochao39/tare_planner` 已有 `humble-jazzy` 分支（已迁移到 ROS 2），直接使用：
+
+```bash
+docker exec lio_nav2 bash -c "
+  cd /ws/src/planner/tare_planner &&
+  git checkout humble-jazzy &&
+  cd /ws &&
+  source /opt/ros/humble/setup.bash &&
+  colcon build --packages-select tare_planner --symlink-install
+"
+```
+
+### Humble 兼容性修复
+
+Jazzy 分支中 `explore.launch` 使用了 `SetParameter`（Jazzy 新增），Humble 不支持：
+
+```python
+# 删除这行
+from launch.actions import SetParameter
+# 删除这行
+SetParameter(name='use_sim_time', value=use_sim_time),
+```
+
+### 仿真管线
+
+**架构**：Gazebo → FAST-LIO (里程计+点云) → lio_interface → sensor_scan_generation → cloud_z_filter → **TARE Planner** → waypoint_follower → `/cmd_vel`
+
+**TARE 话题适配**：
+
+| TARE 输入 | 来源 | 话题 |
+|-----------|------|------|
+| 里程计 | lio_interface | `/odom` |
+| 点云 | cloud_z_filter | `/registered_scan_filtered` |
+| 起始信号 | auto (kAutoStart=true) | `/start_exploration` (不发布) |
+
+**TARE 输出**：
+
+| 话题 | 类型 | 含义 |
+|------|------|------|
+| `/way_point` | geometry_msgs/PointStamped | 下一个探索目标点 |
+| exploration_finish | std_msgs/Bool | 探索完成标志 |
+
+**Waypoint Follower**：新增 `scripts/waypoint_follower.py`，订阅 `/way_point` → PID 控制器 → `/cmd_vel`。
+
+### 启动
+
+```bash
+docker exec -it lio_nav2 bash
+cd /ws && bash scripts/gazebo_tare.sh
+```
+
+tmux 窗口：`Gazebo | FAST-LIO | lio_if | sensor | TARE | RViz`
+
+### 新增文件
+
+| 文件 | 说明 |
+|------|------|
+| `src/planner/tare_planner/src/tare_planner/config/gazebo_indoor.yaml` | Gazebo 仿真参数 |
+| `src/planner/tare_planner/src/tare_planner/launch/tare_planner_lio_launch.py` | ROS 2 Launch 文件 |
+| `src/planner/tare_planner/src/tare_planner/scripts/waypoint_follower.py` | PID 航点跟随器 |
+| `scripts/gazebo_tare.sh` | 一键启动脚本 |

@@ -2,7 +2,7 @@
 """Z-axis PassThrough filter for point clouds."""
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import PointCloud2
 import struct
 
@@ -17,7 +17,7 @@ class CloudZFilter(Node):
         self.sub = self.create_subscription(
             PointCloud2, 'cloud_in', self.callback, qos_profile_sensor_data)
         self.pub = self.create_publisher(
-            PointCloud2, 'cloud_out', qos_profile_sensor_data)
+            PointCloud2, 'cloud_out', QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
         self.get_logger().info(f'Z filter active: [{self.z_min:.1f}, {self.z_max:.1f}] m')
 
     def callback(self, msg):
