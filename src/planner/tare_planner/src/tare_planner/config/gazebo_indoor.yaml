@@ -22,7 +22,7 @@ tare_planner_node:
     kRushHome: true
     kUseTerrainHeight: false
     kCheckTerrainCollision: false
-    kExtendWayPoint: true
+    kExtendWayPoint: false
     kUseLineOfSightLookAheadPoint: true
     kNoExplorationReturnHome: true
     kExtendWayPointDistanceBig: 6.0

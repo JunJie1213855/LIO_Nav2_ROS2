@@ -1,7 +1,8 @@
 """Gazebo + FAST-LIO + TARE Planner 联合仿真 launch 文件
 
 管线:
-  Gazebo → FAST-LIO (里程计+点云) → cloud_z_filter → TARE 探索规划 → waypoint_follower → /cmd_vel
+  Gazebo → FAST-LIO (里程计+点云) → lio_interface → sensor_scan_generation
+         → TARE 探索规划 → waypoint_follower(带局部避障) → /cmd_vel
 
 用法:
   ros2 launch tare_planner tare_planner_lio_launch.py use_sim_time:=true
@@ -49,6 +50,13 @@ def generate_launch_description():
             "max_linear_vel": 0.5,
             "max_angular_vel": 1.0,
             "arrival_dist": 0.3,
+            "kp_linear": 0.8,
+            "kp_angular": 2.0,
+            "stop_dist": 0.45,
+            "slow_dist": 0.8,
+            "robot_half_width": 0.35,
+            "check_height_min": 0.05,
+            "check_height_max": 0.60,
         }],
     )
 

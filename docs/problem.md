@@ -393,3 +393,69 @@ tmux 窗口：`Gazebo | FAST-LIO | lio_if | sensor | TARE | RViz`
 | `src/planner/tare_planner/src/tare_planner/launch/tare_planner_lio_launch.py` | ROS 2 Launch 文件 |
 | `src/planner/tare_planner/src/tare_planner/scripts/waypoint_follower.py` | PID 航点跟随器 |
 | `scripts/gazebo_tare.sh` | 一键启动脚本 |
+
+### 调试过程中的关键问题与修复
+
+#### 1. QoS 不匹配（已修复）
+
+`cloud_z_filter.py` 用 `qos_profile_sensor_data`（BEST_EFFORT）发布，但 TARE subscriber 默认 RELIABLE，导致点云无法传递。
+
+#### 2. 点云帧错误（关键根因）
+
+`cloud_z_filter` 对 `camera_init` 帧（LiDAR 帧）的 `/cloud_registered` 做 Z 轴过滤，`camera_init` 帧的 Z 轴与世界 Z 轴不一致，导致所有点被滤除（输出 width=0）。
+
+**修复**：TARE 直接订阅 `sensor_scan_generation` 发布的 `/registered_scan`（已转换到 `odom` 帧），去掉 `cloud_z_filter` 节点。
+
+#### 3. Rolling Occupancy Grid 过大（性能瓶颈）
+
+`rolling_occupancy_grid` 范围 = `kPointCloudCellSize × kPointCloudManagerNeighborCellNum`。默认 18×5=90m，在 0.2m 分辨率下是 450×450×45 = 910 万网格，3D RayTrace 极慢，主线程被点云回调占满，`execute()` 定时器长时间延迟。
+
+**修复**：
+```yaml
+kPointCloudCellSize: 18.0 → 10.0
+kPointCloudManagerNeighborCellNum: 5 → 3
+rolling_occupancy_grid/resolution: 0.2 → 0.3
+```
+网格从 910 万降到 15 万，速度提升 60 倍。
+
+#### 4. 坐标系帧不匹配（可视化空白根因）
+
+TARE 所有可视化数据（点云、路径、标记）都发布在 `map` 帧（`kWorldFrameID = "map"`），但 FAST-LIO 管线的 TF 树只有 `world → odom`，没有 `map` 帧。RViz 用 `odom` 作 Fixed Frame，看不到 `map` 帧数据。
+
+**修复**：
+- `sensor_coverage_planner_ground.h`: `kWorldFrameID = "map"` → `"odom"`
+- `tare_visualizer.h`: 同上
+- `planning_env.h`: 默认帧参数 `"map"` → `"odom"`
+- `sensor_coverage_planner_ground.cpp`: 所有 `header.frame_id = "map"` → `"odom"`
+- RViz 配置 Fixed Frame: `map` → `odom`
+
+#### 5. 首轮全局规划耗时 5 秒
+
+TARE 首次完整规划周期（`UpdateGlobalRepresentation` + TSP）约需 5 秒，期间主线程阻塞，后续定时器延迟。这是正常现象，后续迭代更快。
+
+#### 6. 机器人撞障碍物（waypoint 延长 + follower 无避障）
+
+**现象**：探索时机器人直线撞上障碍物。
+
+**根因 1**：`PublishWaypoint()` 中当 lookahead 点在视线内时，waypoint 被延长到 `kExtendWayPointDistanceBig`（默认 6~8m），但延长后的点**没有碰撞检测**，可能穿过障碍物：
+
+```cpp
+// sensor_coverage_planner_ground.cpp - PublishWaypoint()
+if (r < extend_dist && kExtendWayPoint) {
+    dx = dx / r * extend_dist;  // 直接延长, 无碰撞检查
+    dy = dy / r * extend_dist;
+}
+```
+
+**根因 2**：`waypoint_follower.py` 是纯 PID 直线跟随，无任何避障。
+
+**修复**：
+1. `kExtendWayPoint: true → false`（waypoint 停在经过 LOS 检测的 lookahead 点）
+2. 重写 `waypoint_follower.py`，订阅 `/registered_scan` 点云做前方局部避障：
+   - 将点云变换到 body 帧，分左/中/右三扇区检测最小障碍距离
+   - 正前方 < 0.45m：原地转向远离障碍物
+   - 前方 < 0.8m：减速 + 转向偏往开阔侧
+
+**根因 3（地面点误判）**：避障检测时地面点（z≈0）落在高度检查范围 [-0.15, 0.6] 内，被误判为障碍物，导致机器人停滞。
+
+**修复**：`check_height_min: -0.15 → 0.05`（排除地面点，只检测机器人底盘以上的障碍物）。
