@@ -57,8 +57,7 @@ def generate_launch_description():
         remappings=remappings,
         arguments=[
             "-d",
-            PathJoinSubstitution([point_lio_dir, "rviz_cfg", "loam_livox"]),
-            ".rviz",
+            PathJoinSubstitution([point_lio_dir, "rviz_cfg", "pointlio.rviz"]),
         ],
     )
 
