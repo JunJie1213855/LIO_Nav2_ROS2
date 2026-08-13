@@ -12,9 +12,9 @@ PCD
 *.svg
 frames_2026-07-20_09.36.01*
 rosgraph*
-lib
+# lib
 bin
-*.a
+# *.a
 *.so
 
 # 大型二进制文件与深度学习模型
