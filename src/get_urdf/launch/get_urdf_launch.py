@@ -11,8 +11,8 @@ def generate_launch_description():
     # 动态获取 get_urdf 包在 install 目录下的绝对路径
     pkg_share_path = get_package_share_directory('get_urdf')
 
-    rviz_config_path = os.path.join(pkg_share_path, 'rviz', 'nav2_new.rviz')
-    default_world_path = os.path.join(pkg_share_path, 'worlds', 'test_world.world')
+    rviz_config_path = os.path.join(pkg_share_path, 'rviz', 'nav2.rviz')
+    default_world_path = os.path.join(pkg_share_path, 'worlds', 'field.world')
 
     # Gazebo 模型搜索路径（冒号分隔）
     #   1. 包内 models 目录（如果有的话）

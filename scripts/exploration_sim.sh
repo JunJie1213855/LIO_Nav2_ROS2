@@ -41,7 +41,7 @@ W "convert"  "ros2 run ign_sim_pointcloud_tool ign_sim_pointcloud_tool_node --ro
 
 # ============== Point-LIO 里程计 =======================
 # 订阅 /velodyne_points + /livox/imu，输出里程计 /aft_mapped_to_init 和点云 /cloud_registered
-# W "Point-LIO" "ros2 launch point_lio point_lio.launch.py rviz:=true point_lio_cfg_dir:=$WS/src/localization/point_lio/config/mid360_sim.yaml"
+W "Point-LIO" "ros2 launch point_lio point_lio.launch.py rviz:=true point_lio_cfg_dir:=$WS/src/localization/point_lio/config/mid360_sim.yaml"
 
 # ============== LIO 接口（TF 桥接） =======================
 # lio_type:=pointlio 表示订阅 /aft_mapped_to_init，转成标准 odom 坐标系 TF
