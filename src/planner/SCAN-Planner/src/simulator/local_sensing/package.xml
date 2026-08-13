@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>local_sensing_node</name>
+  <version>0.2.0</version>
+  <description>CPU and OpenGL local sensor simulation for SCAN-Planner.</description>
+  <maintainer email="jackykongfz@gmail.com">Fanze Kong</maintainer>
+  <license>GPL-3.0-only</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>ament_index_cpp</depend>
+  <depend>boost</depend>
+  <depend>cv_bridge</depend>
+  <depend>eigen</depend>
+  <depend>geometry_msgs</depend>
+  <depend>libglm-dev</depend>
+  <depend>nav_msgs</depend>
+  <depend>pcl_conversions</depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2_ros</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

@@ -6,8 +6,8 @@
         init_map_size: 10
         point_filter_num: 4
         space_down_sample: True
-        filter_size_surf: 0.25
-        filter_size_map: 0.25
+        filter_size_surf: 0.5
+        filter_size_map: 0.5
         ivox_nearby_type: 6
         runtime_pos_log_enable: False
 
@@ -20,7 +20,7 @@
             cut_frame_time_interval: 0.1
             time_diff_lidar_to_imu: 0.0
             cut_frame_init: True      
-            cut_frame_num: 5 # 10 帧
+            cut_frame_num: 1 # 1 = 整帧（96 线），不拆帧；>1 会把每帧拆成多个稀疏子帧导致 /scan 过稀
 
         prior_pcd:
             enable: False
@@ -53,8 +53,8 @@
             plane_thr: 0.1
             match_s: 81.0
             ivox_grid_resolution: 2.0
-            gravity: [ -0.0205, -0.0912, -9.8684 ]       # 实机：重力方向 Z 轴正方向
-            gravity_init: [ -0.0205, -0.0912, -9.8684 ]
+            gravity: [ 0.0205, 0.0912, 9.8684 ]       # 实机：Airy 机体 Z 朝下，重力沿 +Z；世界系与机体对齐，避免 180° roll
+            gravity_init: [ 0.0205, 0.0912, 9.8684 ]
             extrinsic_T: [0.0, 0.0, 0.0]
             extrinsic_R: [0.0, -1.0, 0.0,
                          -1.0, 0.0, 0.0,
