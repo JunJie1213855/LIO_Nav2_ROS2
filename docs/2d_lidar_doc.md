@@ -10,65 +10,28 @@
 ### 1.1 整体架构与数据流
 
 ```mermaid
-flowchart LR
-    subgraph GAZ["Gazebo 仿真环境"]
-        WORLD["indoor_2d.world<br/>封闭室内场景<br/>(四面墙 + 障碍物)"]
-        ROBOT["diff_robot_2d<br/>2D 差分小车"]
-        LIDAR["单线 LiDAR<br/>360° / 720采样 / 10Hz"]
-        IMU["IMU<br/>200Hz"]
-        DIFF["diff_drive 插件<br/>差分驱动 + 里程计"]
+flowchart TB
+    GOAL["🎯 用户目标<br/>2D Goal Pose（RViz 点击）"]
+
+    subgraph SIM["① 仿真层 Simulation"]
+        A["Gazebo 室内世界 + diff_robot_2d 差分小车<br/>单线 LiDAR · IMU · 轮式里程计"]
     end
 
-    subgraph TOPIC["传感器话题"]
-        SCAN["/scan<br/>(sensor_msgs/LaserScan)"]
-        IMUT["/imu<br/>(sensor_msgs/Imu)"]
-        ODOM["/odom<br/>(nav_msgs/Odometry)"]
+    subgraph PER["② 感知定位层 Perception & Localization"]
+        B["Cartographer 2D SLAM<br/>scan matching 建图 + 位姿图优化定位"]
     end
 
-    subgraph CARTO["Cartographer 2D SLAM"]
-        CARTON["cartographer_node<br/>scan matching + 位姿图优化"]
-        OCCGRID["cartographer_occupancy_grid_node<br/>栅格地图发布"]
-        MAP["/map<br/>(nav_msgs/OccupancyGrid)"]
+    subgraph NAV["③ 规划控制层 Planning & Control"]
+        C["Nav2 导航栈<br/>NavFn 全局规划 + DWB 局部规划 + 行为树调度"]
     end
 
-    subgraph NAV2["Nav2 导航栈"]
-        PLANNER["planner_server<br/>NavFn 全局规划"]
-        CONTROLLER["controller_server<br/>DWB 局部规划"]
-        BT["bt_navigator<br/>行为树调度"]
-        BEHAVIOR["behavior_server<br/>恢复行为 spin/backup"]
-        LIFECYCLE["lifecycle_manager<br/>节点生命周期管理"]
-    end
-
-    GOAL["2D Goal Pose<br/>/goal_pose (RViz)"] --> BT
-    WORLD --> LIDAR
-    WORLD --> IMU
-    ROBOT --> DIFF
-    LIDAR --> SCAN
-    IMU --> IMUT
-    DIFF --> ODOM
-
-    SCAN --> CARTON
-    IMUT --> CARTON
-    ODOM --> CARTON
-    CARTON --> OCCGRID
-    OCCGRID --> MAP
-
-    MAP --> PLANNER
-    SCAN --> CONTROLLER
-    SCAN --> PLANNER
-    ODOM --> CONTROLLER
-    BT --> PLANNER
-    BT --> CONTROLLER
-    BT --> BEHAVIOR
-    LIFECYCLE -.配置/激活.-> PLANNER
-    LIFECYCLE -.配置/激活.-> CONTROLLER
-    LIFECYCLE -.配置/激活.-> BT
-    LIFECYCLE -.配置/激活.-> BEHAVIOR
-
-    PLANNER -->|"/plan 全局路径"| CONTROLLER
-    CONTROLLER -->|"/cmd_vel"| DIFF
-    BEHAVIOR -->|"/cmd_vel (恢复)"| DIFF
+    GOAL -->|"发布 /goal_pose"| NAV
+    SIM -->|"传感器数据<br/>/scan /imu /odom"| PER
+    PER -->|"地图与定位<br/>/map + map→odom TF"| NAV
+    NAV -->|"速度指令<br/>/cmd_vel"| SIM
 ```
+
+数据流闭环：① 用户在 RViz 点目标 → `/goal_pose` 发给 Nav2；② 仿真层传感器（LiDAR/IMU/里程计）→ Cartographer；③ Cartographer 输出 `/map` + 定位 → Nav2；④ Nav2 规划后发 `/cmd_vel` 驱动机器人，传感器继续更新，形成闭环。
 
 ### 1.2 TF 坐标变换树
 
