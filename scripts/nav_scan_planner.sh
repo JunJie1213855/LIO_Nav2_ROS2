@@ -20,16 +20,13 @@ W() { tmux new-window -t "$SESS" -n "$1" \
 # =================== Gazebo 仿真 ===================
 tmux new-session -d -s "$SESS" -n "Gazebo" \
   "bash -c 'cd $WS && source install/setup.bash && ros2 launch get_urdf get_urdf_launch.py rviz:=false; exec bash'"
-sleep 6
 
 # =================== Fast-LIO2 ===================
 W "FAST-LIO" "ros2 launch fast_lio_robosense mapping_livox.launch.py rviz:=true use_sim_time:=true"
-sleep 3
 
 # =================== 中间层 ===================
 W "lio_if"    "ros2 launch lio_interface lio_interface_launch.py"
 W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
-sleep 2
 
 # =================== scan planner ===================
 W "SCAN"      "ros2 launch me_nav2_bringup scan_planner_lio_launch.py \

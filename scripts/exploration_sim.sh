@@ -37,15 +37,21 @@ tmux new-session -d -s "$SESS" -n "Gazebo" \
 # ============== 点云格式转换器 =======================
 # 把 Gazebo 的 /livox/lidar 转成 /velodyne_points，
 # 并注入 Point-LIO(Velodyne 模式) 必需的 ring(线号) 和 time(单点时间戳) 字段
-W "convert"  "ros2 run ign_sim_pointcloud_tool ign_sim_pointcloud_tool_node --ros-args -p pcd_topic:=/livox/lidar -p n_scan:=50 -p horizon_scan:=360 -p ang_bottom:=7.22 -p ang_res_y:=1.248"
+# W "convert"  "ros2 run ign_sim_pointcloud_tool ign_sim_pointcloud_tool_node --ros-args -p pcd_topic:=/livox/lidar -p n_scan:=50 -p horizon_scan:=360 -p ang_bottom:=7.22 -p ang_res_y:=1.248"
 
 # ============== Point-LIO 里程计 =======================
 # 订阅 /velodyne_points + /livox/imu，输出里程计 /aft_mapped_to_init 和点云 /cloud_registered
-W "Point-LIO" "ros2 launch point_lio point_lio.launch.py rviz:=true point_lio_cfg_dir:=$WS/src/localization/point_lio/config/mid360_sim.yaml"
+# W "Point-LIO" "ros2 launch point_lio point_lio.launch.py rviz:=true point_lio_cfg_dir:=$WS/src/localization/point_lio/config/mid360_sim.yaml"
+
+# ============== Fast-LIO 里程计 ========================
+W "FAST-LIO" "ros2 launch fast_lio_robosense mapping_livox.launch.py rviz:=true use_sim_time:=true"
+
 
 # ============== LIO 接口（TF 桥接） =======================
 # lio_type:=pointlio 表示订阅 /aft_mapped_to_init，转成标准 odom 坐标系 TF
-W "lio_if"   "ros2 launch lio_interface pointlio_lio_interface_launch.py"
+# W "lio_if"   "ros2 launch lio_interface pointlio_lio_interface_launch.py"
+
+W "lio_if"   "ros2 launch lio_interface fastlio_lio_interface_launch.py"
 
 # ============== 扫描生成（/registered_scan + /odom） =======================
 # 发布 /registered_scan（odom 帧点云）和 /odom，供 TARE 规划与 waypoint_follower 使用

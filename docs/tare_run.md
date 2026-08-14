@@ -6,14 +6,12 @@
 >
 > 本工作空间支持两种 LIO 里程计后端。当前仓库内的联合仿真脚本为：
 > - **Point-LIO**：`scripts/exploration_sim.sh`（Gazebo + Point-LIO + TARE 探索，本章重点）
->
-> FAST-LIO 版本的仿真脚本（`gazebo_tare.sh`）当前未提供，管线结构见 §1.1 作为参考。
-
+> - **Fast-LIO**：`scripts/exploration_sim.sh`（Gazebo + Fast-LIO + TARE 探索，本章重点）
 ---
 
 ## 1. 管线架构
 
-### 1.1 FAST-LIO 作为里程计（`gazebo_tare.sh`，参考，未提供）
+### 1.1 FAST-LIO 作为里程计
 
 ```mermaid
 flowchart LR
