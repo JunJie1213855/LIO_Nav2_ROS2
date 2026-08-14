@@ -38,7 +38,7 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.035         # 到达目标的XY坐标允许误差（米）
+      xy_goal_tolerance: 0.15          # 到达目标的XY坐标允许误差（米）
       yaw_goal_tolerance: 0.1745       # 10度 到达目标的角度允许误差（弧度）
 
     # 局部控制器(DWB)配置
@@ -172,7 +172,7 @@ local_costmap:
       width: 6                        # 保持 5x5 米的开阔局部窗口
       height: 6
       resolution: 0.05    # 分辨率为5cm
-      footprint: "[ [0.21, 0.195], [0.21, -0.195], [-0.21, -0.195], [-0.21, 0.195] ]"
+      footprint: "[ [0.15, 0.12], [0.15, -0.12], [-0.15, -0.12], [-0.15, 0.12] ]"
       plugins: ["obstacle_layer", "inflation_layer"] # 彻底采用纯平面层接2D scan
       footprint_clearing_enabled: true    # 开启局部地图轮廓清理
       combination_method: 1
@@ -209,7 +209,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: True
-      footprint: "[ [0.21, 0.195], [0.21, -0.195], [-0.21, -0.195], [-0.21, 0.195] ]"
+      footprint: "[ [0.15, 0.12], [0.15, -0.12], [-0.15, -0.12], [-0.15, 0.12] ]"
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]

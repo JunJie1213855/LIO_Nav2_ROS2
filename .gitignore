@@ -24,3 +24,6 @@ PCD
 .claude/
 .codex
 CLAUDE.md
+
+# 参考备份（含大文件，不入库）
+refer/
