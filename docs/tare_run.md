@@ -15,31 +15,59 @@
 
 ### 1.1 FAST-LIO 作为里程计（`gazebo_tare.sh`，参考，未提供）
 
-```
-Gazebo (get_urdf)
-   └─> FAST-LIO (fast_lio mapping.launch.py)
-          ├─ 订阅 /livox/lidar + /livox/imu
-          └─ 发布 /Odometry + /cloud_registered
-                 └─> lio_interface (默认 fastlio)
-                        └─> sensor_scan_generation → /registered_scan + /odom
-                                └─> TARE (tare_planner_node) → /way_point
-                                        └─> waypoint_follower → /cmd_vel
+```mermaid
+flowchart LR
+    GAZ["get_urdf<br>Gazebo"]
+
+    LIDAR["/livox/lidar"]
+    IMU["/livox/imu"]
+
+    GAZ --> LIDAR
+    GAZ --> IMU
+
+    LIDAR --> FASTLIO
+    IMU --> FASTLIO
+
+    FASTLIO["FAST-LIO<br>fast_lio mapping.launch.py"]
+
+    FASTLIO -->|"/Odometry + /cloud_registered"| LIOIF["lio_interface<br>（默认 fastlio）"]
+
+    LIOIF --> SENSOR["sensor_scan_generation"]
+
+    SENSOR -->|"/registered_scan + /odom"| TARE["TARE<br>tare_planner_node"]
+
+    TARE -->|"/way_point"| FOLLOWER["waypoint_follower"]
+
+    FOLLOWER -->|"/cmd_vel"| GAZ
 ```
 
 ### 1.2 Point-LIO 作为里程计（`exploration_sim.sh`）
 
-```
-Gazebo (get_urdf)
-   └─ 发布 /livox/lidar (PointCloud2, 无 ring/time) + /livox/imu
-   └─> ign_sim_pointcloud_tool（点云格式转换器）
-          └─ /livox/lidar → /velodyne_points（注入 ring + time 字段）
-                 └─> Point-LIO (point_lio, mid360_sim.yaml)
-                        ├─ 订阅 /velodyne_points + /livox/imu
-                        └─ 发布 /aft_mapped_to_init + /cloud_registered
-                               └─> lio_interface (pointlio_lio_interface_launch.py)
-                                      └─> sensor_scan_generation → /registered_scan + /odom
-                                              └─> TARE → /way_point
-                                                      └─> waypoint_follower → /cmd_vel
+```mermaid
+flowchart LR
+    GAZ["get_urdf<br>Gazebo"]
+
+    LIDAR["/livox/lidar<br>PointCloud2（无 ring/time）"]
+    IMU["/livox/imu"]
+
+    GAZ --> LIDAR
+    GAZ --> IMU
+
+    LIDAR --> CONV["ign_sim_pointcloud_tool<br>（点云格式转换器）"]
+
+    CONV -->|"/velodyne_points<br>（注入 ring + time）"| POINTLIO["Point-LIO<br>point_lio / mid360_sim.yaml"]
+
+    IMU --> POINTLIO
+
+    POINTLIO -->|"/aft_mapped_to_init + /cloud_registered"| LIOIF["lio_interface<br>pointlio_lio_interface_launch.py"]
+
+    LIOIF --> SENSOR["sensor_scan_generation"]
+
+    SENSOR -->|"/registered_scan + /odom"| TARE["TARE<br>tare_planner_node"]
+
+    TARE -->|"/way_point"| FOLLOWER["waypoint_follower"]
+
+    FOLLOWER -->|"/cmd_vel"| GAZ
 ```
 
 > **两种 LIO 的关键差异**：FAST-LIO 里程计话题是 `/Odometry`；Point-LIO 是 `/aft_mapped_to_init`。
