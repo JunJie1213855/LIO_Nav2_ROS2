@@ -120,7 +120,7 @@ namespace scan_planner
     double estimateYawFromSegment(const Eigen::Vector3d &from, const Eigen::Vector3d &to) const;
     void updateLocalTrajTimeFreeze();
 
-    /* ROS functions */
+    /* ROS functions for call back */
     void execFSMCallback();
     void checkCollisionCallback();
     void rvizGoalCallback(const geometry_msgs::msg::PoseStamped::ConstSharedPtr &msg);

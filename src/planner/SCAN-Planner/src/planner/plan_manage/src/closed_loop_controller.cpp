@@ -17,6 +17,9 @@
 
 namespace scan_planner
 {
+/**
+ * 闭环控制器：接收来自 scan planner 的 B 样条轨迹和当前物体姿态，输出 cmd_vel 的控制数据
+ */
 class ClosedLoopController : public rclcpp::Node
 {
 public:

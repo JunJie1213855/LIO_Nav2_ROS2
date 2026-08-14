@@ -4,15 +4,16 @@
 > 在 Gazebo 仿真环境中，让机器人自动探索未知室内环境、规划覆盖路径并局部避障。
 > 环境：Ubuntu 22.04 + ROS 2 Humble + Docker（容器名 `lio_nav2`，工作空间挂载到 `/ws`）。
 >
-> 本工作空间支持两种 LIO 里程计后端，通过不同启动脚本切换：
-> - **FAST-LIO**：`scripts/gazebo_tare.sh`
-> - **Point-LIO**：`scripts/gazebo_tare_pointlio.sh`
+> 本工作空间支持两种 LIO 里程计后端。当前仓库内的联合仿真脚本为：
+> - **Point-LIO**：`scripts/exploration_sim.sh`（Gazebo + Point-LIO + TARE 探索，本章重点）
+>
+> FAST-LIO 版本的仿真脚本（`gazebo_tare.sh`）当前未提供，管线结构见 §1.1 作为参考。
 
 ---
 
 ## 1. 管线架构
 
-### 1.1 FAST-LIO 作为里程计（`gazebo_tare.sh`）
+### 1.1 FAST-LIO 作为里程计（`gazebo_tare.sh`，参考，未提供）
 
 ```
 Gazebo (get_urdf)
@@ -25,7 +26,7 @@ Gazebo (get_urdf)
                                         └─> waypoint_follower → /cmd_vel
 ```
 
-### 1.2 Point-LIO 作为里程计（`gazebo_tare_pointlio.sh`）
+### 1.2 Point-LIO 作为里程计（`exploration_sim.sh`）
 
 ```
 Gazebo (get_urdf)
@@ -35,14 +36,16 @@ Gazebo (get_urdf)
                  └─> Point-LIO (point_lio, mid360_sim.yaml)
                         ├─ 订阅 /velodyne_points + /livox/imu
                         └─ 发布 /aft_mapped_to_init + /cloud_registered
-                               └─> lio_interface (lio_type:=pointlio)
+                               └─> lio_interface (pointlio_lio_interface_launch.py)
                                       └─> sensor_scan_generation → /registered_scan + /odom
                                               └─> TARE → /way_point
                                                       └─> waypoint_follower → /cmd_vel
 ```
 
 > **两种 LIO 的关键差异**：FAST-LIO 里程计话题是 `/Odometry`；Point-LIO 是 `/aft_mapped_to_init`。
-> `lio_interface` 通过 `lio_type` 参数自动匹配：`fastlio` / `pointlio` / `superlio`。
+> `lio_interface` 通过不同的 launch 文件匹配：
+> - `fastlio_lio_interface_launch.py`：订阅 `/Odometry`
+> - `pointlio_lio_interface_launch.py`：订阅 `/aft_mapped_to_init`
 
 | 节点 | 包 | 作用 |
 |------|-----|------|
@@ -110,6 +113,8 @@ docker exec lio_nav2 bash -c "
 
 ### 3.1 FAST-LIO 作为里程计：一键启动
 
+> **注意**：`scripts/gazebo_tare.sh` 当前未包含在本仓库中，本节仅作管线参考。如需 FAST-LIO 版本，可参照 §3.2 的 `exploration_sim.sh`，把 LIO 后端换成 FAST-LIO 即可。
+
 ```bash
 docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/gazebo_tare.sh"
 ```
@@ -119,21 +124,24 @@ docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/gazebo_tare.sh"
 ### 3.2 Point-LIO 作为里程计：一键启动
 
 ```bash
-docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/gazebo_tare_pointlio.sh"
+docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/exploration_sim.sh"
 ```
 
-相比 FAST-LIO 版本多了一个 **点云格式转换器**（`ign_sim_pointcloud_tool`），并把 `lio_interface` 的 `lio_type` 设为 `pointlio`。
+脚本 `scripts/exploration_sim.sh`（Gazebo + Point-LIO + TARE 探索）相比 FAST-LIO 版本多了一个 **点云格式转换器**（`ign_sim_pointcloud_tool`），并使用 `pointlio_lio_interface_launch.py` 订阅 `/aft_mapped_to_init`。
 
-脚本关键模块（`gazebo_tare_pointlio.sh` 内已用 `# ============== xxx =======================` 标注）：
+脚本关键模块（已用 `# ============== xxx =======================` 标注）：
 
 | 模块 | 命令要点 | 说明 |
 |------|----------|------|
 | Gazebo | `ros2 launch get_urdf get_urdf_launch.py rviz:=false` | 发布 `/livox/lidar` + `/livox/imu` |
 | convert | `ros2 run ign_sim_pointcloud_tool ign_sim_pointcloud_tool_node --ros-args -p pcd_topic:=/livox/lidar -p n_scan:=50 -p horizon_scan:=360 -p ang_bottom:=7.22 -p ang_res_y:=1.248` | `/livox/lidar` → `/velodyne_points`，注入 ring/time |
-| Point-LIO | `ros2 launch point_lio point_lio.launch.py rviz:=false point_lio_cfg_dir:=$WS/src/localization/point_lio/config/mid360_sim.yaml` | 订阅 `/velodyne_points`，输出 `/aft_mapped_to_init` |
-| lio_if | `ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio` | 把 `/aft_mapped_to_init` 转成 odom TF |
+| Point-LIO | `ros2 launch point_lio point_lio.launch.py rviz:=true point_lio_cfg_dir:=$WS/src/localization/point_lio/config/mid360_sim.yaml` | 订阅 `/velodyne_points`，输出 `/aft_mapped_to_init` |
+| lio_if | `ros2 launch lio_interface pointlio_lio_interface_launch.py` | 把 `/aft_mapped_to_init` 转成 odom TF |
 | sensor | `ros2 launch sensor_scan_generation sensor_scan_generation_launch.py` | 发布 `/registered_scan` + `/odom` |
-| TARE | `ros2 launch tare_planner tare_planner_lio_launch.py use_sim_time:=true` | 探索规划，发布 `/way_point` |
+| TARE | `ros2 launch tare_planner tare_planner_lio_launch.py use_sim_time:=true` | 探索规划 + waypoint_follower，发布 `/way_point`（脚本中默认注释） |
+| RViz | `rviz2 -d $WS/src/planner/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz` | 探索可视化 |
+
+> **注意**：`exploration_sim.sh` 中 TARE 窗口默认被注释（`# W "TARE" ...`），需要探索时手动取消注释，或在脚本启动后手动执行 `ros2 launch tare_planner tare_planner_lio_launch.py use_sim_time:=true`。
 
 ### 3.3 tmux 窗口
 
@@ -141,15 +149,15 @@ docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/gazebo_tare_pointlio.sh
 docker exec -it lio_nav2 tmux attach -t tare_gz
 ```
 
-| 窗口（FAST-LIO 版） | 窗口（Point-LIO 版） | 内容 |
-|------|------|------|
-| `Gazebo` | `Gazebo` | Gazebo 仿真世界 |
-| `FAST-LIO` | `convert` | Point-LIO 版此处是点云格式转换器 |
-| — | `Point-LIO` | Point-LIO 里程计 |
-| `lio_if` | `lio_if` | 里程计接口 |
-| `sensor` | `sensor` | 点云生成 |
-| `TARE` | `TARE` | TARE 探索规划器 + waypoint_follower |
-| `RViz` | `RViz` | 可视化 |
+| 窗口（`exploration_sim.sh`） | 内容 |
+|------|------|
+| `Gazebo` | Gazebo 仿真世界 |
+| `convert` | 点云格式转换器（`/livox/lidar` → `/velodyne_points`） |
+| `Point-LIO` | Point-LIO 里程计 |
+| `lio_if` | 里程计接口（`pointlio_lio_interface_launch.py`） |
+| `sensor` | 点云生成（`/registered_scan` + `/odom`） |
+| `TARE` | TARE 探索规划器 + waypoint_follower（脚本中默认注释，需手动启动） |
+| `RViz` | 探索可视化 |
 
 切换窗口：`Ctrl+B` 后按对应数字键。关闭整个会话：`docker exec lio_nav2 tmux kill-server`。
 
@@ -196,7 +204,7 @@ ros2 launch point_lio point_lio.launch.py rviz:=false \
   point_lio_cfg_dir:=/ws/src/localization/point_lio/config/mid360_sim.yaml
 
 # 4. 里程计接口 + 点云生成
-ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio
+ros2 launch lio_interface pointlio_lio_interface_launch.py
 ros2 launch sensor_scan_generation sensor_scan_generation_launch.py
 
 # 5. TARE

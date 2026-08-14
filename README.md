@@ -162,6 +162,26 @@ ros2 topic hz /registered_scan
 
 日志中出现 `KISSMatcher initialization succeeded` 表示全局初始化成功，随后会进入 small_gicp 连续跟踪阶段。若持续出现 `KISSMatcher initialization failed`，通常是当前累计点云与先验地图重叠不足、点云太稀疏，或 `prior_pcd_file` / 坐标系设置不匹配。
 
+### 3.6 自主探索仿真（Point-LIO + TARE）
+
+```bash
+source install/setup.bash
+cd scripts
+./exploration_sim.sh
+```
+
+启动 Gazebo + Point-LIO + TARE 探索规划的联合仿真（tmux 会话 `tare_gz`），数据链路：
+
+```text
+Gazebo (/livox/lidar + /livox/imu)
+  → ign_sim_pointcloud_tool（/livox/lidar → /velodyne_points，注入 ring/time）
+    → Point-LIO → /aft_mapped_to_init + /cloud_registered
+      → lio_interface → sensor_scan_generation → /registered_scan + /odom
+        → TARE (tare_planner_node) → /way_point → waypoint_follower → /cmd_vel
+```
+
+> 脚本内 TARE 窗口默认注释，需手动启动探索。详细说明与参数配置见 [docs/tare_run.md](docs/tare_run.md)。
+
 ## 4. 功能包
 
 工作空间包含 **19 个 ROS 2 功能包**，位于 `src/` 下：
@@ -189,6 +209,10 @@ ros2 topic hz /registered_scan
 
 - `me_nav2_bringup` — Nav2 集成：启动文件、参数配置、地图、PCD、RViz 配置
 - `gui_teleop` — tkinter GUI 遥控，持速度调节和紧急停止
+
+**自主探索** (`src/planner/`)
+
+- `tare_planner` — TARE 自主探索规划器：点云前沿探索、视点规划、航点跟随与局部避障
 
 **仿真与描述**
 
