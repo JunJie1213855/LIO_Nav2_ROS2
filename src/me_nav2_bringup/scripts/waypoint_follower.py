@@ -5,7 +5,8 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PointStamped, Twist
 from nav_msgs.msg import Odometry
-
+## 该节点接受来自 tare planner 的航点 和 当前位姿点
+## 发布 cmd_vel 也就是速度控制指令
 class WaypointFollower(Node):
     def __init__(self):
         super().__init__('waypoint_follower')
@@ -22,9 +23,13 @@ class WaypointFollower(Node):
         self.target = None
         self.stuck = False
 
+        # 机器人位姿
         self.odom_sub = self.create_subscription(Odometry, '/odom', self.odom_cb, 10)
+        # 航点
         self.wp_sub = self.create_subscription(PointStamped, '/way_point', self.wp_cb, 10)
+        # cmd_vel 控制器
         self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        # 定时器，主循环
         self.timer = self.create_timer(0.1, self.loop)
         self.get_logger().info('Waypoint follower v2 ready')
 
@@ -39,8 +44,10 @@ class WaypointFollower(Node):
         self.get_logger().info(f'Waypoint: ({msg.point.x:.2f}, {msg.point.y:.2f})')
 
     def loop(self):
+        # 没有目标航点就直接返回
         if self.target is None:
             return
+        # 有目标航点就开始规划
         dx = self.target[0] - self.cx
         dy = self.target[1] - self.cy
         dist = math.hypot(dx, dy)

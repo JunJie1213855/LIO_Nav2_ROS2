@@ -665,7 +665,7 @@ LocalCoveragePlanner::SolveLocalCoverageProblem(
       viewpoint_sampling_runtime_ +=
           select_viewpoint_timer.GetDuration(kRuntimeUnit);
 
-      // Solve the TSP problem
+      // ===== Solve the TSP problem =====
       exploration_path_ns::ExplorationPath local_path_itr;
       local_path_itr =
           SolveTSP(selected_viewpoint_indices_itr, ordered_viewpoint_indices);

@@ -309,6 +309,7 @@ void SensorCoveragePlanner3D::InitializeData() {
   visualizer_ =
       std::make_shared<tare_visualizer_ns::TAREVisualizer>(shared_from_this());
 
+  // 初始位姿
   initial_position_.x() = 0.0;
   initial_position_.y() = 0.0;
   initial_position_.z() = 0.0;
@@ -385,55 +386,71 @@ bool SensorCoveragePlanner3D::initialize() {
   lidar_model_ns::LiDARModel::setCloudDWZResol(
       planning_env_->GetPlannerCloudResolution());
 
+
+  // 每 1 秒 触发一次 execute()（主循环）
+  // 这是整个探索器的"心脏"，上一轮介绍过的「全局 TSP + 局部 TSP + 前瞻点 + 发布航点
+  // 全部在这 1s 一次的定时器里执行
+  //  用 wall_timer（墙钟）而非仿真时钟，避免 use_sim_time 下时间不推进导致卡死
   execution_timer_ = this->create_wall_timer(
       1000ms, std::bind(&SensorCoveragePlanner3D::execute, this));
 
+  // 开始探索的信号
   exploration_start_sub_ = this->create_subscription<std_msgs::msg::Bool>(
       sub_start_exploration_topic_, 5,
       std::bind(&SensorCoveragePlanner3D::ExplorationStartCallback, this,
                 std::placeholders::_1));
+  // LIO 点云图接接收，planning_env 降采样，每5帧作为关键帧，然后进行导航
   registered_scan_sub_ =
       this->create_subscription<sensor_msgs::msg::PointCloud2>(
           sub_registered_scan_topic_, 5,
           std::bind(&SensorCoveragePlanner3D::RegisteredScanCallback, this,
                     std::placeholders::_1));
+  // 地形图，用于后续碰撞检测
   terrain_map_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       sub_terrain_map_topic_, 5,
       std::bind(&SensorCoveragePlanner3D::TerrainMapCallback, this,
                 std::placeholders::_1));
+  // 大范围地形图
   terrain_map_ext_sub_ =
       this->create_subscription<sensor_msgs::msg::PointCloud2>(
           sub_terrain_map_ext_topic_, 5,
           std::bind(&SensorCoveragePlanner3D::TerrainMapExtCallback, this,
                     std::placeholders::_1));
+  // 状态估计，更新机器人的位姿估计，以及回航记录
   state_estimation_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
       sub_state_estimation_topic_, 5,
       std::bind(&SensorCoveragePlanner3D::StateEstimationCallback, this,
                 std::placeholders::_1));
+  // 覆盖边界，用于规划探索范围
   coverage_boundary_sub_ =
       this->create_subscription<geometry_msgs::msg::PolygonStamped>(
           sub_coverage_boundary_topic_, 5,
           std::bind(&SensorCoveragePlanner3D::CoverageBoundaryCallback, this,
                     std::placeholders::_1));
+  // 视点，机器人可到达的位姿
   viewpoint_boundary_sub_ =
       this->create_subscription<geometry_msgs::msg::PolygonStamped>(
           sub_viewpoint_boundary_topic_, 5,
           std::bind(&SensorCoveragePlanner3D::ViewPointBoundaryCallback, this,
                     std::placeholders::_1));
+  // 禁行区
   nogo_boundary_sub_ =
       this->create_subscription<geometry_msgs::msg::PolygonStamped>(
           sub_nogo_boundary_topic_, 5,
           std::bind(&SensorCoveragePlanner3D::NogoBoundaryCallback, this,
                     std::placeholders::_1));
+  // 手柄遥控
   joystick_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
       sub_joystick_topic_, 5,
       std::bind(&SensorCoveragePlanner3D::JoystickCallback, this,
                 std::placeholders::_1));
+  // 重置航点
   reset_waypoint_sub_ = this->create_subscription<std_msgs::msg::Empty>(
       sub_reset_waypoint_topic_, 1,
       std::bind(&SensorCoveragePlanner3D::ResetWaypointCallback, this,
                 std::placeholders::_1));
-
+  
+  // 发布相关的，重要的是航点 /way_point 会用到速度控制
   global_path_full_publisher_ =
       this->create_publisher<nav_msgs::msg::Path>("global_path_full", 1);
   global_path_publisher_ =
@@ -866,6 +883,7 @@ void SensorCoveragePlanner3D::GlobalPlanning(
 
   viewpoint_manager_->UpdateCandidateViewPointCellStatus(grid_world_);
 
+  // 全局旅行商问题求解
   global_path = grid_world_->SolveGlobalTSP(
       viewpoint_manager_, global_cell_tsp_order, keypose_graph_);
 
@@ -955,6 +973,7 @@ void SensorCoveragePlanner3D::LocalPlanning(
   if (lookahead_point_update_) {
     local_coverage_planner_->SetLookAheadPoint(lookahead_point_);
   }
+  // 局部旅行商求解
   local_path = local_coverage_planner_->SolveLocalCoverageProblem(
       global_path, uncovered_point_num, uncovered_frontier_point_num);
   local_tsp_timer.Stop(false);
@@ -1505,14 +1524,17 @@ void SensorCoveragePlanner3D::execute() {
       return;
     }
 
+    // 更新关键位姿帧图
     UpdateKeyposeGraph();
 
     int uncovered_point_num = 0;
     int uncovered_frontier_point_num = 0;
     if (!exploration_finished_ || !kNoExplorationReturnHome) {
+      // 更新视点
       UpdateViewPointCoverage();
       UpdateCoveredAreas(uncovered_point_num, uncovered_frontier_point_num);
     } else {
+      // 如果探索结束了，重置视点
       viewpoint_manager_->ResetViewPointCoverage();
     }
 
