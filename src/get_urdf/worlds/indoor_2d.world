@@ -58,7 +58,7 @@
           <material>
             <script>
               <uri>file://media/materials/scripts/gazebo.material</uri>
-              <name>Gazebo/Grey</name>
+              <name>Gazebo/WoodFloor</name>
             </script>
           </material>
         </visual>
@@ -92,7 +92,7 @@
         </collision>
         <visual name='visual'>
           <geometry><box><size>20 0.2 1</size></box></geometry>
-          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Brick</name></script></material>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
         </visual>
       </link>
     </model>
@@ -106,7 +106,7 @@
         </collision>
         <visual name='visual'>
           <geometry><box><size>20 0.2 1</size></box></geometry>
-          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Brick</name></script></material>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
         </visual>
       </link>
     </model>
@@ -120,7 +120,7 @@
         </collision>
         <visual name='visual'>
           <geometry><box><size>0.2 20 1</size></box></geometry>
-          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Brick</name></script></material>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
         </visual>
       </link>
     </model>
@@ -134,7 +134,7 @@
         </collision>
         <visual name='visual'>
           <geometry><box><size>0.2 20 1</size></box></geometry>
-          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Brick</name></script></material>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
         </visual>
       </link>
     </model>
@@ -149,7 +149,7 @@
         </collision>
         <visual name='visual'>
           <geometry><box><size>2 2 1</size></box></geometry>
-          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Wood</name></script></material>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
         </visual>
       </link>
     </model>
@@ -163,7 +163,7 @@
         </collision>
         <visual name='visual'>
           <geometry><box><size>1.5 1.5 1</size></box></geometry>
-          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Wood</name></script></material>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
         </visual>
       </link>
     </model>
@@ -177,7 +177,7 @@
         </collision>
         <visual name='visual'>
           <geometry><box><size>1 1 1</size></box></geometry>
-          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Wood</name></script></material>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
         </visual>
       </link>
     </model>
@@ -191,7 +191,7 @@
         </collision>
         <visual name='visual'>
           <geometry><box><size>1.2 1.2 1</size></box></geometry>
-          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Wood</name></script></material>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
         </visual>
       </link>
     </model>

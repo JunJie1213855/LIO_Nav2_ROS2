@@ -1,0 +1,295 @@
+<?xml version="1.0"?>
+<robot name="diff_robot_stereo">
+
+  <!-- 空 link 作为 footprint（diff_drive 里程计 child frame） -->
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.06" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 底盘 -->
+  <link name="base_link">
+    <visual>
+      <geometry><box size="0.22 0.18 0.08"/></geometry>
+      <material name="blue"><color rgba="0.0 0.0 1.0 1.0"/></material>
+    </visual>
+    <collision>
+      <geometry><box size="0.22 0.18 0.08"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.008" ixy="0.0" ixz="0.0" iyy="0.010" iyz="0.0" izz="0.012"/>
+    </inertial>
+  </link>
+
+  <gazebo reference="base_link">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+
+  <!-- 左驱动轮 -->
+  <link name="wheel_left">
+    <visual>
+      <geometry><cylinder length="0.02" radius="0.033"/></geometry>
+      <material name="black"><color rgba="0.0 0.0 0.0 1.0"/></material>
+    </visual>
+    <collision>
+      <geometry><cylinder length="0.02" radius="0.033"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="0.03"/>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+    </inertial>
+  </link>
+
+  <gazebo reference="wheel_left">
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <joint name="wheel_left_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="wheel_left"/>
+    <origin xyz="0 0.08 -0.033" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <!-- 右驱动轮 -->
+  <link name="wheel_right">
+    <visual>
+      <geometry><cylinder length="0.02" radius="0.033"/></geometry>
+      <material name="black"><color rgba="0.0 0.0 0.0 1.0"/></material>
+    </visual>
+    <collision>
+      <geometry><cylinder length="0.02" radius="0.033"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="0.03"/>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+    </inertial>
+  </link>
+
+  <gazebo reference="wheel_right">
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <joint name="wheel_right_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="wheel_right"/>
+    <origin xyz="0 -0.08 -0.033" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <!-- 前万向轮 -->
+  <link name="caster_front">
+    <visual>
+      <geometry><sphere radius="0.018"/></geometry>
+      <material name="grey"><color rgba="0.4 0.4 0.4 1.0"/></material>
+    </visual>
+    <collision>
+      <geometry><sphere radius="0.018"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="0.000001" ixy="0.0" ixz="0.0" iyy="0.000001" iyz="0.0" izz="0.000001"/>
+    </inertial>
+  </link>
+
+  <gazebo reference="caster_front">
+    <material>Gazebo/Grey</material>
+  </gazebo>
+
+  <joint name="caster_front_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_front"/>
+    <origin xyz="0.08 0 -0.046" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 后万向轮 -->
+  <link name="caster_back">
+    <visual>
+      <geometry><sphere radius="0.018"/></geometry>
+      <material name="grey"><color rgba="0.4 0.4 0.4 1.0"/></material>
+    </visual>
+    <collision>
+      <geometry><sphere radius="0.018"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="0.000001" ixy="0.0" ixz="0.0" iyy="0.000001" iyz="0.0" izz="0.000001"/>
+    </inertial>
+  </link>
+
+  <gazebo reference="caster_back">
+    <material>Gazebo/Grey</material>
+  </gazebo>
+
+  <joint name="caster_back_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_back"/>
+    <origin xyz="-0.08 0 -0.046" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 左相机 cam0 -->
+  <link name="cam0">
+    <visual>
+      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+      <geometry><box size="0.03 0.03 0.02"/></geometry>
+      <material name="grey"><color rgba="0.3 0.3 0.3 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+      <geometry><box size="0.03 0.03 0.02"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+    </inertial>
+  </link>
+
+  <joint name="cam0_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="cam0"/>
+    <origin xyz="0.15 0.05 0.2" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+
+  <!-- 右相机 cam1 -->
+  <link name="cam1">
+    <visual>
+      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+      <geometry><box size="0.03 0.03 0.02"/></geometry>
+      <material name="grey"><color rgba="0.3 0.3 0.3 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+      <geometry><box size="0.03 0.03 0.02"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+    </inertial>
+  </link>
+
+  <joint name="cam1_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="cam1"/>
+    <origin xyz="0.15 -0.05 0.2" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+
+  <!-- Gazebo 差分驱动插件 -->
+  <gazebo>
+    <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <ros>
+        <namespace>/</namespace>
+      </ros>
+      <update_rate>30</update_rate>
+      <left_joint>wheel_left_joint</left_joint>
+      <right_joint>wheel_right_joint</right_joint>
+      <wheel_separation>0.16</wheel_separation>
+      <wheel_diameter>0.066</wheel_diameter>
+      <max_wheel_torque>20</max_wheel_torque>
+      <max_wheel_acceleration>1.0</max_wheel_acceleration>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+    </plugin>
+  </gazebo>
+
+  <!-- 左相机传感器 -->
+  <gazebo reference="cam0">
+    <sensor type="camera" name="camera_cam0">
+      <pose>0 0 0 0 0 0</pose>
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <update_rate>10</update_rate>
+      <camera>
+        <horizontal_fov>1.35104</horizontal_fov>
+        <image>
+          <width>752</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>30</far>
+        </clip>
+      </camera>
+      <plugin name="camera_cam0_plugin" filename="libgazebo_ros_camera.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>~/image_raw:=/cam0/image_raw</remapping>
+          <remapping>~/camera_info:=/cam0/camera_info</remapping>
+        </ros>
+        <camera_name>cam0</camera_name>
+        <frame_name>cam0</frame_name>
+        <hack_baseline>0.0</hack_baseline>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- 右相机传感器 -->
+  <gazebo reference="cam1">
+    <sensor type="camera" name="camera_cam1">
+      <pose>0 0 0 0 0 0</pose>
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <update_rate>10</update_rate>
+      <camera>
+        <horizontal_fov>1.35104</horizontal_fov>
+        <image>
+          <width>752</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>30</far>
+        </clip>
+      </camera>
+      <plugin name="camera_cam1_plugin" filename="libgazebo_ros_camera.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>~/image_raw:=/cam1/image_raw</remapping>
+          <remapping>~/camera_info:=/cam1/camera_info</remapping>
+        </ros>
+        <camera_name>cam1</camera_name>
+        <frame_name>cam1</frame_name>
+        <hack_baseline>0.0</hack_baseline>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- IMU 传感器 -->
+  <gazebo reference="base_link">
+    <sensor name="imu_stereo" type="imu">
+      <always_on>true</always_on>
+      <update_rate>200</update_rate>
+      <visualize>false</visualize>
+
+      <plugin name="imu_stereo_plugin" filename="libgazebo_ros_imu_sensor.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>~/out:=/imu0</remapping>
+        </ros>
+        <initial_orientation_as_reference>false</initial_orientation_as_reference>
+      </plugin>
+
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>2e-4</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>2e-4</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>2e-4</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+
+</robot>

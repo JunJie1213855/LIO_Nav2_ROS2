@@ -24,10 +24,27 @@
 - **仿真-实机一致性** — 同一套导航栈，仅传感器驱动和 URDF 不同
 - **Docker 支持** — 提供完整 Docker 镜像构建、编译和运行方案
 - **完整工具链** — 构建、建图、保存地图、导航全流程脚本化
+- **2D 单线 LiDAR 导航** — 标准差分小车（`diff_robot_2d`）+ 单线 LaserScan + Cartographer 2D SLAM + Nav2 在线导航
+- **SCAN-Planner 局部避障** — B-spline 轨迹优化 + A* 绕障的局部反应式规划器（替代 Nav2 局部规划）
+- **TARE 自主探索** — 大范围自主探索规划器，配合 LIO 在未知室内环境自动覆盖建图
+- **双目 + IMU VIO** — VINS-Fusion（ROS2 版）视觉惯性里程计，跨容器仿真验证（实验性）
 
 数据管线：
 
+**3D LiDAR 导航管线**：
 > LiDAR/IMU &rarr; LIO (FAST-LIO / Point-LIO / Super-LIO) &rarr; TF 桥接 (`lio_interface`) &rarr; odom TF &amp; `/registered_scan` (`sensor_scan_generation`) &rarr; 3D&rarr;2D 切片 (`pointcloud_to_laserscan`) &rarr; 2D SLAM 建图 (SLAM Toolbox / Cartographer) &rarr; 重定位 (KISS-Matcher / Cartographer 纯定位) &rarr; Nav2 (DWB + Navfn)
+
+**2D 单线 LiDAR 导航管线**：
+> 单线 LiDAR `/scan` + IMU + `/odom` (diff_drive) &rarr; Cartographer 2D SLAM（在线建图定位）&rarr; Nav2（跳过 map_server）&rarr; `/cmd_vel`
+
+**SCAN-Planner 局部避障管线**：
+> LIO 点云建栅格地图 &rarr; 全局直线轨迹 + 局部目标 &rarr; 碰撞段检测 &rarr; A* 绕障搜索 &rarr; B-spline 轨迹优化 &rarr; 闭环控制 `/cmd_vel`
+
+**TARE 自主探索管线**：
+> LIO 点云 &rarr; Rolling Occupancy Grid &rarr; 视点图 + TSP 规划 &rarr; 局部路径 + 路径跟随（带局部避障）
+
+**双目 + IMU VIO 管线**（实验性）：
+> 双目相机 `/cam0/image_raw` `/cam1/image_raw` + `/imu0` &rarr; VINS-Fusion（跨容器运行）&rarr; `/vins_estimator/odometry` + 轨迹/点云
 
 TF 坐标树：**`map` &rarr; `odom` &rarr; `base_footprint` &rarr; `chassis` &rarr; `livox_frame`**
 
@@ -166,9 +183,53 @@ ros2 topic hz /registered_scan
 
 日志中出现 `KISSMatcher initialization succeeded` 表示全局初始化成功，随后会进入 small_gicp 连续跟踪阶段。若持续出现 `KISSMatcher initialization failed`，通常是当前累计点云与先验地图重叠不足、点云太稀疏，或 `prior_pcd_file` / 坐标系设置不匹配。
 
+### 3.6 2D 单线 LiDAR 导航（仿真）
+
+标准差分小车 + 单线 LiDAR + Cartographer 2D SLAM + Nav2 在线导航，无需预建图。
+
+```bash
+docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/nav2_2d_sim.sh"
+```
+
+在 RViz 中用 "2D Goal Pose" 发送目标，机器人实时建图并自主导航。详细说明见 [`docs/nav2_2d_run.md`](docs/nav2_2d_run.md) 和 [`docs/2d_lidar_doc.md`](docs/2d_lidar_doc.md)。
+
+### 3.7 SCAN-Planner 局部避障（仿真）
+
+FAST-LIO + SCAN-Planner 局部反应式避障规划器（B-spline + A*），用于需要比 Nav2 更激进的局部避障场景。
+
+```bash
+docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/nav_scan_sim.sh"
+```
+
+详细说明见 [`docs/scan_run.md`](docs/scan_run.md)。
+
+### 3.8 TARE 自主探索（仿真）
+
+TARE Planner 大范围自主探索，自动在未知室内环境覆盖建图。
+
+```bash
+docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/mapping_tare_sim.sh"
+```
+
+详细说明见 [`docs/tare_run.md`](docs/tare_run.md)。
+
+### 3.9 双目 + IMU VIO（实验性）
+
+VINS-Fusion（ROS2 版）视觉惯性里程计，Gazebo 与 VINS 跨容器运行。
+
+```bash
+# 容器 A（lio_nav2）：Gazebo 双目小车 + 键盘遥控
+docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/stereo_vio_sim.sh"
+
+# 容器 B（vins_run）：VINS-Fusion + RViz
+docker exec -it vins_run bash -c "cd /ws && bash scripts/vins_run.sh"
+```
+
+> 当前为实验性功能，双目标定/外参/图像方向仍在调试中。
+
 ## 4. 功能包
 
-工作空间包含 **19 个 ROS 2 功能包**，位于 `src/` 下：
+工作空间包含数十个 ROS 2 功能包，位于 `src/` 下，按功能分组如下：
 
 **里程计与定位** (`src/localization/`)
 
@@ -189,14 +250,16 @@ ros2 topic hz /registered_scan
 - `sensor_scan_generation` — 发布 `odom` &rarr; `base_footprint` TF、`/odom` 和 `/registered_scan`
 - `ign_sim_pointcloud_tool` — PointCloud2 转 Velodyne 格式，Point-LIO 仿真必需
 
-**导航**
+**导航与规划器**
 
 - `me_nav2_bringup` — Nav2 集成：启动文件、参数配置、地图、PCD、RViz 配置
-- `gui_teleop` — tkinter GUI 遥控，持速度调节和紧急停止
+- `gui_teleop` — tkinter GUI 遥控，支持速度调节和紧急停止
+- `SCAN-Planner`（`src/planner/SCAN-Planner/`）— 局部反应式避障规划器：碰撞段检测 + A* 绕障 + B-spline 轨迹优化，多包结构（`bspline_opt` / `path_searching` / `plan_env` / `plan_manage`）
+- `tare_planner`（`src/planner/tare_planner/`）— TARE 大范围自主探索规划器：rolling occupancy grid + 视点图 + TSP 路径规划
 
 **仿真与描述**
 
-- `get_urdf` — 四轮滑移转向机器人 URDF、Gazebo 世界、RViz 配置
+- `get_urdf` — 机器人 URDF（四轮滑移 `simple_car`、2D 差分 `diff_robot_2d`、双目 `diff_robot_stereo`）、Gazebo 世界、RViz 配置
 - `gld_robot_description` — 实机 URDF（含 RealSense D456/D405、Orbbec Gemini 相机）
 - `livox_laser_simulation_RO2` — Livox LiDAR Gazebo 仿真插件
 
@@ -231,10 +294,10 @@ ros2 topic hz /registered_scan
 当前配置使用 **DWB** 局部规划器和 **Navfn**（Dijkstra）全局规划器。
 
 - **速度限制**：线速度 0.26 m/s，角速度 1.0 rad/s
-- **目标容差**：XY 0.035 m，偏航角 10&deg;
+- **目标容差**：XY 0.15 m，偏航角 10&deg;
 - **局部代价地图**：6&times;6 m 滚动窗口，0.05 m 分辨率
 - **全局代价地图**：静态层 + 障碍物层 + 膨胀层（0.55 m 半径）
-- **机器人外轮廓**：0.42&times;0.39 m 矩形
+- **机器人外轮廓**：0.30&times;0.24 m 矩形（适配 2D 差分小车 `diff_robot_2d`；3D 小车需调回 0.42&times;0.39 m）
 
 ### 5.3 LIO 切换
 
@@ -307,6 +370,17 @@ lidar_frame: livox_frame
 | `/plan` | Path | Nav2 规划器 |
 | `/tf` | TFMessage | LIO、sensor_scan_generation、重定位节点 |
 
+2D 单线 LiDAR / 双目 VIO 管线额外使用：
+
+| 话题 | 消息类型 | 发布者 |
+|------|----------|--------|
+| `/imu0` | sensor_msgs/Imu | Gazebo IMU 插件（双目小车） |
+| `/cam0/image_raw` `/cam1/image_raw` | sensor_msgs/Image | Gazebo 相机插件（双目小车） |
+| `/vins_estimator/odometry` | Odometry | VINS-Fusion |
+| `/vins_estimator/path` | Path | VINS-Fusion |
+| `/vins_estimator/point_cloud` | PointCloud2 | VINS-Fusion |
+| `/goal_pose` | PoseStamped | RViz（2D Goal Pose） |
+
 `global_relocalization_kiss_matcher` 额外使用：
 
 | 话题 / TF | 方向 | 说明 |
@@ -358,6 +432,9 @@ cd scripts
 - [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox) — 2D 位姿图 SLAM
 - [Livox SDK2](https://github.com/Livox-SDK/Livox-SDK2) — Livox LiDAR SDK
 - [Sophus](https://github.com/strasdat/Sophus) — 李群 C++ 库
+- [SCAN-Planner](https://github.com/HKUST-Aerial-Robotics/SCAN-Planner) — 局部反应式避障规划器（B-spline + A*）
+- [TARE Planner](https://github.com/caochao39/tare_planner) — 大范围自主探索规划器
+- [VINS-Fusion](https://github.com/HKUST-Aerial-Robotics/VINS-Fusion) — 多传感器视觉惯性里程计
 
 ## 9. 许可证
 
