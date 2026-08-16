@@ -27,7 +27,6 @@
 - **2D 单线 LiDAR 导航** — 标准差分小车（`diff_robot_2d`）+ 单线 LaserScan + Cartographer 2D SLAM + Nav2 在线导航
 - **SCAN-Planner 局部避障** — B-spline 轨迹优化 + A* 绕障的局部反应式规划器（替代 Nav2 局部规划）
 - **TARE 自主探索** — 大范围自主探索规划器，配合 LIO 在未知室内环境自动覆盖建图
-- **双目 + IMU VIO** — VINS-Fusion（ROS2 版）视觉惯性里程计，跨容器仿真验证（实验性）
 
 数据管线：
 
@@ -43,8 +42,6 @@
 **TARE 自主探索管线**：
 > LIO 点云 &rarr; Rolling Occupancy Grid &rarr; 视点图 + TSP 规划 &rarr; 局部路径 + 路径跟随（带局部避障）
 
-**双目 + IMU VIO 管线**（实验性）：
-> 双目相机 `/cam0/image_raw` `/cam1/image_raw` + `/imu0` &rarr; VINS-Fusion（跨容器运行）&rarr; `/vins_estimator/odometry` + 轨迹/点云
 
 TF 坐标树：**`map` &rarr; `odom` &rarr; `base_footprint` &rarr; `chassis` &rarr; `livox_frame`**
 
@@ -213,20 +210,6 @@ docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/mapping_tare_sim.sh"
 
 详细说明见 [`docs/tare_run.md`](docs/tare_run.md)。
 
-### 3.9 双目 + IMU VIO（实验性）
-
-VINS-Fusion（ROS2 版）视觉惯性里程计，Gazebo 与 VINS 跨容器运行。
-
-```bash
-# 容器 A（lio_nav2）：Gazebo 双目小车 + 键盘遥控
-docker exec -it lio_nav2 bash -c "cd /ws && bash scripts/stereo_vio_sim.sh"
-
-# 容器 B（vins_run）：VINS-Fusion + RViz
-docker exec -it vins_run bash -c "cd /ws && bash scripts/vins_run.sh"
-```
-
-> 当前为实验性功能，双目标定/外参/图像方向仍在调试中。
-
 ## 4. 功能包
 
 工作空间包含数十个 ROS 2 功能包，位于 `src/` 下，按功能分组如下：
@@ -259,7 +242,7 @@ docker exec -it vins_run bash -c "cd /ws && bash scripts/vins_run.sh"
 
 **仿真与描述**
 
-- `get_urdf` — 机器人 URDF（四轮滑移 `simple_car`、2D 差分 `diff_robot_2d`、双目 `diff_robot_stereo`）、Gazebo 世界、RViz 配置
+- `get_urdf` — 机器人 URDF（四轮滑移 `simple_car`、2D 差分 `diff_robot_2d`）、Gazebo 世界、RViz 配置
 - `gld_robot_description` — 实机 URDF（含 RealSense D456/D405、Orbbec Gemini 相机）
 - `livox_laser_simulation_RO2` — Livox LiDAR Gazebo 仿真插件
 
@@ -370,16 +353,6 @@ lidar_frame: livox_frame
 | `/plan` | Path | Nav2 规划器 |
 | `/tf` | TFMessage | LIO、sensor_scan_generation、重定位节点 |
 
-2D 单线 LiDAR / 双目 VIO 管线额外使用：
-
-| 话题 | 消息类型 | 发布者 |
-|------|----------|--------|
-| `/imu0` | sensor_msgs/Imu | Gazebo IMU 插件（双目小车） |
-| `/cam0/image_raw` `/cam1/image_raw` | sensor_msgs/Image | Gazebo 相机插件（双目小车） |
-| `/vins_estimator/odometry` | Odometry | VINS-Fusion |
-| `/vins_estimator/path` | Path | VINS-Fusion |
-| `/vins_estimator/point_cloud` | PointCloud2 | VINS-Fusion |
-| `/goal_pose` | PoseStamped | RViz（2D Goal Pose） |
 
 `global_relocalization_kiss_matcher` 额外使用：
 
@@ -434,10 +407,6 @@ cd scripts
 - [Sophus](https://github.com/strasdat/Sophus) — 李群 C++ 库
 - [SCAN-Planner](https://github.com/HKUST-Aerial-Robotics/SCAN-Planner) — 局部反应式避障规划器（B-spline + A*）
 - [TARE Planner](https://github.com/caochao39/tare_planner) — 大范围自主探索规划器
-- [VINS-Fusion](https://github.com/HKUST-Aerial-Robotics/VINS-Fusion) — 多传感器视觉惯性里程计
 
 ## 9. 许可证
-
 本项目依据 [MIT License](./LICENSE) 开源。
-
----
