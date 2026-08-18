@@ -18,6 +18,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(ament_cmake_auto REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
+find_package(PCL REQUIRED)
+find_package(pcl_conversions REQUIRED)
+find_package(pcl_ros REQUIRED)
+add_definitions(${PCL_DEFINITIONS})
 ament_auto_find_build_dependencies()
 
 ###########
@@ -28,8 +32,19 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   DIRECTORY src
 )
 
+
+ament_target_dependencies(${PROJECT_NAME} 
+  rclcpp
+  sensor_msgs
+  pcl_conversions
+  pcl_ros
+)
+
 # 显式链接 tf2_geometry_msgs (提供 tf2::fromMsg 等函数)
-target_link_libraries(${PROJECT_NAME} tf2_geometry_msgs::tf2_geometry_msgs)
+target_link_libraries(${PROJECT_NAME} 
+  tf2_geometry_msgs::tf2_geometry_msgs
+  ${PCL_LIBRARIES}
+)
 
 # 为每个组件注册单独的可执行节点
 rclcpp_components_register_node(${PROJECT_NAME}

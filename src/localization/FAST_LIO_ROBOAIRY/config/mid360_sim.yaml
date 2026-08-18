@@ -1,0 +1,49 @@
+/**:
+    ros__parameters:
+        feature_extract_enable: false
+        point_filter_num: 4
+        max_iteration: 3
+        filter_size_surf: 0.5
+        filter_size_map: 0.5
+        cube_side_length: 1000.0
+        runtime_pos_log_enable: false
+        map_file_path: "./test.pcd"
+
+        common:
+            lid_topic:  "/velodyne_points"    # ign_sim_pointcloud_tool 转换后的 velodyne 格式点云
+            imu_topic:  "/livox/imu"
+            time_sync_en: false
+            time_offset_lidar_to_imu: 0.0
+
+        preprocess:
+            lidar_type: 2                # Velodyne 格式（由 ign_sim_pointcloud_tool 注入 ring/time）
+            scan_line: 50                # 与转换器 n_scan:=50 一致（URDF 垂直 50 线）
+            blind: 0.5
+            timestamp_unit: 0            # 转换器注入的 time 字段单位是【秒】(point_id%360*0.1/360)
+            scan_rate: 10                # 与 URDF ray sensor update_rate 一致 (Hz)
+
+        mapping:
+            acc_cov: 0.1
+            gyr_cov: 0.1
+            b_acc_cov: 0.0001
+            b_gyr_cov: 0.0001
+            gravity_ref: [0.0, 0.0, -9.81]    # 标准 z-up 传感器，重力朝 -Z
+            fov_degree: 360.0
+            det_range: 40.0
+            extrinsic_est_en: false      # 仿真下 LiDAR 与 IMU 共置于 livox_frame，外参已知，关闭在线估计
+            extrinsic_T: [0.0, 0.0, 0.0]
+            extrinsic_R: [1., 0., 0.,
+                          0., 1., 0.,
+                          0., 0., 1.]
+
+        publish:
+            path_en: true                # true: publish Path
+            effect_map_en: false
+            map_en: true
+            scan_publish_en:  true
+            dense_publish_en: false
+            scan_bodyframe_pub_en: true
+
+        pcd_save:
+            pcd_save_en: true
+            interval: -1                 # -1 : 所有帧存进一个 PCD

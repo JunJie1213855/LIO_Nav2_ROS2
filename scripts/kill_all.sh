@@ -98,6 +98,27 @@ fi
 sleep 1
 
 # ═══════════════════════════════════════════════════════════════
+# 阶段 1.5: 关闭 tmux 会话（DSV 探索仿真用 tmux 而非 gnome-terminal）
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "── 阶段 1.5: 关闭 tmux 会话 (DSV 仿真) ──"
+
+# DSV Planner 探索仿真 (scripts/dsv_exploration_sim.sh) 全部窗口跑在 tmux 会话 dsv_gz 里，
+# 杀会话即可一次性端掉 Gazebo/FAST-LIO/relay/DSV 整条链路，避免逐进程匹配遗漏。
+DSV_TMUX_SESSION="dsv_gz"
+if command -v tmux &> /dev/null && tmux has-session -t "$DSV_TMUX_SESSION" 2>/dev/null; then
+    if [ "$DRY_RUN" = true ]; then
+        echo "  [DRY-RUN] 将关闭 tmux 会话: $DSV_TMUX_SESSION"
+    else
+        tmux kill-session -t "$DSV_TMUX_SESSION" 2>/dev/null && echo "  ✓ 关闭 tmux 会话: $DSV_TMUX_SESSION" || true
+    fi
+else
+    echo "  (无 $DSV_TMUX_SESSION tmux 会话)"
+fi
+
+sleep 1
+
+# ═══════════════════════════════════════════════════════════════
 # 阶段 2: 通过 ros2 node list 自动发现节点并终止其进程
 # ═══════════════════════════════════════════════════════════════
 echo ""
@@ -157,6 +178,9 @@ ALL_PROCESS_NAMES=(
     "async_slam_toolbox_node" "slam_toolbox"
     # 规划器
     "far_planner" "tare_planner_node"
+    # DSV Planner (探索仿真)
+    "dsvplanner_exe" "graph_planner_exe" "graph_visualization" "navigationBoundary"
+    "dsvp_launch" "topic_tools"
     # Nav2
     "map_server" "planner_server" "controller_server"
     "bt_navigator" "behavior_server" "waypoint_follower"
@@ -214,6 +238,11 @@ ALL_LAUNCH_PATTERNS=(
     "online_async_launch.py"
     "my_nav2_launch.py"
     "gld_robot_description"
+    # DSV Planner 探索仿真
+    "dsvp.launch"
+    "graph_planner.launch"
+    "graph_visualization.launch"
+    "dsv_exploration_sim.sh"
 )
 
 for pattern in "${ALL_LAUNCH_PATTERNS[@]}"; do
