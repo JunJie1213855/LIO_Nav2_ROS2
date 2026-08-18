@@ -46,7 +46,8 @@ class ImuProcess
   void set_acc_cov(const V3D &scaler);
   void set_gyr_bias_cov(const V3D &b_g);
   void set_acc_bias_cov(const V3D &b_a);
-  
+  void set_gravity_ref(const V3D &ref);
+
   // 协方差矩阵 q、p、v、bg、ba
   Eigen::Matrix<double, 12, 12> Q;
   void Process(const MeasureGroup &meas,  esekfom::esekf<state_ikfom, 12, input_ikfom> &kf_state, PointCloudXYZI::Ptr pcl_un_);
@@ -84,6 +85,8 @@ class ImuProcess
   // mean acceleration and 
   V3D mean_acc;
   V3D mean_gyr;
+  // world系参考重力方向（config: mapping.gravity_ref），用于初始化时的重力对齐
+  V3D gravity_ref_;
   // 最新的角速度和加速度
   V3D angvel_last;
   V3D acc_s_last;
@@ -107,6 +110,7 @@ ImuProcess::ImuProcess()
   cov_bias_acc  = V3D(0.0001, 0.0001, 0.0001);
   mean_acc      = V3D(0, 0, -1.0);
   mean_gyr      = V3D(0, 0, 0);
+  gravity_ref_  = V3D(0, 0, -9.81);
   angvel_last     = Zero3d;
   Lidar_T_wrt_IMU = Zero3d;
   Lidar_R_wrt_IMU = Eye3d;
@@ -168,6 +172,11 @@ void ImuProcess::set_acc_bias_cov(const V3D &b_a)
   cov_bias_acc = b_a;
 }
 
+void ImuProcess::set_gravity_ref(const V3D &ref)
+{
+  gravity_ref_ = ref;
+}
+
 void ImuProcess::IMU_init(const MeasureGroup &meas, esekfom::esekf<state_ikfom, 12, input_ikfom> &kf_state, int &N)
 {
   /** 1. initializing the gravity, gyro bias, acc and gyro covariance
@@ -205,8 +214,16 @@ void ImuProcess::IMU_init(const MeasureGroup &meas, esekfom::esekf<state_ikfom, 
     N ++;
   }
   state_ikfom init_state = kf_state.get_x();
-  init_state.grav = S2(- mean_acc / mean_acc.norm() * G_m_s2);
-  
+  // 重力对齐：用实测重力与参考重力做最短弧旋转，一次性初始化水平姿态
+  // 参考方向由 config (mapping.gravity_ref) 指定；Airy z-flip 传感器需用 +Z（保持现有翻转系约定）
+  V3D g_body = -mean_acc / mean_acc.norm();   // IMU系下实测重力单位方向
+  V3D g_ref  = gravity_ref_.normalized();     // world系参考重力单位方向
+  init_state.grav = S2(gravity_ref_);         // world系重力状态与参考一致（S2 只保留方向，幅值固定）
+  // 最短弧：把 body 系实测重力转到 world 系参考方向 → 初始 roll/pitch 立即水平化（yaw 不可观测，由 LiDAR 收敛）
+  Eigen::Quaterniond q_align =
+      Eigen::Quaterniond::FromTwoVectors(g_body, g_ref);
+  init_state.rot = SO3(q_align.toRotationMatrix());
+
   //state_inout.rot = Eye3d; // Exp(mean_acc.cross(V3D(0, 0, -1 / scale_gravity)));
   init_state.bg  = mean_gyr;
   init_state.offset_T_L_I = Lidar_T_wrt_IMU;
