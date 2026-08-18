@@ -1,9 +1,9 @@
 Pointcloud2d_3d:
   ros__parameters:
-    target_frame: "livox_frame" # 扫描参考坐标系
+    target_frame: "base_footprint" # 扫描参考坐标系
     transform_tolerance: 0.01
-    min_height: -2.0    # 切片下界（车顶以上，避开地面）
-    max_height: -0.3   # 切片上界
+    min_height: -1.5    # 切片下界（车顶以上，避开地面）
+    max_height: -0.1   # 切片上界
     angle_min: -3.14159
     angle_max: 3.14159
     angle_increment: 0.0087 # 约 0.5 度分辨率

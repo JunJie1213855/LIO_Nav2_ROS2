@@ -155,11 +155,17 @@ docker exec lio_nav2 bash -c "
 
 ### 4.2 方案 A: SLAM Toolbox 建图
 
+> **⚠️ 注意：`robo_mapping_real_docker.sh` 里 `bag播放` 窗口被注释掉了**（第 50-53 行），脚本只负责启动节点，**数据需要手动播放**，否则所有节点空转。
+
 ```bash
-# 启动
+# 1. 启动建图节点（FAST-LIO / robot_desc / lio_if / sensor / pc2laser / slam_toolbox / RViz）
 docker exec -it lio_nav2 /ws/scripts/robo_mapping_real_docker.sh
 
-# 查看输出
+# 2. 播放 bag 数据（--clock 发布 /clock 仿真时钟，配合各节点 use_sim_time:=true；换数据改路径即可）
+docker exec lio_nav2 bash -c 'source /opt/ros/humble/setup.bash && cd /ws && \
+  ros2 bag play /dataset/robosense/mapping --clock'
+
+# 3. 查看输出（退出: 先按 Ctrl+B 再按 D）
 docker exec -it lio_nav2 tmux attach -t robo_mapping
 
 # 停止
@@ -170,7 +176,6 @@ tmux 窗口：
 
 | 窗口 | 内容 |
 |------|------|
-| `bag播放` | 回放数据集 `--clock` |
 | `FAST-LIO` | 3D 里程计 + **FAST-LIO 自带 3D RViz**（点云 + 轨迹） |
 | `robot_desc` | URDF → 静态 TF（`rviz:=false`） |
 | `lio_if` | 坐标系转换 |
@@ -181,12 +186,35 @@ tmux 窗口：
 
 > 两个 RViz：FAST-LIO 显示 3D 视角（`/cloud_registered` + `/path`），建图 RViz 显示 2D 地图（`/map` + `/scan`）。
 
-保存地图：
+**检查数据流是否正常（bag 播放期间）：**
 
 ```bash
-docker exec lio_nav2 bash -c "source install/setup.bash && \
-  /ws/scripts/save_map.sh && /ws/scripts/save_pcd.sh"
+docker exec lio_nav2 bash -c 'source /opt/ros/humble/setup.bash && ros2 topic hz /Odometry /scan'
+# 预期: /rslidar_points ~8.5Hz → /Odometry ~9Hz → /scan ~10Hz；/map 有 1 个 publisher
 ```
+
+**保存地图（bag 播完后）：**
+
+```bash
+# 3D 点云地图（触发 FAST-LIO 的 /map_save 服务）
+docker exec lio_nav2 bash -c 'source /opt/ros/humble/setup.bash && \
+  timeout 20 ros2 service call /map_save std_srvs/srv/Trigger'
+
+# 2D 栅格地图（SLAM Toolbox → map_saver → .pgm + .yaml）
+docker exec lio_nav2 bash -c 'cd /ws && source install/setup.bash && /ws/scripts/save_map.sh'
+```
+
+> 3D 点云保存后需确认落盘位置，见下方 **路径问题**。
+
+**⚠️ 3D PCD 落盘路径问题：**
+
+`robosenseAiry.yaml` 的 `map_file_path` 若指向容器内部路径（如 `/home/ros/rosws/...`），`map_save` 会把 PCD 写进容器层（宿主看不到、容器重建即丢）。建议改为：
+
+```yaml
+map_file_path: /ws/src/me_nav2_bringup/pcd/robo_map.pcd
+```
+
+改完后保存结果直接落在项目 `src/me_nav2_bringup/pcd/robo_map.pcd`（宿主可见），建图/导航（KISS-Matcher）直接引用。
 
 ### 4.3 方案 B: Cartographer 建图
 
