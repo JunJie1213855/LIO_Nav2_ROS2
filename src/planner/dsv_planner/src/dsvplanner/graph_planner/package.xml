@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>graph_planner</name>
+  <version>0.0.1</version>
+  <description>The graph planner package</description>
+  <maintainer email="hongbiaz@andrew.cmu.edu">Hongbiao Zhu</maintainer>
+  <license>BSD</license>
+
+  <author>Hongbiao Zhu</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <depend>rclcpp</depend>
+  <depend>graph_utils</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>pcl_conversions</depend>
+  <depend>misc_utils</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

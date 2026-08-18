@@ -1,0 +1,23 @@
+#Octomap Parameters
+/dsvplanner:
+  ros__parameters:
+    octo/tfFrame: map
+    octo/robotFrame: base_footprint
+    octo/resolution: 0.35
+    octo/probabilityHit: 0.65
+    octo/probabilityMiss: 0.4
+    octo/thresholdMin: 0.12
+    octo/thresholdMax: 0.97
+    octo/thresholdOccupancy: 0.7
+    octo/filterSpeckles: true
+    octo/maxFreeSpace: 0.0
+    octo/minHeightFreeSpace: 0.0
+    octo/sensorMaxRange: 15.0
+    octo/visualizeMinZ: -25.0
+    octo/visualizeMaxZ: 25.0
+    octo/mapPublishFrequency: 1.0
+    octo/treatUnknownAsOccupied: false
+    octo/changeDetectionEnabled: false
+    # 点云进入 octomap 前必须先滤除地面点（地面被标成 occupied 会挡住 RRT 扩展，
+    # 因为 ground robot 的 RRT 在地面高度 z≈0 规划）。滤除后由 ground_ceiling_filter.py 发布。
+    octo/velodyne_cloud_topic: /terrain_map_ext_filtered

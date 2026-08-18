@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<package>
+  <name>minkindr</name>
+  <version>0.0.1</version>
+  <description>minkindr</description>
+
+  <maintainer email="paul.furgale@gmail.com">Paul Furgale</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+</package>
+
