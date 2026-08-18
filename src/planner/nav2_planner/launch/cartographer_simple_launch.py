@@ -4,11 +4,11 @@
 需要: /scan (LaserScan), /livox/imu (Imu), TF: base_footprint→livox_frame (URDF 静态)
 
 建图用法:
-  ros2 launch me_nav2_bringup cartographer_simple_launch.py
+  ros2 launch nav2_planner cartographer_simple_launch.py
 
 定位用法:
-  ros2 launch me_nav2_bringup cartographer_simple_launch.py \
-      pure_localization:=true load_pbstream:=/ws/src/me_nav2_bringup/map/map.pbstream
+  ros2 launch nav2_planner cartographer_simple_launch.py \
+      pure_localization:=true load_pbstream:=/ws/src/planner/nav2_planner/map/map.pbstream
 """
 
 import os
@@ -21,7 +21,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    pkg_dir = get_package_share_directory('me_nav2_bringup')
+    pkg_dir = get_package_share_directory('nav2_planner')
     config_dir = os.path.join(pkg_dir, 'config')
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
@@ -75,7 +75,7 @@ def generate_launch_description():
 
     # TF → Odometry 桥接（Nav2 需要 /odom 话题）
     tf_to_odom_node = Node(
-        package='me_nav2_bringup',
+        package='nav2_planner',
         executable='tf_to_odom.py',
         name='tf_to_odometry',
         output='screen',

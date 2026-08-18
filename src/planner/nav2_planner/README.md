@@ -1,4 +1,4 @@
-# me_nav2_bringup
+# nav2_planner
 
 **Nav2 导航集成中心**，包含启动文件、参数配置、地图、PCD 和 RViz 界面。
 
@@ -29,7 +29,7 @@
 ## 启动
 
 ```bash
-ros2 launch me_nav2_bringup my_nav2_launch.py
+ros2 launch nav2_planner my_nav2_launch.py
 ```
 
 ## 依赖

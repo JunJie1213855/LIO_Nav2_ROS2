@@ -25,7 +25,7 @@ sleep 3
 W "lio_if"    "ros2 launch lio_interface lio_interface_launch.py"
 W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 sleep 2
-W "TARE"      "ros2 launch me_nav2_bringup tare_lio_explore_launch.py"
+W "TARE"      "ros2 launch nav2_planner tare_lio_explore_launch.py"
 
 echo "========================================="
 echo " Gazebo + FAST-LIO + TARE 自主探索"

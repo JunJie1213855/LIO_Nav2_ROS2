@@ -35,11 +35,11 @@ new_win "lio_if"        "ros2 launch lio_interface lio_interface_launch.py use_s
 new_win "sensor"        "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 # ================= 3D 转 2D =================
-new_win "pc2laser"      "ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch_robo.py"
+new_win "pc2laser"      "ros2 launch nav2_planner pointcloud_to_laserscan_launch_robo.py"
 
 # ================= slam toolbox =================
 new_win "slam_toolbox"  "ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
+    slam_params_file:=src/planner/nav2_planner/config/slam_toolbox_params.yaml"
 
 # ================= slam toolbox 可视化 =================
 new_win "RViz"          "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner/rviz/nav2.rviz"

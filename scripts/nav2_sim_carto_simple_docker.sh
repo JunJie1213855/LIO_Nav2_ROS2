@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(dirname -- "$SCRIPT_DIR")"
 
 SESSION=nav2_simple
-PBSTREAM="${1:-/ws/src/me_nav2_bringup/map/map_simple.pbstream}"
+PBSTREAM="${1:-/ws/src/planner/nav2_planner/map/map_simple.pbstream}"
 
 tmux kill-session -t "$SESSION" 2>/dev/null
 killall -9 gzserver gzclient 2>/dev/null
@@ -30,12 +30,12 @@ tmux new-session -d -s "$SESSION" -n "GUI控制" \
 new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"
 
 # 3D→2D 切片
-new_win "pc2laser" "ros2 launch me_nav2_bringup pointcloud_to_laserscan_simple_launch.py"
+new_win "pc2laser" "ros2 launch nav2_planner pointcloud_to_laserscan_simple_launch.py"
 
 # Cartographer 纯定位 + TF→Odometry
 # 带 -pure_localization 命令行参数 + 加载 pbstream
 new_win "Carto定位" "ros2 run cartographer_ros cartographer_node \
-    -configuration_directory /ws/src/me_nav2_bringup/config \
+    -configuration_directory /ws/src/planner/nav2_planner/config \
     -configuration_basename cartographer_simple.lua \
     -load_state_filename $PBSTREAM \
     -pure_localization \
@@ -43,10 +43,10 @@ new_win "Carto定位" "ros2 run cartographer_ros cartographer_node \
 
 # 上一步 Cartographer 已 start occupancy_grid_node（封装在 cartographer_simple_launch 里）
 # 这里单独启动 occupancy_grid 和 tf_to_odom
-new_win "odom桥接" "ros2 run me_nav2_bringup tf_to_odom.py --ros-args -p use_sim_time:=true"
+new_win "odom桥接" "ros2 run nav2_planner tf_to_odom.py --ros-args -p use_sim_time:=true"
 
 # Nav2 导航
-new_win "Nav2" "ros2 launch me_nav2_bringup my_nav2_launch.py"
+new_win "Nav2" "ros2 launch nav2_planner my_nav2_launch.py"
 
 echo "===== 精简导航已启动 (会话: $SESSION) ====="
 echo "tmux 窗口: GUI控制 | Gazebo | pc2laser | Carto定位 | odom桥接 | Nav2"

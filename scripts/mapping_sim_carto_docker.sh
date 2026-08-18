@@ -48,16 +48,16 @@ new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"
 new_win "sensor_scan" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 # 3D点云转2D LaserScan
-new_win "pc2laser" "ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch.py"
+new_win "pc2laser" "ros2 launch nav2_planner pointcloud_to_laserscan_launch.py"
 
 # --- Cartographer 2D 在线建图 (替代 slam_toolbox) ---
 # 订阅: /scan + /livox/imu + /odom
 # 发布: /map (OccupancyGrid) + map→odom TF
-new_win "Cartographer" "ros2 launch me_nav2_bringup cartographer_mapping_launch.py"
+new_win "Cartographer" "ros2 launch nav2_planner cartographer_mapping_launch.py"
 
 # RViz 可视化 Cartographer 建图
 # 显示: /map (Cartographer OccupancyGrid) + /scan + TF + 机器人模型 + /registered_scan
-new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/me_nav2_bringup/rviz/cartographer_mapping.rviz"
+new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner/rviz/cartographer_mapping.rviz"
 
 echo "已在 tmux 会话 '$SESSION' 中启动全部节点。"
 echo "查看输出: tmux attach -t $SESSION   (Ctrl-b n/p 切换窗口, Ctrl-b d 退出)"
@@ -71,6 +71,6 @@ echo "      ros2 service call /finish_trajectory cartographer_ros_msgs/srv/Finis
 echo ""
 echo "   2. 导出 pbstream → pgm + yaml:"
 echo "      ros2 run cartographer_ros cartographer_pbstream_to_ros_map \\"
-echo "          -pbstream_filename /ws/src/me_nav2_bringup/map/map.pbstream \\"
-echo "          -map_filestem /ws/src/me_nav2_bringup/map/my_map"
+echo "          -pbstream_filename /ws/src/planner/nav2_planner/map/map.pbstream \\"
+echo "          -map_filestem /ws/src/planner/nav2_planner/map/my_map"
 echo "============================================================"

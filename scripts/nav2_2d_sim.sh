@@ -27,15 +27,15 @@ tmux new-session -d -s "$SESS" -n "Gazebo" \
 sleep 8
 
 # ================ Cartographer 2D SLAM (在线建图 + map→odom TF) ================
-W "Carto" "ros2 launch me_nav2_bringup cartographer_2d_launch.py"
+W "Carto" "ros2 launch nav2_planner cartographer_2d_launch.py"
 sleep 4
 
 # ================ Nav2 在线导航 (无 map_server/AMCL) ================
-W "Nav2" "ros2 launch me_nav2_bringup nav2_online_launch.py"
+W "Nav2" "ros2 launch nav2_planner nav2_online_launch.py"
 sleep 3
 
 # ================ RViz 2D 导航视图 ================
-W "RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_2d -p use_sim_time:=true -- -d /ws/src/me_nav2_bringup/rviz/nav2.rviz"
+W "RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_2d -p use_sim_time:=true -- -d /ws/src/planner/nav2_planner/rviz/nav2.rviz"
 
 echo "========================================="
 echo " 2D 单线 LiDAR 导航 (Cartographer + Nav2)"

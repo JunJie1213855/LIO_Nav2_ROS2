@@ -8,7 +8,7 @@
   /odom (Odometry, 运动先验)       ─┘
 
 用法:
-  ros2 launch me_nav2_bringup cartographer_mapping_launch.py
+  ros2 launch nav2_planner cartographer_mapping_launch.py
 """
 
 import os
@@ -20,7 +20,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    pkg_dir = get_package_share_directory('me_nav2_bringup')
+    pkg_dir = get_package_share_directory('nav2_planner')
     config_dir = os.path.join(pkg_dir, 'config')
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')

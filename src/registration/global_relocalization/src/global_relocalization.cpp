@@ -19,7 +19,7 @@ GlobalRelocalization::GlobalRelocalization() : Node("global_relocalization")
   this->declare_parameter<std::string>("prior_pcd_file", "");
   prior_pcd_file_ = this->get_parameter("prior_pcd_file").as_string();
   if (prior_pcd_file_.empty()) {
-    prior_pcd_file_ = "/home/ros/rosws/3d_nav_ws/src/Lidar_nav2_ws/src/me_nav2_bringup/pcd/nav_test_4_27.pcd";
+    prior_pcd_file_ = "/home/ros/rosws/3d_nav_ws/src/Lidar_nav2_ws/src/planner/nav2_planner/pcd/nav_test_4_27.pcd";
   }
   
   // 初始化位姿

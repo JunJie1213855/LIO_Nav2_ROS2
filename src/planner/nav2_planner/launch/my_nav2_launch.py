@@ -8,7 +8,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # 获取共享目录路径
     nav2_bringup_dir = get_package_share_directory('nav2_bringup')
-    me_share_path = get_package_share_directory('me_nav2_bringup')
+    me_share_path = get_package_share_directory('nav2_planner')
 
     # 配置文件与地图路径
     params_file = os.path.join(me_share_path, 'config', 'nav2_params.yaml')

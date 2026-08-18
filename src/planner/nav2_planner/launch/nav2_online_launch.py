@@ -6,7 +6,7 @@ Cartographer occupancy_grid_node 发布的 /map 话题。
 依赖: /map (Cartographer), /scan, /odom, map→odom TF (Cartographer)
 
 用法:
-  ros2 launch me_nav2_bringup nav2_online_launch.py
+  ros2 launch nav2_planner nav2_online_launch.py
 """
 
 import os
@@ -18,7 +18,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    me_share_path = get_package_share_directory('me_nav2_bringup')
+    me_share_path = get_package_share_directory('nav2_planner')
     params_file = os.path.join(me_share_path, 'config', 'nav2_params.yaml')
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')

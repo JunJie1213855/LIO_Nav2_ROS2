@@ -51,7 +51,7 @@ map ──> odom ──> base_footprint ──> base_link ──> laser
 ```bash
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && cd /ws &&
-  MAKEFLAGS='-j4' colcon build --packages-select get_urdf me_nav2_bringup \
+  MAKEFLAGS='-j4' colcon build --packages-select get_urdf nav2_planner \
     --symlink-install --executor sequential
 "
 ```
@@ -189,10 +189,10 @@ docker exec lio_nav2 bash -c "source /ws/install/setup.bash && \
 | `src/get_urdf/model/diff_robot_2d.urdf` | 2D 差分小车（2 驱动轮 + 2 万向轮 + 单线 LiDAR + IMU） |
 | `src/get_urdf/worlds/indoor_2d.world` | 封闭室内场景（四面墙 + 4 个障碍物） |
 | `src/get_urdf/launch/get_urdf_launch.py` | 支持 `robot:=` 与 `world_path:=` 参数 |
-| `src/me_nav2_bringup/config/cartographer_2d.lua` | Cartographer 2D 配置（use_odometry + IMU） |
-| `src/me_nav2_bringup/launch/cartographer_2d_launch.py` | Cartographer 启动（cartographer_node + occupancy_grid_node） |
-| `src/me_nav2_bringup/launch/nav2_online_launch.py` | Nav2 在线导航（无 map_server/AMCL） |
-| `src/me_nav2_bringup/config/nav2_params.yaml` | Nav2 参数（footprint/tolerance 已适配 2D 小车） |
+| `src/planner/nav2_planner/config/cartographer_2d.lua` | Cartographer 2D 配置（use_odometry + IMU） |
+| `src/planner/nav2_planner/launch/cartographer_2d_launch.py` | Cartographer 启动（cartographer_node + occupancy_grid_node） |
+| `src/planner/nav2_planner/launch/nav2_online_launch.py` | Nav2 在线导航（无 map_server/AMCL） |
+| `src/planner/nav2_planner/config/nav2_params.yaml` | Nav2 参数（footprint/tolerance 已适配 2D 小车） |
 | `scripts/nav2_2d_sim.sh` | 一键启动脚本（可选世界参数） |
 
 ---
@@ -202,7 +202,7 @@ docker exec lio_nav2 bash -c "source /ws/install/setup.bash && \
 ```bash
 # 编译
 docker exec lio_nav2 bash -c "source /opt/ros/humble/setup.bash && cd /ws && \
-  MAKEFLAGS='-j4' colcon build --packages-select get_urdf me_nav2_bringup --symlink-install --executor sequential"
+  MAKEFLAGS='-j4' colcon build --packages-select get_urdf nav2_planner --symlink-install --executor sequential"
 
 # 运行
 xhost +local:docker

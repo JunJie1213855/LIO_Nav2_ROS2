@@ -139,7 +139,7 @@ Cartographer 路线需要保存的文件：
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && source install/setup.bash && \
   ros2 service call /write_state cartographer_ros_msgs/srv/WriteState \
-    '{filename: \"/ws/src/me_nav2_bringup/map/map.pbstream\", include_unfinished_submaps: true}'"
+    '{filename: \"/ws/src/planner/nav2_planner/map/map.pbstream\", include_unfinished_submaps: true}'"
 
 # 步骤 2: 结束轨迹（停止接收新数据）
 docker exec lio_nav2 bash -c "
@@ -151,8 +151,8 @@ docker exec lio_nav2 bash -c "
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && source install/setup.bash && \
   ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
-    -pbstream_filename /ws/src/me_nav2_bringup/map/map.pbstream \
-    -map_filestem /ws/src/me_nav2_bringup/map/my_map"
+    -pbstream_filename /ws/src/planner/nav2_planner/map/map.pbstream \
+    -map_filestem /ws/src/planner/nav2_planner/map/my_map"
 ```
 
 > ⚠️ **关键理解**：Cartographer 的三个步骤各有分工：
@@ -293,7 +293,7 @@ GUI控制 | FAST-LIO | lio_interface | Gazebo | sensor_scan | pc2laser | Carto�
 
 **如果定位失败**
 
-- 确认 `.pbstream` 路径正确：`docker exec lio_nav2 ls -la /ws/src/me_nav2_bringup/map/map.pbstream`
+- 确认 `.pbstream` 路径正确：`docker exec lio_nav2 ls -la /ws/src/planner/nav2_planner/map/map.pbstream`
 - 让机器人原地缓慢旋转几圈，扩大 scan 覆盖范围
 - 在 RViz 中重新给 **"2D Pose Estimate"**
 - 检查 `/scan` 数据是否正常：`docker exec lio_nav2 bash -c "source install/setup.bash && ros2 topic hz /scan"`
@@ -350,11 +350,11 @@ docker exec -it lio_nav2 tmux attach -t mapping_carto             # 查看
 # 保存地图（完成建图后）:
 docker exec lio_nav2 bash -c "source /opt/ros/humble/setup.bash && source install/setup.bash && \
   ros2 service call /write_state cartographer_ros_msgs/srv/WriteState \
-    '{filename: \"/ws/src/me_nav2_bringup/map/map.pbstream\", include_unfinished_submaps: true}' && \
+    '{filename: \"/ws/src/planner/nav2_planner/map/map.pbstream\", include_unfinished_submaps: true}' && \
   ros2 service call /finish_trajectory cartographer_ros_msgs/srv/FinishTrajectory '{trajectory_id: 0}' && \
   ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
-    -pbstream_filename /ws/src/me_nav2_bringup/map/map.pbstream \
-    -map_filestem /ws/src/me_nav2_bringup/map/my_map"
+    -pbstream_filename /ws/src/planner/nav2_planner/map/map.pbstream \
+    -map_filestem /ws/src/planner/nav2_planner/map/my_map"
 docker exec lio_nav2 tmux kill-session -t mapping_carto             # 停止
 
 # ═══ 导航 ═══

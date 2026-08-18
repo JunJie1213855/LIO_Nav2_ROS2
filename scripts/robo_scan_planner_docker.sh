@@ -53,11 +53,11 @@ new_win "lio_if" "ros2 launch lio_interface lio_interface_launch.py use_sim_time
 new_win "sensor" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 # ── 窗口 6: SCAN-Planner (ESDF建图 + 局部规划) ────────────────────
-new_win "SCAN-Planner" "ros2 launch me_nav2_bringup scan_planner_lio_launch.py \
+new_win "SCAN-Planner" "ros2 launch nav2_planner scan_planner_lio_launch.py \
     use_sim_time:=true navi_mode:=1"
 
 # ── 窗口 7: SCAN-Planner RViz ──────────────────────────────────────
-new_win "SP-RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan_planner -p use_sim_time:=true -- -d /ws/src/me_nav2_bringup/rviz/scan_planner.rviz"
+new_win "SP-RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan_planner -p use_sim_time:=true -- -d /ws/src/planner/nav2_planner/rviz/scan_planner.rviz"
 
 echo "===== SCAN-Planner + LIO 建图定位导航一体化 (会话: $SESSION) ====="
 echo "窗口: bag播放 | FAST-LIO | robot_desc | lio_if | sensor | SCAN-Planner | SP-RViz"

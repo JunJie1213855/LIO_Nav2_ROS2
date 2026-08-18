@@ -6,7 +6,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
 
     config_file = os.path.join(
-        get_package_share_directory('me_nav2_bringup'),
+        get_package_share_directory('nav2_planner'),
         'config',
         'Pointcloud2d_3d_robo.yaml'
     )

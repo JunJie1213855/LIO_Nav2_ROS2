@@ -47,17 +47,17 @@ new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"
 new_win "sensor_scan" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 # 3D点云转2D LaserScan
-new_win "pc2laser" "ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch.py"
+new_win "pc2laser" "ros2 launch nav2_planner pointcloud_to_laserscan_launch.py"
 
 # --- Cartographer 纯定位 (替代 KISS-Matcher) ---
 # 加载 .pbstream 地图，只做定位不建图
 # 发布: map→odom TF (重定位)
-new_win "Carto定位" "ros2 launch me_nav2_bringup cartographer_localization_launch.py \
-    load_state_filename:=/ws/src/me_nav2_bringup/map/map.pbstream"
+new_win "Carto定位" "ros2 launch nav2_planner cartographer_localization_launch.py \
+    load_state_filename:=/ws/src/planner/nav2_planner/map/map.pbstream"
 
 # --- Nav2 导航栈 ---
 # map_server 在 my_nav2_launch.py 中加载 .pgm 地图 (从 pbstream 导出)
-new_win "Nav2" "ros2 launch me_nav2_bringup my_nav2_launch.py"
+new_win "Nav2" "ros2 launch nav2_planner my_nav2_launch.py"
 
 echo "已在 tmux 会话 '$SESSION' 中启动全部节点。"
 echo "查看输出: tmux attach -t $SESSION   (Ctrl-b n/p 切换窗口, Ctrl-b d 退出)"

@@ -327,11 +327,11 @@ flowchart TB
 ### 4.1 编译
 
 ```bash
-# 编译 get_urdf（模型/世界）和 me_nav2_bringup（Cartographer/Nav2 配置）
+# 编译 get_urdf（模型/世界）和 nav2_planner（Cartographer/Nav2 配置）
 # 注意限速 -j4，避免占满 CPU 卡死宿主机
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && cd /ws &&
-  MAKEFLAGS='-j4' colcon build --packages-select get_urdf me_nav2_bringup \
+  MAKEFLAGS='-j4' colcon build --packages-select get_urdf nav2_planner \
     --symlink-install --executor sequential
 "
 ```

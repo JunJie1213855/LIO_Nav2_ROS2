@@ -30,16 +30,16 @@ tmux new-session -d -s "$SESSION" -n "FAST-LIO" \
 new_win "robot_desc"   "ros2 launch gld_robot_description gld_robot_description_launch.py rviz:=false use_sim_time:=true"
 new_win "lio_if"       "ros2 launch lio_interface lio_interface_launch.py use_sim_time:=true"
 new_win "sensor"       "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
-new_win "pc2laser"     "ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch_robo.py"
+new_win "pc2laser"     "ros2 launch nav2_planner pointcloud_to_laserscan_launch_robo.py"
 
 # KISS-Matcher 全局重定位（加载 .pcd 先验地图 → map→odom TF）
 new_win "KISS+GICP"    "ros2 launch global_relocalization_kiss_matcher global_kiss_matcher_relocalization_launch_robo.py"
 
 # Nav2 导航栈（加载 .pgm 静态地图 + 规划/控制）
-new_win "Nav2"         "ros2 launch me_nav2_bringup my_nav2_launch.py"
+new_win "Nav2"         "ros2 launch nav2_planner my_nav2_launch.py"
 
 # RViz（导航视角: /map + /scan + /plan + TF + 代价地图）
-new_win "RViz"         "ros2 run rviz2 rviz2 -d /ws/src/me_nav2_bringup/rviz/nav2.rviz"
+new_win "RViz"         "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner/rviz/nav2.rviz"
 
 # ---- 最后播放 bag ----
 sleep 3

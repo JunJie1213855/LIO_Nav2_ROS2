@@ -83,18 +83,18 @@ source install/setup.bash
 
 **换用 Cartographer 建图：**
 
-编辑脚本最后一行，把 `slam_toolbox` 替换为 `ros2 launch me_nav2_bringup cartographer_mapping_launch.py use_sim_time:=false`。
+编辑脚本最后一行，把 `slam_toolbox` 替换为 `ros2 launch nav2_planner cartographer_mapping_launch.py use_sim_time:=false`。
 
 Cartographer 保存地图：
 
 ```bash
 source install/setup.bash
 ros2 service call /write_state cartographer_ros_msgs/srv/WriteState \
-  '{filename: "src/me_nav2_bringup/map/airy_map.pbstream", include_unfinished_submaps: true}'
+  '{filename: "src/planner/nav2_planner/map/airy_map.pbstream", include_unfinished_submaps: true}'
 ros2 service call /finish_trajectory cartographer_ros_msgs/srv/FinishTrajectory '{trajectory_id: 0}'
 ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
-  -pbstream_filename src/me_nav2_bringup/map/airy_map.pbstream \
-  -map_filestem src/me_nav2_bringup/map/airy_map
+  -pbstream_filename src/planner/nav2_planner/map/airy_map.pbstream \
+  -map_filestem src/planner/nav2_planner/map/airy_map
 ```
 
 ---
@@ -117,8 +117,8 @@ source install/setup.bash
 
 **换用 Cartographer 纯定位：** 编辑脚本，把 KISS-Matcher 那行替换为：
 ```bash
-ros2 launch me_nav2_bringup cartographer_localization_launch.py \
-    load_state_filename:=src/me_nav2_bringup/map/airy_map.pbstream use_sim_time:=false
+ros2 launch nav2_planner cartographer_localization_launch.py \
+    load_state_filename:=src/planner/nav2_planner/map/airy_map.pbstream use_sim_time:=false
 ```
 
 ---
@@ -211,10 +211,10 @@ docker exec lio_nav2 bash -c 'cd /ws && source install/setup.bash && /ws/scripts
 `robosenseAiry.yaml` 的 `map_file_path` 若指向容器内部路径（如 `/home/ros/rosws/...`），`map_save` 会把 PCD 写进容器层（宿主看不到、容器重建即丢）。建议改为：
 
 ```yaml
-map_file_path: /ws/src/me_nav2_bringup/pcd/robo_map.pcd
+map_file_path: /ws/src/planner/nav2_planner/pcd/robo_map.pcd
 ```
 
-改完后保存结果直接落在项目 `src/me_nav2_bringup/pcd/robo_map.pcd`（宿主可见），建图/导航（KISS-Matcher）直接引用。
+改完后保存结果直接落在项目 `src/planner/nav2_planner/pcd/robo_map.pcd`（宿主可见），建图/导航（KISS-Matcher）直接引用。
 
 ### 4.3 方案 B: Cartographer 建图
 
@@ -248,11 +248,11 @@ tmux 窗口：
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && source install/setup.bash && \
   ros2 service call /write_state cartographer_ros_msgs/srv/WriteState \
-    '{filename: \"/ws/src/me_nav2_bringup/map/airy_map.pbstream\", include_unfinished_submaps: true}' && \
+    '{filename: \"/ws/src/planner/nav2_planner/map/airy_map.pbstream\", include_unfinished_submaps: true}' && \
   ros2 service call /finish_trajectory cartographer_ros_msgs/srv/FinishTrajectory '{trajectory_id: 0}' && \
   ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
-    -pbstream_filename /ws/src/me_nav2_bringup/map/airy_map.pbstream \
-    -map_filestem /ws/src/me_nav2_bringup/map/airy_map"
+    -pbstream_filename /ws/src/planner/nav2_planner/map/airy_map.pbstream \
+    -map_filestem /ws/src/planner/nav2_planner/map/airy_map"
 ```
 
 ### 4.4 KISS-Matcher + Nav2 导航

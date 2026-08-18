@@ -8,7 +8,7 @@ def generate_launch_description():
     remappings = [("/tf", "tf"), ("/tf_static", "tf_static")]
 
     pcd_path = os.path.join(
-        get_package_share_directory("me_nav2_bringup"),
+        get_package_share_directory("nav2_planner"),
         "pcd", "map.pcd"
     )
 

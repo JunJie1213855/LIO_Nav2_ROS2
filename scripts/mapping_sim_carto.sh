@@ -44,7 +44,7 @@ ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 # 3D 点云转 2D LaserScan
 gnome-terminal --title="3d点云转2d" -- bash -c "
 source install/setup.bash;
-ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch.py"
+ros2 launch nav2_planner pointcloud_to_laserscan_launch.py"
 
 # ----------------------------------------------------------------------------
 # Cartographer 2D 在线建图 (替代 slam_toolbox)
@@ -52,7 +52,7 @@ ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch.py"
 # 发布: /map (OccupancyGrid) + map→odom TF
 gnome-terminal --title="Cartographer 建图" -- bash -c "
 source install/setup.bash;
-ros2 launch me_nav2_bringup cartographer_mapping_launch.py"
+ros2 launch nav2_planner cartographer_mapping_launch.py"
 
 # ============================================================================
 # 建图完成后，保存地图:

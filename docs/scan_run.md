@@ -28,7 +28,7 @@ Gazebo (get_urdf, simple_car + 50线LiDAR + IMU)
 | `fastlio_mapping` | `fast_lio` | LiDAR 惯性里程计 + 点云配准 |
 | `lio_interface` | `lio_interface` | 生成 `/odom` 里程计 |
 | `sensor_scan_generation` | `sensor_scan_generation` | 生成 odom 帧 `/registered_scan` |
-| `cloud_z_filter` | `me_nav2_bringup` | Z 轴过滤点云（滤地面/天花板） |
+| `cloud_z_filter` | `nav2_planner` | Z 轴过滤点云（滤地面/天花板） |
 | `scan_planner_node` | `scan_planner` | 局部避障规划核心 |
 | `closed_loop_controller` | `scan_planner` | B-spline 轨迹 → `/cmd_vel` |
 

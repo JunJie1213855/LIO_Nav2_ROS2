@@ -8,7 +8,7 @@
                                    waypoint_follower → /cmd_vel → 机器人
 
 用法:
-  ros2 launch me_nav2_bringup tare_lio_explore_launch.py use_sim_time:=true
+  ros2 launch nav2_planner tare_lio_explore_launch.py use_sim_time:=true
 """
 
 import os
@@ -58,7 +58,7 @@ def generate_launch_description():
 
     # Waypoint Follower: /way_point → /cmd_vel（降低速度防撞墙）
     waypoint_follower = Node(
-        package="me_nav2_bringup",
+        package="nav2_planner",
         executable="waypoint_follower.py",
         name="waypoint_follower",
         output="screen",

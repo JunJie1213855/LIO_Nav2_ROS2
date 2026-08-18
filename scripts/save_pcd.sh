@@ -6,7 +6,7 @@ cd "$WORKSPACE_ROOT" || exit 1
 
 source install/setup.bash
 
-PCD_DEST_DIR="$WORKSPACE_ROOT/src/me_nav2_bringup/pcd"
+PCD_DEST_DIR="$WORKSPACE_ROOT/src/planner/nav2_planner/pcd"
 
 # FAST-LIO 节点名: /laserMapping（注意驼峰）
 # 服务注册在节点命名空间下: /laserMapping/map_save
@@ -65,7 +65,7 @@ fi
 
 # --- 同步到 install 目录 ---
 # launch 用 get_package_share_directory 读取 install/ 路径，需要创建软链接
-INSTALL_PCD_DIR="$WORKSPACE_ROOT/install/me_nav2_bringup/share/me_nav2_bringup/pcd"
+INSTALL_PCD_DIR="$WORKSPACE_ROOT/install/nav2_planner/share/nav2_planner/pcd"
 mkdir -p "$INSTALL_PCD_DIR"
 
 for pcd_file in robo_map.pcd dense_map.pcd; do

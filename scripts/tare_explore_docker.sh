@@ -34,7 +34,7 @@ new_win "lio_if" "ros2 launch lio_interface lio_interface_launch.py"
 new_win "sensor" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 # ── 窗口 5: TARE 自主探索 + waypoint_follower + RViz ────────────
-new_win "TARE" "ros2 launch me_nav2_bringup tare_lio_explore_launch.py"
+new_win "TARE" "ros2 launch nav2_planner tare_lio_explore_launch.py"
 
 # ── 窗口 6: GUI 遥控 (可选干预) ────────────────────────────────
 new_win "GUI遥控" "ros2 run gui_teleop gui_teleop_node"

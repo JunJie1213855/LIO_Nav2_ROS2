@@ -47,17 +47,17 @@ new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"
 new_win "sensor_scan" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 # 3d点云转2d
-new_win "pc2laser" "ros2 launch me_nav2_bringup pointcloud_to_laserscan_launch.py"
+new_win "pc2laser" "ros2 launch nav2_planner pointcloud_to_laserscan_launch.py"
 
 # RViz 可视化 slam_toolbox 建图过程
-new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/me_nav2_bringup/rviz/nav2.rviz"
+new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner/rviz/nav2.rviz"
 
 # slam_toolbox 建图
 new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
+    slam_params_file:=src/planner/nav2_planner/config/slam_toolbox_params.yaml"
 
 # Nav2 导航（可选——关掉不影响建图和 RViz 显示）
-# new_win "Nav2" "ros2 launch me_nav2_bringup my_nav2_launch.py"
+# new_win "Nav2" "ros2 launch nav2_planner my_nav2_launch.py"
 
 echo "已在 tmux 会话 '$SESSION' 中启动全部节点。"
 echo "查看输出: tmux attach -t $SESSION   (Ctrl-b n/p 切换窗口, Ctrl-b d 退出)"
