@@ -63,6 +63,7 @@
 #include <livox_ros_driver2/msg/custom_msg.hpp>
 #include "preprocess.h"
 #include <ikd-Tree/ikd_Tree.h>
+#include "colors.h"
 
 #define INIT_TIME (0.1)
 #define LASER_POINT_COV (0.001)
@@ -92,7 +93,7 @@ double res_mean_last = 0.05, total_residual = 0.0;
 double last_timestamp_lidar = 0, last_timestamp_imu = -1.0;
 double gyr_cov = 0.1, acc_cov = 0.1, b_gyr_cov = 0.0001, b_acc_cov = 0.0001;
 double filter_size_corner_min = 0, filter_size_surf_min = 0, filter_size_map_min = 0, fov_deg = 0;
-double save_voxel_size = 0.0;
+double save_voxel_size = 0.2;
 double cube_len = 0, HALF_FOV_COS = 0, FOV_DEG = 0, total_distance = 0, lidar_end_time = 0, first_lidar_time = 0.0;
 int effct_feat_num = 0, time_log_counter = 0, scan_count = 0, publish_count = 0;
 int iterCount = 0, feats_down_size = 0, NUM_MAX_ITERATIONS = 0, laserCloudValidNum = 0, pcd_save_interval = -1, pcd_index = 0;
@@ -107,6 +108,7 @@ vector<BoxPointType> cub_needrm;
 vector<PointVector> Nearest_Points;
 vector<double> extrinT(3, 0.0);
 vector<double> extrinR(9, 0.0);
+vector<double> gravity_ref(3, 0.0);
 deque<double> time_buffer;
 deque<PointCloudXYZI::Ptr> lidar_buffer;
 deque<sensor_msgs::msg::Imu::ConstSharedPtr> imu_buffer;
@@ -146,6 +148,10 @@ geometry_msgs::msg::PoseStamped msg_body_pose;
 shared_ptr<Preprocess> p_pre(new Preprocess());
 shared_ptr<ImuProcess> p_imu(new ImuProcess());
 
+/*
+* pub and save dense world point cloud
+*/
+
 PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI());
 PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
 void save_to_pcd();
@@ -153,14 +159,34 @@ void save_to_pcd();
 void SigHandle(int sig)
 {
     flg_exit = true;
-    std::cout << "catch sig " << sig << std::endl;
+    std::cout << CLR_YEL "catch sig " << sig << CLR_RST << std::endl;
     sig_buffer.notify_all();
     // Auto-save map on exit if pcd_save_en is true
     if (pcd_save_en && !map_file_path.empty())
     {
-        std::cout << "[INFO] Auto-saving map before exit..." << std::endl;
+        std::cout << CLR_GRN "[INFO] Auto-saving map before exit..." CLR_RST << std::endl;
         save_to_pcd();
     }
+    // 同时保存稠密累积点云用于重定位（来自每帧 feats_undistort 的累积）
+    // if (pcd_save_en && pcl_wait_save->size() > 0)
+    // {
+    //     string dense_path(string(string(ROOT_DIR) + "PCD/dense_map.pcd"));
+    //     std::filesystem::path p(dense_path);
+    //     if (!p.parent_path().empty() && !std::filesystem::exists(p.parent_path()))
+    //         std::filesystem::create_directories(p.parent_path());
+
+    //     pcl::VoxelGrid<PointType> vg;
+    //     vg.setLeafSize(0.05, 0.05, 0.05);
+    //     auto filtered = std::make_shared<PointCloudXYZI>();
+    //     vg.setInputCloud(pcl_wait_save);
+    //     vg.filter(*filtered);
+    //     std::cout << "[INFO] Dense map: " << pcl_wait_save->size()
+    //               << " -> " << filtered->size() << " pts (0.05m voxel)" << std::endl;
+
+    //     pcl::PCDWriter pcd_writer;
+    //     pcd_writer.writeBinary(dense_path, *filtered);
+    //     std::cout << "[INFO] Dense map saved to " << dense_path << std::endl;
+    // }
     rclcpp::shutdown();
 }
 
@@ -310,7 +336,7 @@ void standard_pcl_cbk(const sensor_msgs::msg::PointCloud2::UniquePtr msg)
     double preprocess_start_time = omp_get_wtime();
     if (!is_first_lidar && cur_time < last_timestamp_lidar)
     {
-        std::cerr << "lidar loop back, clear buffer" << std::endl;
+        RCLCPP_WARN(rclcpp::get_logger("laser_mapping"), "lidar loop back, clear buffer");
         lidar_buffer.clear();
     }
     if (is_first_lidar)
@@ -358,7 +384,7 @@ void livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::UniquePtr msg)
     scan_count++;
     if (!is_first_lidar && cur_time < last_timestamp_lidar)
     {
-        std::cerr << "lidar loop back, clear buffer" << std::endl;
+        RCLCPP_WARN(rclcpp::get_logger("laser_mapping"), "lidar loop back, clear buffer");
         lidar_buffer.clear();
     }
     if (is_first_lidar)
@@ -369,14 +395,14 @@ void livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::UniquePtr msg)
 
     if (!time_sync_en && abs(last_timestamp_imu - last_timestamp_lidar) > 10.0 && !imu_buffer.empty() && !lidar_buffer.empty())
     {
-        printf("IMU and LiDAR not Synced, IMU time: %lf, lidar header time: %lf \n", last_timestamp_imu, last_timestamp_lidar);
+        RCLCPP_WARN(rclcpp::get_logger("laser_mapping"), "IMU and LiDAR not Synced, IMU time: %.3f, lidar header time: %.3f", last_timestamp_imu, last_timestamp_lidar);
     }
 
     if (time_sync_en && !timediff_set_flg && abs(last_timestamp_lidar - last_timestamp_imu) > 1 && !imu_buffer.empty())
     {
         timediff_set_flg = true;
         timediff_lidar_wrt_imu = last_timestamp_lidar + 0.1 - last_timestamp_imu;
-        printf("Self sync IMU and LiDAR, time diff is %.10lf \n", timediff_lidar_wrt_imu);
+        RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "Self sync IMU and LiDAR, time diff is %.6f", timediff_lidar_wrt_imu);
     }
 
     PointCloudXYZI::Ptr ptr(new PointCloudXYZI());
@@ -408,7 +434,7 @@ void imu_cbk(const sensor_msgs::msg::Imu::UniquePtr msg_in)
 
     if (timestamp < last_timestamp_imu)
     {
-        std::cerr << "lidar loop back, clear buffer" << std::endl;
+        RCLCPP_WARN(rclcpp::get_logger("laser_mapping"), "lidar loop back, clear buffer");
         imu_buffer.clear();
     }
 
@@ -436,7 +462,7 @@ bool sync_packages(MeasureGroup &meas)
         if (meas.lidar->points.size() <= 1) // time too little
         {
             lidar_end_time = meas.lidar_beg_time + lidar_mean_scantime;
-            std::cerr << "Too few input point cloud!\n";
+            RCLCPP_ERROR(rclcpp::get_logger("laser_mapping"), "Too few input point cloud!");
         }
         else if (meas.lidar->points.back().curvature / double(1000) < 0.5 * lidar_mean_scantime)
         {
@@ -530,8 +556,7 @@ void map_incremental()
     kdtree_incremental_time = omp_get_wtime() - st_time;
 }
 
-// PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI());
-// PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
+
 void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudFull)
 {
     if (scan_pub_en)
@@ -561,32 +586,32 @@ void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Share
     /* 1. make sure you have enough memories
     /* 2. noted that pcd save will influence the real-time performences **/
     /**/
-    if (pcd_save_en)
-    {
-        int size = feats_undistort->points.size();
-        PointCloudXYZI::Ptr laserCloudWorld(
-            new PointCloudXYZI(size, 1));
+    // if (pcd_save_en)
+    // {
+    //     int size = feats_undistort->points.size();
+    //     PointCloudXYZI::Ptr laserCloudWorld(
+    //         new PointCloudXYZI(size, 1));
 
-        for (int i = 0; i < size; i++)
-        {
-            RGBpointBodyToWorld(&feats_undistort->points[i],
-                                &laserCloudWorld->points[i]);
-        }
-        *pcl_wait_save += *laserCloudWorld;
+    //     for (int i = 0; i < size; i++)
+    //     {
+    //         RGBpointBodyToWorld(&feats_undistort->points[i],
+    //                             &laserCloudWorld->points[i]);
+    //     }
+    //     *pcl_wait_save += *laserCloudWorld;
 
-        static int scan_wait_num = 0;
-        scan_wait_num++;
-        if (pcl_wait_save->size() > 0 && pcd_save_interval > 0 && scan_wait_num >= pcd_save_interval)
-        {
-            pcd_index++;
-            string all_points_dir(string(string(ROOT_DIR) + "PCD/scans_") + to_string(pcd_index) + string(".pcd"));
-            pcl::PCDWriter pcd_writer;
-            cout << "current scan saved to /PCD/" << all_points_dir << endl;
-            pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
-            pcl_wait_save->clear();
-            scan_wait_num = 0;
-        }
-    }
+    //     static int scan_wait_num = 0;
+    //     scan_wait_num++;
+    //     if (pcl_wait_save->size() > 0 && pcd_save_interval > 0 && scan_wait_num >= pcd_save_interval)
+    //     {
+    //         pcd_index++;
+    //         string all_points_dir(string(string(ROOT_DIR) + "PCD/scans_") + to_string(pcd_index) + string(".pcd"));
+    //         pcl::PCDWriter pcd_writer;
+    //         cout << "current scan saved to /PCD/" << all_points_dir << endl;
+    //         pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
+    //         pcl_wait_save->clear();
+    //         scan_wait_num = 0;
+    //     }
+    // }
 }
 
 void publish_frame_body(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudFull_body)
@@ -656,16 +681,48 @@ void save_to_pcd()
 {
     if (pcl_wait_pub->points.empty())
     {
-        std::cout << "pcl_wait_pub is empty!!!" << std::endl;
+        RCLCPP_ERROR(rclcpp::get_logger("laser_mapping"), "Cannot save map: pcl_wait_pub is empty!");
         return;
     }
+
+    // Get all points from ikdtree
+    // PointVector().swap(ikdtree.PCL_Storage);
+    // ikdtree.flatten(ikdtree.Root_Node, ikdtree.PCL_Storage, NOT_RECORD);
+
+    // // Convert to PCL point cloud
+    // PointCloudXYZI::Ptr map_cloud(new PointCloudXYZI());
+    // map_cloud->points = ikdtree.PCL_Storage;
+    // map_cloud->width = map_cloud->points.size();
+    // map_cloud->height = 1;
+    // map_cloud->is_dense = false;
+
+    // if (map_cloud->points.size() == 0)
+    // {
+    //     std::cerr << "[ERROR] Cannot save map: no points in ikdtree!" << std::endl;
+    //     return;
+    // }
+
+    // if (save_voxel_size > 1e-6)
+    // {
+    //     pcl::VoxelGrid<PointType> sf;
+    //     sf.setLeafSize(save_voxel_size, save_voxel_size, save_voxel_size);
+    //     auto sc = std::make_shared<PointCloudXYZI>();
+    //     sf.setInputCloud(map_cloud);
+    //     sf.filter(*sc);
+    //     std::cout << "[INFO] Save voxel " << save_voxel_size << "m: " << map_cloud->points.size() << " -> " << sc->points.size() << " pts" << std::endl;
+    //     map_cloud = sc;
+    // }
+    // 自动创建父目录
+    std::filesystem::path p(map_file_path);
+    if (!p.parent_path().empty() && !std::filesystem::exists(p.parent_path()))
+    {
+        std::filesystem::create_directories(p.parent_path());
+        RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "Created directory: %s", p.parent_path().c_str());
+    }
+
     pcl::PCDWriter pcd_writer;
-    std::cout << "size of pcl_wait_pub : " << pcl_wait_pub->points.size() << "\n";
-    // 保存 pcl_wait_pub（实时发布用点云）
-    std::cout << "save pcl_wait_pub" << "\n";
     pcd_writer.writeBinary(map_file_path, *pcl_wait_pub);
-    std::cout << "[INFO] Map saved: " << pcl_wait_pub->points.size()
-              << " points to " << map_file_path << std::endl;
+    RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "Sparse Map saved successfully with %lu points to %s", pcl_wait_pub->points.size(), map_file_path.c_str());
 }
 
 template <typename T>
@@ -805,7 +862,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
     if (effct_feat_num < 1)
     {
         ekfom_data.valid = false;
-        std::cerr << "No Effective Points!" << std::endl;
+        RCLCPP_WARN(rclcpp::get_logger("laser_mapping"), "No Effective Points!");
         // ROS_WARN("No Effective Points! \n");
         return;
     }
@@ -892,6 +949,7 @@ public:
         this->declare_parameter<int>("pcd_save.interval", -1);
         this->declare_parameter<vector<double>>("mapping.extrinsic_T", vector<double>());
         this->declare_parameter<vector<double>>("mapping.extrinsic_R", vector<double>());
+        this->declare_parameter<vector<double>>("mapping.gravity_ref", vector<double>({0.0, 0.0, -9.81}));
 
         this->get_parameter_or<bool>("publish.path_en", path_en, true);
         this->get_parameter_or<bool>("publish.effect_map_en", effect_pub_en, false);
@@ -930,10 +988,11 @@ public:
         this->get_parameter_or<int>("pcd_save.interval", pcd_save_interval, -1);
         this->get_parameter_or<vector<double>>("mapping.extrinsic_T", extrinT, vector<double>());
         this->get_parameter_or<vector<double>>("mapping.extrinsic_R", extrinR, vector<double>());
+        this->get_parameter_or<vector<double>>("mapping.gravity_ref", gravity_ref, vector<double>({0.0, 0.0, -9.81}));
 
-        RCLCPP_INFO(this->get_logger(), "p_pre->lidar_type %d", p_pre->lidar_type);
-        RCLCPP_INFO(this->get_logger(), "is save : %d", pcd_save_en);
-        std::cout << "map_file_path : " << map_file_path << "\n";
+        RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "p_pre->lidar_type %d", p_pre->lidar_type);
+        RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "is save : %d", pcd_save_en);
+        RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "map_file_path  : %s", map_file_path.c_str());
         path.header.stamp = this->get_clock()->now();
         path.header.frame_id = "camera_init";
 
@@ -957,6 +1016,9 @@ public:
         Lidar_T_wrt_IMU << VEC_FROM_ARRAY(extrinT);
         Lidar_R_wrt_IMU << MAT_FROM_ARRAY(extrinR);
         p_imu->set_extrinsic(Lidar_T_wrt_IMU, Lidar_R_wrt_IMU);
+        V3D gravity_ref_v;
+        gravity_ref_v << VEC_FROM_ARRAY(gravity_ref);
+        p_imu->set_gravity_ref(gravity_ref_v);
         p_imu->set_gyr_cov(V3D(gyr_cov, gyr_cov, gyr_cov));
         p_imu->set_acc_cov(V3D(acc_cov, acc_cov, acc_cov));
         p_imu->set_gyr_bias_cov(V3D(b_gyr_cov, b_gyr_cov, b_gyr_cov));
@@ -975,9 +1037,9 @@ public:
         fout_out.open(DEBUG_FILE_DIR("mat_out.txt"), ios::out);
         fout_dbg.open(DEBUG_FILE_DIR("dbg.txt"), ios::out);
         if (fout_pre && fout_out)
-            cout << "~~~~" << ROOT_DIR << " file opened" << endl;
+            RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "Log file opened: %s", (string(ROOT_DIR) + "/Log/").c_str());
         else
-            cout << "~~~~" << ROOT_DIR << " doesn't exist" << endl;
+            RCLCPP_ERROR(rclcpp::get_logger("laser_mapping"), "Log directory doesn't exist: %s", ROOT_DIR);
 
         /*** ROS subscribe initialization ***/
         if (p_pre->lidar_type == AVIA)
@@ -1007,10 +1069,9 @@ public:
 
         auto map_period_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0));
         map_pub_timer_ = rclcpp::create_timer(this, this->get_clock(), map_period_ms, std::bind(&LaserMappingNode::map_publish_callback, this));
-
         map_save_srv_ = this->create_service<std_srvs::srv::Trigger>("map_save", std::bind(&LaserMappingNode::map_save_callback, this, std::placeholders::_1, std::placeholders::_2));
 
-        RCLCPP_INFO(this->get_logger(), "Node init finished.");
+        RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), CLR_GRN "Node init finished." CLR_RST);
     }
 
     ~LaserMappingNode()
@@ -1048,7 +1109,7 @@ private:
 
             if (feats_undistort->empty() || (feats_undistort == NULL))
             {
-                RCLCPP_WARN(this->get_logger(), "No point, skip this scan!\n");
+                RCLCPP_WARN(rclcpp::get_logger("laser_mapping"), CLR_YEL "No point, skip this scan!" CLR_RST);
                 return;
             }
 
@@ -1067,7 +1128,7 @@ private:
             /*** initialize the map kdtree ***/
             if (ikdtree.Root_Node == nullptr)
             {
-                RCLCPP_INFO(this->get_logger(), "Initialize the map kdtree");
+                RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), CLR_GRN "Initialize the map kdtree" CLR_RST);
                 if (feats_down_size > 5)
                 {
                     ikdtree.set_downsample_param(filter_size_map_min);
@@ -1088,7 +1149,7 @@ private:
             /*** ICP and iterated Kalman filter update ***/
             if (feats_down_size < 5)
             {
-                RCLCPP_WARN(this->get_logger(), "No point, skip this scan!\n");
+                RCLCPP_WARN(rclcpp::get_logger("laser_mapping"), CLR_YEL "No point, skip this scan!" CLR_RST);
                 return;
             }
 
@@ -1170,7 +1231,7 @@ private:
                 s_plot9[time_log_counter] = aver_time_consu;
                 s_plot10[time_log_counter] = add_point_size;
                 time_log_counter++;
-                printf("[ mapping ]: time: IMU + Map + Input Downsample: %0.6f ave match: %0.6f ave solve: %0.6f  ave ICP: %0.6f  map incre: %0.6f ave total: %0.6f icp: %0.6f construct H: %0.6f \n", t1 - t0, aver_time_match, aver_time_solve, t3 - t1, t5 - t3, aver_time_consu, aver_time_icp, aver_time_const_H_time);
+                RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "[ mapping ] time: IMU + Map + Input Downsample: %0.6f ave match: %0.6f ave solve: %0.6f  ave ICP: %0.6f  map incre: %0.6f ave total: %0.6f icp: %0.6f construct H: %0.6f \n", t1 - t0, aver_time_match, aver_time_solve, t3 - t1, t5 - t3, aver_time_consu, aver_time_icp, aver_time_const_H_time);
                 ext_euler = SO3ToEuler(state_point.offset_R_L_I);
                 fout_out << setw(20) << Measures.lidar_beg_time - first_lidar_time << " " << euler_cur.transpose() << " " << state_point.pos.transpose() << " " << ext_euler.transpose() << " " << state_point.offset_T_L_I.transpose() << " " << state_point.vel.transpose()
                          << " " << state_point.bg.transpose() << " " << state_point.ba.transpose() << " " << state_point.grav << " " << feats_undistort->points.size() << endl;
@@ -1191,11 +1252,11 @@ private:
         {
             res->success = false;
             res->message = "Map file path is not set. Please set map_file_path parameter.";
-            RCLCPP_ERROR(this->get_logger(), "Map file path is not set!");
+            RCLCPP_ERROR(rclcpp::get_logger("laser_mapping"), CLR_RED "Map file path is not set!" CLR_RST);
             return;
         }
 
-        RCLCPP_INFO(this->get_logger(), "Saving map to %s...", map_file_path.c_str());
+        RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), CLR_GRN "Saving map to %s..." CLR_RST, map_file_path.c_str());
         if (pcd_save_en)
         {
             save_to_pcd();
@@ -1249,13 +1310,13 @@ int main(int argc, char **argv)
     /**************** save map ****************/
     /* 1. make sure you have enough memories
     /* 2. pcd save will largely influence the real-time performences **/
-    std::cout << "save the map \n";
+    RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "Saving map to file...");
     if (pcl_wait_save->size() > 0 && pcd_save_en)
     {
         string file_name = string("scans.pcd");
         string all_points_dir(string(string(ROOT_DIR) + "PCD/") + file_name);
         pcl::PCDWriter pcd_writer;
-        cout << "current scan saved to /PCD/" << file_name << endl;
+        RCLCPP_INFO(rclcpp::get_logger("laser_mapping"), "Current scan saved to /PCD/%s", file_name.c_str());
         pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
     }
 

@@ -1,10 +1,10 @@
 /**:
   ros__parameters:
     # runtime_pos_log_enable: true
-    map_file_path: ./PCD/map.pcd
-    # point_filter_num: 1       # 不过滤，保留每 1 个点
-    filter_size_surf: 0.5    # 体素从 0.5m 缩到 0.2m
-    filter_size_map: 0.5
+    map_file_path: /home/ros/rosws/3d_nav_ws/src/localization/FAST_LIO_ROBOAIRY/PCD/robo_map.pcd
+    point_filter_num: 3       # 不过滤，保留每 1 个点
+    filter_size_surf: 0.5    # surf 点降采样体素 (m)
+    filter_size_map: 0.5   # ikd-tree 地图体素 (m) — 越小 → 保存的 PCD 越密，重定位越准
     common:
       lid_topic: "/rslidar_points"
       imu_topic: "/rslidar_imu_data"  # /mavros/imu/data /ouster/imu /imu/data
@@ -25,8 +25,10 @@
       gyr_cov: 0.1
       b_acc_cov: 0.0001
       b_gyr_cov: 0.0001
+      gravity_ref: [0.0, 0.0, -9.81]    # world系参考重力方向；Airy z-flip（z向下）重力朝 +Z，保持现有翻转系约定
       fov_degree: 360.0
       det_range: 15.0
+      save_voxel_size: 0.5   # 保存 PCD 时的体素 (m)，比 filter_size_map 稍小保留细节
       extrinsic_est_en: false  # true: enable the online estimation of IMU-LiDAR extrinsic
       extrinsic_T: [0.0, 0.0, 0.0]
       extrinsic_R: [0.0, -1.0, 0.0,
@@ -37,12 +39,12 @@
       #               -0.999937 ,  0.011259 ,  0.000023,
       #               -0.000072 , -0.004350 , -0.999990]
     publish:
-        path_en: true                # true: publish Path
-        effect_map_en: false         # true: publish Effects
-        map_en: true                 # true: publish Map cloud
-        scan_publish_en:  true       # false: close all the point cloud output
-        dense_publish_en: false      # false: low down the points number in a global-frame point clouds scan.
-        scan_bodyframe_pub_en: true  # true: output the point cloud scans in IMU-body-frame
+      path_en: true
+      scan_publish_en: true  # false: close all the point cloud output
+      dense_publish_en: false  # false: low down the points number in a global-frame point clouds scan.
+      scan_bodyframe_pub_en: true  # true: output the point cloud scans in IMU-body-frame
+      effect_map_en: false
+      map_en: true
 
     pcd_save:
       pcd_save_en: true

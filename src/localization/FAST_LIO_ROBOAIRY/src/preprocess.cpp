@@ -2,6 +2,7 @@
 
 #include <pcl/common/common.h>
 
+#include "colors.h"
 #define RETURN0 0x00
 #define RETURN0AND1 0x10
 
@@ -138,7 +139,7 @@ void Preprocess::process(const sensor_msgs::msg::PointCloud2::UniquePtr &msg, Po
     break;
 
   default:
-    std::cerr << "Error: lidar_type " << lidar_type << " does not support sub_cloud processing" << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("preprocess"), "Error: lidar_type %d does not support sub_cloud processing", lidar_type);
     break;
   }
   *pcl_out = pl_surf;
@@ -213,7 +214,7 @@ void Preprocess::avia_handler(const livox_ros_driver2::msg::CustomMsg::UniquePtr
       // pl_surf += pl;
     }
     time += omp_get_wtime() - t0;
-    printf("Feature extraction time: %lf \n", time / count);
+    RCLCPP_INFO(rclcpp::get_logger("preprocess"), "Feature extraction time: %.3f", time / count);
   }
   else
   {
@@ -643,7 +644,7 @@ void Preprocess::give_feature(pcl::PointCloud<PointType> &pl, vector<orgtype> &t
   int plsize2;
   if (plsize == 0)
   {
-    printf("something wrong\n");
+    RCLCPP_ERROR(rclcpp::get_logger("preprocess"), "something wrong");
     return;
   }
   uint head = 0;
@@ -1249,7 +1250,7 @@ void Preprocess::robosenseM1_handler(const sensor_msgs::msg::PointCloud2::Unique
     }
     catch (const std::exception &e)
     {
-      std::cerr << "Error converting point cloud: " << e.what() << std::endl;
+      RCLCPP_ERROR(rclcpp::get_logger("preprocess"), "Error converting point cloud: %s", e.what());
       return;
     }
   }
