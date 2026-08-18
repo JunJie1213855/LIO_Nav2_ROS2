@@ -18,7 +18,10 @@ install(PROGRAMS
   scripts/send_goal.py
   scripts/cloud_z_filter.py
   scripts/waypoint_follower.py
+  scripts/waypoint_follower_far.py
+  scripts/far_local_planner.py
   scripts/tf_to_odom.py
+  scripts/terrain_cloud_generator.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

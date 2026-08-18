@@ -5,13 +5,6 @@ WORKSPACE_ROOT="$(dirname -- "$SCRIPT_DIR")"
 cd "$WORKSPACE_ROOT" || exit 1
 
 # 仿真建图启动脚本
-
-# 杀死之前的 Gazebo 进程
-# killall -9 gzserver gzclient
-
-# 键盘控制
-# ros2 run teleop_twist_keyboard teleop_twist_keyboard
-
 # 可能会导致 /cmd_vel 话题被占用
 # gui控制小车
 gnome-terminal --title="GUI控制" -- bash -c "
@@ -29,9 +22,8 @@ gnome-terminal --title="lio_interface" -- bash -c "
 source install/setup.bash;
 ros2 launch lio_interface lio_interface_launch.py"
 
-# ------------------------------------------------------------------------------------
+# ================================= 使用point-lio作为里程计  =================================
 
-# 使用point-lio作为里程计
 # gnome-terminal --title="点云格式转换器" -- bash -c "
 # source install/setup.bash;
 # ros2 run ign_sim_pointcloud_tool ign_sim_pointcloud_tool_node --ros-args \
@@ -50,14 +42,9 @@ ros2 launch lio_interface lio_interface_launch.py"
 # source install/setup.bash;
 # ros2 launch lio_interface pointlio_lio_interface_launch.py"
 
-# ------------------------------------------------------------------------------------
+# ================================= 使用point-lio作为里程计  =================================
 
 # Gazebo 仿真环境
-# gnome-terminal --title="Gazebo 仿真" -- bash -c "
-# killall -9 gzserver gzclient;
-# source install/setup.bash;
-# ros2 launch get_urdf get_urdf_launch.py"
-
 gnome-terminal --title="Gazebo 仿真" -- bash -c "
 killall -9 gzserver gzclient;
 source install/setup.bash;

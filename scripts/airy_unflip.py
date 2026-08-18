@@ -93,10 +93,12 @@ class AiryUnflip(Node):
         self.declare_parameter('output_cloud', '/cloud_registered_unflipped')
         self.declare_parameter('input_odometry', '/Odometry')
         self.declare_parameter('output_odometry', '/Odometry_unflipped')
+        # self.declare_parameter(
+        #     'extrin_r',
+        #     '0.0,-1.0,0.0, -1.0,0.0,0.0, 0.0,0.0,-1.0')
         self.declare_parameter(
             'extrin_r',
-            '1.0,0.0,0.0, 0.0,-1.0,0.0, 0.0,0.0,-1.0')
-
+            '1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,-1.0')
         inp_cloud = self.get_parameter('input_cloud').value
         out_cloud = self.get_parameter('output_cloud').value
         inp_odom = self.get_parameter('input_odometry').value

@@ -23,10 +23,15 @@ cd "$WORKSPACE_ROOT" || exit 1
 # source install/setup.bash;
 # ros2 launch rslidar_sdk driver_only.launch.py"
 
-# ================ fast-lio2 ================
+# ================ 建图定位算法 1：fast-lio2 ================
 gnome-terminal --title="FAST-LIO 里程计" -- bash -c "
 source install/setup.bash;
 ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
+
+# =============== 建图定位算法 2：super-lio =================
+# gnome-terminal --title="Super-LIO 里程计" -- bash -c "
+# source install/setup.bash;
+# ros2 launch super_lio robosense_airy.py"
 
 # ================ robosense airy 描述 ================
 gnome-terminal --title="机器人描述" -- bash -c "
@@ -34,18 +39,26 @@ killall -9 gzserver gzclient;
 source install/setup.bash;
 ros2 launch gld_robot_description robosense_description_launch.py"
 
-# ================ 中间层 ================
+# ================ 中间层 2 : fast-lio2 ================
 gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
 source install/setup.bash;
 ros2 launch me_nav2_bringup middleware_launch.py use_sim_time:=False"
 
 
+# ================ 中间层 2 : super lio ================
+# gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
+# source install/setup.bash;
+# ros2 launch me_nav2_bringup middleware_launch_superlio.py use_sim_time:=False"
+
 # ================ slam toolbox 建图 ================
+# gnome-terminal --title="slam_toolbox 建图" -- bash -c "
+# source install/setup.bash;
+# ros2 launch slam_toolbox online_async_launch.py \
+#     slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
+
 gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 source install/setup.bash;
-ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml"
-
+ros2 launch slam_toolbox online_async_launch.py"
 
 # ================ slam toolbox 建图可视化 ================
 gnome-terminal --title="slam_toolbox 建图可视化" -- bash -c "

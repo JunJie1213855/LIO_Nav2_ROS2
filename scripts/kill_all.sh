@@ -58,6 +58,7 @@ ALL_WINDOW_TITLES=(
     "robosense lidar SDK"
     "GUI控制"
     "FAST-LIO 里程计"
+    "Super-LIO 里程计"
     "lio_interface"
     "Gazebo 仿真"
     "sensor_scan_generation"
@@ -145,7 +146,7 @@ ALL_PROCESS_NAMES=(
     # Livox 驱动
     "livox_ros_driver2"
     # LIO
-    "fastlio_mapping" "fast_lio" "point_lio"
+    "fastlio_mapping" "fast_lio" "point_lio" "super_lio" "super_lio_node" "relocation_node"
     # 接口 & 传感器
     "lio_interface_node" "sensor_scan_generation"
     "pointcloud_to_laserscan" "ign_sim_pointcloud_tool"
@@ -154,6 +155,8 @@ ALL_PROCESS_NAMES=(
     "global_relocalization" "small_gicp_relocalization"
     # SLAM
     "async_slam_toolbox_node" "slam_toolbox"
+    # 规划器
+    "far_planner" "tare_planner_node"
     # Nav2
     "map_server" "planner_server" "controller_server"
     "bt_navigator" "behavior_server" "waypoint_follower"
@@ -200,6 +203,11 @@ ALL_LAUNCH_PATTERNS=(
     "lio_interface_launch.py"
     "fastlio_lio_interface"
     "pointlio_lio_interface"
+    "superlio_lio_interface"
+    "super_lio"
+    "robosense_airy"
+    "Livox_mid360"
+    "relocation.py"
     "global_kiss_matcher_relocalization"
     "global_relocalization"
     "small_gicp_relocalization"

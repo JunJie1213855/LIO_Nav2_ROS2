@@ -60,7 +60,7 @@ W "sensor"   "ros2 launch sensor_scan_generation sensor_scan_generation_launch.p
 
 # ============== TARE 探索规划 =======================
 # 订阅 /registered_scan 和 /odom，规划探索路径，发布 /way_point 目标点
-# W "TARE"     "ros2 launch tare_planner tare_planner_lio_launch.py use_sim_time:=true"
+W "TARE"     "ros2 launch tare_planner tare_planner_lio_launch.py use_sim_time:=true"
 
 # ============== RViz 可视化 =======================
 # 查看探索路径(绿)、目标点(红)等可视化结果
