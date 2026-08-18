@@ -559,7 +559,7 @@ laserCloudAndOdometryHandler()   // message_filter ApproximateTime 同步后触�
 | 属性 | 值 |
 |------|-----|
 | **包名** | `pointcloud_to_laserscan` (ROS 2 内置包) |
-| **启动文件** | `me_nav2_bringup/launch/pointcloud_to_laserscan_launch.py` |
+| **启动文件** | `nav2_planner/launch/pointcloud_to_laserscan_launch.py` |
 | **必要性** | 🔴 Nav2 costmap 需要 LaserScan 格式 |
 
 **输入：**
@@ -604,8 +604,8 @@ laserCloudAndOdometryHandler()   // message_filter ApproximateTime 同步后触�
 
 **保存地图：**
 ```bash
-./scripts/save_map.sh    # → src/me_nav2_bringup/map/
-./scripts/save_pcd.sh    # → src/me_nav2_bringup/pcd/
+./scripts/save_map.sh    # → src/nav2_planner/map/
+./scripts/save_pcd.sh    # → src/nav2_planner/pcd/
 ```
 
 ---
@@ -644,7 +644,7 @@ laserCloudAndOdometryHandler()   // message_filter ApproximateTime 同步后触�
 
 | 属性 | 值 |
 |------|-----|
-| **启动文件** | `me_nav2_bringup/launch/my_nav2_launch.py` |
+| **启动文件** | `nav2_planner/launch/my_nav2_launch.py` |
 | **配置文件** | `config/nav2_params.yaml` |
 | **必要性** | 🔴 导航核心 |
 
@@ -740,8 +740,8 @@ map ──(KISS-Matcher/SLAM)──→ odom ──(sensor_scan_generation)──
 source install/setup.bash
 ./scripts/mapping_sim_tmux.sh
 # 驾驶机器人遍历环境后：
-./scripts/save_map.sh    # → src/me_nav2_bringup/map/
-./scripts/save_pcd.sh    # → src/me_nav2_bringup/pcd/
+./scripts/save_map.sh    # → src/nav2_planner/map/
+./scripts/save_pcd.sh    # → src/nav2_planner/pcd/
 ./scripts/kill_mapping_sim.sh
 ```
 
@@ -749,11 +749,11 @@ source install/setup.bash
 
 ```bash
 # 确保地图和 PCD 路径正确
-vim src/me_nav2_bringup/launch/my_nav2_launch.py  # map_yaml_file
+vim src/nav2_planner/launch/my_nav2_launch.py  # map_yaml_file
 vim src/registration/global_relocalization_kiss_matcher/launch/...py  # prior_pcd_file
 
 source install/setup.bash
 ./scripts/nav2_sim_tmux.sh
 # RViz "Nav2 Goal" 或命令行：
-ros2 run me_nav2_bringup send_goal.py --ros-args -p x:=3.0 -p y:=-1.0 -p yaw:=0.0
+ros2 run nav2_planner send_goal.py --ros-args -p x:=3.0 -p y:=-1.0 -p yaw:=0.0
 ```

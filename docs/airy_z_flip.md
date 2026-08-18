@@ -128,7 +128,7 @@ max_height: 1.0
 ### 方案二：`Pointcloud2d_3d.yaml` 中将高度切片范围也翻转
 
 ```yaml
-# src/me_nav2_bringup/config/Pointcloud2d_3d.yaml
+# src/nav2_planner/config/Pointcloud2d_3d.yaml
 Pointcloud2d_3d:
   ros__parameters:
     target_frame: "livox_frame"

@@ -6,9 +6,9 @@ from launch_ros.actions import Node
 def generate_launch_description():
 
     config_file = os.path.join(
-        get_package_share_directory('me_nav2_bringup'),
+        get_package_share_directory('nav2_planner'),
         'config',
-        'Pointcloud2d_3d_zlim.yaml'
+        'Pointcloud2d_3d_zflip.yaml'
     )
 
     # 定义 pointcloud_to_laserscan 节点

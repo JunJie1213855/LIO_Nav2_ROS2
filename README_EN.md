@@ -64,15 +64,15 @@ cd scripts
 This command starts Gazebo, FAST-LIO, SLAM Toolbox, Nav2, and the GUI teleoperation window. Use the WASD keys to drive the robot through the environment. After enough area has been covered, save the maps:
 
 ```bash
-./save_map.sh       # Save the 2D occupancy grid map to src/me_nav2_bringup/map/
-./save_pcd.sh       # Save the 3D point cloud, then move it manually to src/me_nav2_bringup/pcd/
+./save_map.sh       # Save the 2D occupancy grid map to src/nav2_planner/map/
+./save_pcd.sh       # Save the 3D point cloud, then move it manually to src/nav2_planner/pcd/
 ```
 
 ### 3.2 Simulation Navigation
 
 Edit the following files so they point to the newly saved map and point cloud:
 
-- `src/me_nav2_bringup/launch/my_nav2_launch.py` - Set `map_yaml_file`
+- `src/nav2_planner/launch/my_nav2_launch.py` - Set `map_yaml_file`
 - `src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py` - Set `prior_pcd_file`
 
 Then start:
@@ -119,7 +119,7 @@ vim src/registration/global_relocalization_kiss_matcher/launch/global_kiss_match
 
 Check the following carefully:
 
-- `prior_pcd_file`: Prior PCD map path, for example `src/me_nav2_bringup/pcd/*.pcd`
+- `prior_pcd_file`: Prior PCD map path, for example `src/nav2_planner/pcd/*.pcd`
 - `input_cloud_topic`: Default is `/registered_scan`
 - `map_frame` / `odom_frame`: Default is `map` / `odom`
 - `base_frame` / `robot_base_frame` / `lidar_frame`: Default is `base_footprint` / `base_footprint` / `livox_frame`
@@ -185,7 +185,7 @@ The workspace contains **19 ROS 2 packages** under `src/`:
 
 **Navigation**
 
-- `me_nav2_bringup` - Nav2 integration: launch files, parameter configuration, maps, PCD files, and RViz configuration
+- `nav2_planner` - Nav2 integration: launch files, parameter configuration, maps, PCD files, and RViz configuration
 - `gui_teleop` - tkinter GUI teleoperation with speed adjustment and emergency stop
 
 **Simulation and Description**
@@ -203,9 +203,9 @@ The workspace contains **19 ROS 2 packages** under `src/`:
 ### 5.1 Key Configuration Files
 
 **Navigation configuration**
-- `me_nav2_bringup/config/nav2_params.yaml` - Nav2 parameters
-- `me_nav2_bringup/config/slam_toolbox_params.yaml` - SLAM Toolbox online-mapping parameters
-- `me_nav2_bringup/config/Pointcloud2d_3d.yaml` - 3D-to-2D slicing height and angular resolution
+- `nav2_planner/config/nav2_params.yaml` - Nav2 parameters
+- `nav2_planner/config/slam_toolbox_params.yaml` - SLAM Toolbox online-mapping parameters
+- `nav2_planner/config/Pointcloud2d_3d.yaml` - 3D-to-2D slicing height and angular resolution
 
 **LIO configuration**
 - `localization/FAST_LIO/config/mid360.yaml` - FAST-LIO parameters
@@ -275,7 +275,7 @@ Common parameters:
 Current workspace defaults in the launch file:
 
 ```text
-prior_pcd_file: /home/pio/Nav2_3D_ws/src/me_nav2_bringup/pcd/nav_test_4_27.pcd
+prior_pcd_file: /home/pio/Nav2_3D_ws/src/nav2_planner/pcd/nav_test_4_27.pcd
 input_cloud_topic: /registered_scan
 map_frame: map
 odom_frame: odom

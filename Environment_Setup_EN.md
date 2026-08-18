@@ -226,13 +226,13 @@ source ~/.bashrc
 Check whether key packages can be found by ROS 2:
 
 ```bash
-ros2 pkg list | grep -E "me_nav2_bringup|lio_interface|fast_lio|livox_ros_driver2|global_relocalization_kiss_matcher"
+ros2 pkg list | grep -E "nav2_planner|lio_interface|fast_lio|livox_ros_driver2|global_relocalization_kiss_matcher"
 ```
 
 Check launch-file arguments:
 
 ```bash
-ros2 launch me_nav2_bringup my_nav2_launch.py --show-args
+ros2 launch nav2_planner my_nav2_launch.py --show-args
 ros2 launch lio_interface lio_interface_launch.py --show-args
 ```
 
@@ -275,8 +275,8 @@ After driving the robot through the environment, save the maps:
 Map output locations:
 
 ```text
-2D map: src/me_nav2_bringup/map/
-3D PCD: src/me_nav2_bringup/pcd/
+2D map: src/nav2_planner/map/
+3D PCD: src/nav2_planner/pcd/
 ```
 
 ### 7.2 Simulation Navigation
@@ -285,7 +285,7 @@ Before navigation, check the map paths:
 
 ```bash
 cd ~/Lidar_nav2_ws
-vim src/me_nav2_bringup/launch/my_nav2_launch.py
+vim src/nav2_planner/launch/my_nav2_launch.py
 vim src/registration/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py
 vim src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py
 ```

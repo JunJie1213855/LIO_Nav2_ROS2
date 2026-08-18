@@ -140,5 +140,5 @@ source install/setup.bash
 
 - **换地图后必须重新建图**：新环境的 2D 地图（`.yaml`/`.pgm`）和 3D 点云（`.pcd`）与旧地图不匹配
 - 使用 `mapping_sim.sh` 在新地图中建图
-- 将保存的地图和点云更新到 `src/me_nav2_bringup/map/` 和 `src/me_nav2_bringup/pcd/`
+- 将保存的地图和点云更新到 `src/nav2_planner/map/` 和 `src/nav2_planner/pcd/`
 - 更新 `my_nav2_launch.py` 中的 `map_yaml_file` 和重定位 launch 文件中的 `prior_pcd_file`

@@ -171,7 +171,7 @@ flowchart TD
         S3["save_map.sh / save_pcd.sh<br>地图保存"]
     end
 
-    subgraph NAV_PKG["me_nav2_bringup 导航集成"]
+    subgraph NAV_PKG["nav2_planner 导航集成"]
         N1["launch/my_nav2_launch.py<br>Nav2 启动 + map_server"]
         N2["config/nav2_params.yaml<br>DWB + Navfn + costmap 参数"]
         N3["config/slam_toolbox_params.yaml<br>在线 SLAM 参数"]

@@ -165,14 +165,14 @@ tmux select-pane -t "$SESSION:sensors.3" -T "scan_gen"
 # Window 2: SLAM + 切片
 tmux new-window -t "$SESSION" -n "slam"
 tmux send-keys -t "$SESSION:slam.0" \
-  "source install/setup.bash && ros2 launch me_nav2_bringup \
+  "source install/setup.bash && ros2 launch nav2_planner \
    pointcloud_to_laserscan_launch.py" C-m
 tmux select-pane -t "$SESSION:slam.0" -T "3d→2d"
 
 tmux split-window -h -t "$SESSION:slam"
 tmux send-keys -t "$SESSION:slam.1" \
   "source install/setup.bash && ros2 launch slam_toolbox online_async_launch.py \
-   slam_params_file:=src/me_nav2_bringup/config/slam_toolbox_params.yaml \
+   slam_params_file:=src/nav2_planner/config/slam_toolbox_params.yaml \
    use_sim_time:=False" C-m
 tmux select-pane -t "$SESSION:slam.1" -T "SLAM"
 
@@ -196,22 +196,22 @@ ros2 topic list | grep livox
 
 # 4. 保存地图（在另一个终端）
 source install/setup.bash
-./scripts/save_map.sh    # → src/me_nav2_bringup/map/airy_map.yaml + .pgm
-./scripts/save_pcd.sh    # → 手动 cp 到 src/me_nav2_bringup/pcd/airy_map.pcd
+./scripts/save_map.sh    # → src/nav2_planner/map/airy_map.yaml + .pgm
+./scripts/save_pcd.sh    # → 手动 cp 到 src/nav2_planner/pcd/airy_map.pcd
 ```
 
 ### 1.8 建图质量检查
 
 ```bash
 # 检查 PCD 点云
-pcl_viewer src/me_nav2_bringup/pcd/airy_map.pcd
+pcl_viewer src/nav2_planner/pcd/airy_map.pcd
 
 # 查看 2D 地图
-eog src/me_nav2_bringup/map/airy_map.pgm
+eog src/nav2_planner/map/airy_map.pgm
 
 # 确认关键文件
-ls -lh src/me_nav2_bringup/map/airy_map.*
-ls -lh src/me_nav2_bringup/pcd/airy_map.pcd
+ls -lh src/nav2_planner/map/airy_map.*
+ls -lh src/nav2_planner/pcd/airy_map.pcd
 ```
 
 ---
@@ -238,7 +238,7 @@ Gazebo World 中的障碍物 ←────────────┘
 
 ```bash
 # 查看地图分辨率
-head -5 src/me_nav2_bringup/map/airy_map.yaml
+head -5 src/nav2_planner/map/airy_map.yaml
 # 输出: resolution: 0.05, origin: [-10.0, -10.0, 0.0]
 ```
 
@@ -367,7 +367,7 @@ map_yaml_file = os.path.join(me_share_path, 'map', 'airy_map.yaml')
 
 ```python
 pcd_path = os.path.join(
-    get_package_share_directory("me_nav2_bringup"),
+    get_package_share_directory("nav2_planner"),
     "pcd", "airy_map.pcd"
 )
 # 在 parameters 中使用:
@@ -391,12 +391,12 @@ cd ~/rosws/3d_nav_ws
 source /opt/ros/humble/setup.bash
 
 # 确认所有文件就位
-ls src/me_nav2_bringup/map/airy_map.yaml
-ls src/me_nav2_bringup/pcd/airy_map.pcd
+ls src/nav2_planner/map/airy_map.yaml
+ls src/nav2_planner/pcd/airy_map.pcd
 ls src/get_urdf/worlds/airy_world.world
 
 # 重新部署
-colcon build --symlink-install --packages-select get_urdf me_nav2_bringup \
+colcon build --symlink-install --packages-select get_urdf nav2_planner \
   --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 source install/setup.bash
 ```
@@ -422,7 +422,7 @@ ros2 topic echo /map --once | head -3
 # 如果一直 failed → 让小车原地旋转几圈
 
 # 4. 发送测试目标 (小距离)
-ros2 run me_nav2_bringup send_goal.py --ros-args -p x:=2.0 -p y:=0.0 -p yaw:=0.0
+ros2 run nav2_planner send_goal.py --ros-args -p x:=2.0 -p y:=0.0 -p yaw:=0.0
 
 # 5. 验证规划路径
 ros2 topic echo /plan
@@ -467,9 +467,9 @@ vim src/get_urdf/worlds/airy_world.world   # 创建仿真世界
 
 # Phase 3: 仿真导航
 source ~/rosws/3d_nav_ws/install/setup.bash   # 切回原工作空间
-colcon build --packages-select get_urdf me_nav2_bringup
+colcon build --packages-select get_urdf nav2_planner
 ./scripts/nav2_sim_tmux.sh
-ros2 run me_nav2_bringup send_goal.py --ros-args -p x:=2.0 -p y:=1.0 -p yaw:=0.0
+ros2 run nav2_planner send_goal.py --ros-args -p x:=2.0 -p y:=1.0 -p yaw:=0.0
 ```
 
 ## 参考代码

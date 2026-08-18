@@ -168,12 +168,12 @@ colcon build --symlink-install \
 source install/setup.bash
 
 # 确认关键包可发现
-ros2 pkg list | grep -E "fast_lio_robosense|lio_interface|sensor_scan_generation|me_nav2_bringup|global_relocalization"
+ros2 pkg list | grep -E "fast_lio_robosense|lio_interface|sensor_scan_generation|nav2_planner|global_relocalization"
 # 预期输出:
 #   fast_lio_robosense
 #   global_relocalization_kiss_matcher
 #   lio_interface
-#   me_nav2_bringup
+#   nav2_planner
 #   sensor_scan_generation
 
 # 确认可执行文件存在
@@ -215,12 +215,12 @@ source install/setup.bash
 导航模式需要已完成建图并保存了以下文件：
 
 ```bash
-ls src/me_nav2_bringup/map/*.yaml   # 2D 占用栅格地图
-ls src/me_nav2_bringup/pcd/*.pcd    # 3D 点云地图
+ls src/nav2_planner/map/*.yaml   # 2D 占用栅格地图
+ls src/nav2_planner/pcd/*.pcd    # 3D 点云地图
 ```
 
 确认启动文件中的路径正确：
-- **2D 地图**: `src/me_nav2_bringup/launch/my_nav2_launch.py` → `map_yaml_file`
+- **2D 地图**: `src/nav2_planner/launch/my_nav2_launch.py` → `map_yaml_file`
 - **3D 点云**: `src/registration/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py` → `prior_pcd_file`
 
 ---
@@ -250,8 +250,8 @@ tmux 窗口布局：
 建图完成后保存：
 
 ```bash
-./scripts/save_map.sh    # → src/me_nav2_bringup/map/
-./scripts/save_pcd.sh    # → 手动 cp 到 src/me_nav2_bringup/pcd/
+./scripts/save_map.sh    # → src/nav2_planner/map/
+./scripts/save_pcd.sh    # → 手动 cp 到 src/nav2_planner/pcd/
 ```
 
 关闭：
@@ -277,7 +277,7 @@ tmux 窗口布局（与建图模式差异）：
 在 RViz 中点击 **"Nav2 Goal"** 发送导航目标，或用命令：
 
 ```bash
-ros2 run me_nav2_bringup send_goal.py --ros-args -p x:=3.0 -p y:=-1.0 -p yaw:=0.0
+ros2 run nav2_planner send_goal.py --ros-args -p x:=3.0 -p y:=-1.0 -p yaw:=0.0
 ```
 
 ---
@@ -362,7 +362,7 @@ source install/setup.bash
 
 # 仿真导航
 ./scripts/nav2_sim_tmux.sh
-ros2 run me_nav2_bringup send_goal.py --ros-args -p x:=3.0 -p y:=-1.0 -p yaw:=0.0
+ros2 run nav2_planner send_goal.py --ros-args -p x:=3.0 -p y:=-1.0 -p yaw:=0.0
 
 # 检查系统状态
 ros2 run tf2_ros tf2_echo map odom

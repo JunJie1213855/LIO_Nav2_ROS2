@@ -6,7 +6,7 @@
   - 导航：SCAN-Planner 局部避障轨迹规划 → /cmd_vel
 
 用法:
-  ros2 launch me_nav2_bringup scan_planner_lio_launch.py use_sim_time:=true
+  ros2 launch nav2_planner scan_planner_lio_launch.py use_sim_time:=true
 """
 
 import os
@@ -52,7 +52,7 @@ def generate_launch_description():
     z_min = LaunchConfiguration("z_min", default="-1.0")
     z_max = LaunchConfiguration("z_max", default="2.0")
     z_filter = Node(
-        package="me_nav2_bringup",
+        package="nav2_planner",
         executable="cloud_z_filter.py",
         name="cloud_z_filter",
         output="screen",

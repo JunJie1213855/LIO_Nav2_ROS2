@@ -2,7 +2,7 @@
 """
 发送 Nav2 导航目标
 用法:
-  ros2 run me_nav2_bringup send_goal.py --ros-args -p x:=3.0 -p y:=-1.0 -p yaw:=0.0
+  ros2 run nav2_planner send_goal.py --ros-args -p x:=3.0 -p y:=-1.0 -p yaw:=0.0
 """
 import rclpy
 from rclpy.node import Node

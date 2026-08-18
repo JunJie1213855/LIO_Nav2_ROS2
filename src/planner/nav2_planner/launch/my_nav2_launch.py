@@ -11,7 +11,7 @@ from nav2_common.launch import RewrittenYaml
 
 def generate_launch_description():
     nav2_bringup_dir = get_package_share_directory('nav2_bringup')
-    me_share_path = get_package_share_directory('me_nav2_bringup')
+    me_share_path = get_package_share_directory('nav2_planner')
 
     params_file = os.path.join(me_share_path, 'config', 'nav2_params.yaml')
     map_yaml_file = os.path.join(me_share_path, 'map', 'test_map__2.yaml')

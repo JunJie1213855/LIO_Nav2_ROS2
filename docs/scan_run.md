@@ -61,7 +61,7 @@ flowchart TD
 | `fast_lio` | `fast_lio_robosense` | FAST-LIO 里程计（`/Odometry` + `/cloud_registered`） |
 | `lio_interface` | `lio_interface` | 把 FAST-LIO 输出转到标准 `odom` 帧（`/registered_odometry` + `/registered_scan`） |
 | `sensor_scan_generation` | `sensor_scan_generation` | 生成 `/odom` + `odom→base_footprint` TF |
-| `cloud_z_filter` | `me_nav2_bringup` | 点云 Z 轴直通滤波，去地面/天花板 |
+| `cloud_z_filter` | `nav2_planner` | 点云 Z 轴直通滤波，去地面/天花板 |
 | `scan_planner_node` | `scan_planner` | 占据栅格建图 + 全局/局部轨迹规划 |
 | `closed_loop_controller` | `scan_planner` | B-spline 轨迹 → `/cmd_vel` |
 
@@ -89,8 +89,8 @@ bash scripts/nav_scan_planner.sh
 | FAST-LIO | `ros2 launch fast_lio_robosense mapping_livox.launch.py rviz:=true use_sim_time:=true` |
 | lio_if | `ros2 launch lio_interface lio_interface_launch.py` |
 | sensor | `ros2 launch sensor_scan_generation sensor_scan_generation_launch.py` |
-| SCAN | `ros2 launch me_nav2_bringup scan_planner_lio_launch.py use_sim_time:=true ...` |
-| SP-RViz | `rviz2 -d src/me_nav2_bringup/rviz/scan_planner.rviz` |
+| SCAN | `ros2 launch nav2_planner scan_planner_lio_launch.py use_sim_time:=true ...` |
+| SP-RViz | `rviz2 -d src/nav2_planner/rviz/scan_planner.rviz` |
 
 > 各窗口之间有 `sleep 6/3/2` 保证 Gazebo spawn 完成、TF 就绪后再启动下游节点。
 
@@ -127,10 +127,10 @@ ros2 launch lio_interface lio_interface_launch.py
 ros2 launch sensor_scan_generation sensor_scan_generation_launch.py
 
 # 4. SCAN-Planner
-ros2 launch me_nav2_bringup scan_planner_lio_launch.py use_sim_time:=true
+ros2 launch nav2_planner scan_planner_lio_launch.py use_sim_time:=true
 
 # 5. RViz
-rviz2 -d src/me_nav2_bringup/rviz/scan_planner.rviz
+rviz2 -d src/nav2_planner/rviz/scan_planner.rviz
 ```
 
 **操作**：切到 `SP-RViz` 窗口，用工具 `2D Goal Pose` 点目标（Fixed Frame 为 `odom`，目标发到 `/move_base_simple/goal`）。

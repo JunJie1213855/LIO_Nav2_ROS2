@@ -34,7 +34,7 @@ def generate_launch_description():
         "FAST_LIO_ROBOAIRY", "PCD", "dense_map.pcd"
     )
     legacy_pcd = os.path.join(
-        get_package_share_directory("me_nav2_bringup"),
+        get_package_share_directory("nav2_planner"),
         "pcd", "robo_map.pcd"
     )
     pcd_path = dense_pcd if os.path.exists(dense_pcd) else legacy_pcd

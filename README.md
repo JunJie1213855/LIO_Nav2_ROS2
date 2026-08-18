@@ -66,15 +66,15 @@ cd scripts
 此命令启动 Gazebo、FAST-LIO、SLAM Toolbox、Nav2 和 GUI 遥控窗口。使用 WASD 键驾驶机器人遍历环境。覆盖足够面积后保存地图：
 
 ```bash
-./save_map.sh       # 保存 2D 占用栅格地图至 src/me_nav2_bringup/map/
-./save_pcd.sh       # 保存 3D 点云，手动移至 src/me_nav2_bringup/pcd/
+./save_map.sh       # 保存 2D 占用栅格地图至 src/nav2_planner/map/
+./save_pcd.sh       # 保存 3D 点云，手动移至 src/nav2_planner/pcd/
 ```
 
 ### 3.2 仿真导航
 
 修改以下文件，指向新保存的地图和点云：
 
-- `src/me_nav2_bringup/launch/my_nav2_launch.py` — 设置 `map_yaml_file`
+- `src/nav2_planner/launch/my_nav2_launch.py` — 设置 `map_yaml_file`
 - `src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py` — 设置 `prior_pcd_file`
 
 然后启动：
@@ -121,7 +121,7 @@ vim src/registration/global_relocalization_kiss_matcher/launch/global_kiss_match
 
 重点检查：
 
-- `prior_pcd_file`：先验 PCD 地图路径，例如 `src/me_nav2_bringup/pcd/*.pcd`
+- `prior_pcd_file`：先验 PCD 地图路径，例如 `src/nav2_planner/pcd/*.pcd`
 - `input_cloud_topic`：默认 `/registered_scan`
 - `map_frame` / `odom_frame`：默认 `map` / `odom`
 - `base_frame` / `robot_base_frame` / `lidar_frame`：默认 `base_footprint` / `base_footprint` / `livox_frame`
@@ -207,7 +207,7 @@ Gazebo (/livox/lidar + /livox/imu)
 
 **导航**
 
-- `me_nav2_bringup` — Nav2 集成：启动文件、参数配置、地图、PCD、RViz 配置
+- `nav2_planner` — Nav2 集成：启动文件、参数配置、地图、PCD、RViz 配置
 - `gui_teleop` — tkinter GUI 遥控，持速度调节和紧急停止
 
 **自主探索** (`src/planner/`)
@@ -229,9 +229,9 @@ Gazebo (/livox/lidar + /livox/imu)
 ### 5.1 关键配置文件
 
 **导航配置**
-- `me_nav2_bringup/config/nav2_params.yaml` — Nav2 参数
-- `me_nav2_bringup/config/slam_toolbox_params.yaml` — SLAM Toolbox 在线建图参数
-- `me_nav2_bringup/config/Pointcloud2d_3d.yaml` — 3D→2D 切片高度和角分辨率
+- `nav2_planner/config/nav2_params.yaml` — Nav2 参数
+- `nav2_planner/config/slam_toolbox_params.yaml` — SLAM Toolbox 在线建图参数
+- `nav2_planner/config/Pointcloud2d_3d.yaml` — 3D→2D 切片高度和角分辨率
 
 **LIO 配置**
 - `localization/FAST_LIO/config/mid360.yaml` — FAST-LIO 参数
@@ -301,7 +301,7 @@ Gazebo (/livox/lidar + /livox/imu)
 当前 launch 文件给出的工作空间默认值为：
 
 ```text
-prior_pcd_file: /home/pio/Nav2_3D_ws/src/me_nav2_bringup/pcd/nav_test_4_27.pcd
+prior_pcd_file: /home/pio/Nav2_3D_ws/src/nav2_planner/pcd/nav_test_4_27.pcd
 input_cloud_topic: /registered_scan
 map_frame: map
 odom_frame: odom

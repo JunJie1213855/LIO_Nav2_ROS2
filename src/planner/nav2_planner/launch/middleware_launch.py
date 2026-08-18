@@ -8,10 +8,10 @@
 
 用法:
   # FAST-LIO (默认，zlim 负值切片)
-  ros2 launch me_nav2_bringup middleware_launch.py use_sim_time:=true
+  ros2 launch nav2_planner middleware_launch.py use_sim_time:=true
 
   # Point-LIO (重力对齐，云 Z 朝上；但切片在 base_footprint 机体帧内做，负值)
-  ros2 launch me_nav2_bringup middleware_launch.py use_sim_time:=False \
+  ros2 launch nav2_planner middleware_launch.py use_sim_time:=False \
       odometry_sub:=/aft_mapped_to_init \
       pc2l_config:=Pointcloud2d_3d_zlim.yaml
 """
@@ -32,7 +32,7 @@ def generate_launch_description():
     pc2l_config = LaunchConfiguration("pc2l_config")
 
     pc2l_config_path = PathJoinSubstitution([
-        get_package_share_directory("me_nav2_bringup"),
+        get_package_share_directory("nav2_planner"),
         "config",
         pc2l_config,
     ])
@@ -90,7 +90,7 @@ def generate_launch_description():
         DeclareLaunchArgument("odometry_sub", default_value="/Odometry",
                               description="LIO odometry topic (/Odometry 或 /aft_mapped_to_init)"),
         DeclareLaunchArgument("pc2l_config", default_value="Pointcloud2d_3d_zlim.yaml",
-                              description="3D→2D 切片配置文件名（位于 me_nav2_bringup/config 下）"),
+                              description="3D→2D 切片配置文件名（位于 nav2_planner/config 下）"),
         lio_interface_node,
         sensor_scan_node,
         pc2l_node,
