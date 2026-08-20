@@ -41,7 +41,10 @@ tmux new-session -d -s "$SESS"
 #   "bash -c 'cd $WS && source install/setup.bash && ros2 launch rslidar_sdk driver_only.launch.py; exec bash'"
 
 # ============== Fast-LIO 里程计 ========================
-W "FAST-LIO" "ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
+# W "FAST-LIO" "ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
+
+# ============== Point-LIO 里程计 ========================
+W "Point-LIO" "ros2 launch point_lio point_lio_robosenseAiry.launch.py"
 
 
 # ============== 静态 TF（URDF 链: base_footprint→chassis→livox_frame） ===============
@@ -55,7 +58,9 @@ W "robo_desc" "ros2 launch gld_robot_description robosense_description_launch.py
 
 
 # ============== LIO 接口（TF 桥接） =======================
-W "lio_if"   "ros2 launch lio_interface fastlio_lio_interface_launch.py use_sim_time:=False"
+# W "lio_if"   "ros2 launch lio_interface fastlio_lio_interface_launch.py use_sim_time:=False"
+W "lio_if"   "ros2 launch lio_interface pointlio_lio_interface_launch.py"
+
 
 # ============== 扫描生成（/registered_scan + /odom） =======================
 W "sensor"   "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py use_sim_time:=False"
