@@ -6,6 +6,8 @@ log/
 __pycache__/
 *.o
 # *.so
+grx_sdk-master-0813/
+
 
 # 其他文件和文件夹
 PCD
