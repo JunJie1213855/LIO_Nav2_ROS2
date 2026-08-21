@@ -35,6 +35,7 @@ Panels:
     Name: Time
     SyncMode: 0
     SyncSource: PointCloud2
+    Use Sim Time: true
 Visualization Manager:
   Class: ""
   Displays:

@@ -33,6 +33,12 @@ ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
 # source install/setup.bash;
 # ros2 launch super_lio robosense_airy.py"
 
+# =============== 建图定位算法 3: point-lio =================
+# gnome-terminal --title="Super-LIO 里程计" -- bash -c "
+# source install/setup.bash;
+# ros2 launch point_lio point_lio_robosenseAiry.launch.py"
+
+
 # ================ robosense airy 描述 ================
 gnome-terminal --title="机器人描述" -- bash -c "
 killall -9 gzserver gzclient;
@@ -49,6 +55,13 @@ ros2 launch nav2_planner middleware_launch.py use_sim_time:=False"
 # gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
 # source install/setup.bash;
 # ros2 launch nav2_planner middleware_launch_superlio.py use_sim_time:=False"
+
+
+# ================ 中间层 2 : point lio ================
+# gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
+# source install/setup.bash;
+# ros2 launch nav2_planner pointlio_lio_interface_launch.py use_sim_time:=False"
+
 
 # ================ slam toolbox 建图 ================
 # gnome-terminal --title="slam_toolbox 建图" -- bash -c "

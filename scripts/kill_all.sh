@@ -78,6 +78,9 @@ ALL_WINDOW_TITLES=(
     "点云滤波"
     "点云滤波 180°"
     "点云格式转换器"
+    # Cartographer 建图 (robosense_mapping.sh)
+    "cartographer 建图"
+    "cartographer 建图可视化"
 )
 
 if command -v wmctrl &> /dev/null; then
@@ -176,6 +179,8 @@ ALL_PROCESS_NAMES=(
     "global_relocalization" "small_gicp_relocalization"
     # SLAM
     "async_slam_toolbox_node" "slam_toolbox"
+    # Cartographer (robosense_mapping.sh)
+    "cartographer_node" "cartographer_occupancy_grid_node"
     # 规划器
     "far_planner" "tare_planner_node"
     # DSV Planner (探索仿真)
@@ -236,6 +241,7 @@ ALL_LAUNCH_PATTERNS=(
     "global_relocalization"
     "small_gicp_relocalization"
     "online_async_launch.py"
+    "cartographer_2d_launch.py"
     "my_nav2_launch.py"
     "gld_robot_description"
     # DSV Planner 探索仿真

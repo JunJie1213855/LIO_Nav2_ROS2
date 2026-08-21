@@ -111,6 +111,8 @@ ros2 launch lio_interface fastlio_lio_interface_launch.py \
 
 ## 问题 3：重定位地图 PCD 点云太稀疏
 
+> **现状更新**：当前 FAST-LIO 保存 PCD 使用 `pcl_wait_pub`（`publish_map` 累积的 world 点云），由 `save_to_pcd()` 直接写入 `map_file_path`（`robo_map.pcd`），该点云**已满足重定位需求**。下方方案 B 的稠密累积方案（`pcl_wait_save` → `dense_map.pcd`）在 `laserMapping.cpp` 中已注释停用，**不再使用**。
+
 ### 现象
 
 KISS-Matcher + small_gicp 全局重定位持续失败：
@@ -174,54 +176,56 @@ KISS_GLOBAL_INIT ──成功──→ GICP_TRACKING ──失败 N 次──→
 
 ### 解决方案
 
-#### A. 减小 ikd-tree 体素尺寸
-
-`robosenseAiry.yaml`:
-
-| 参数 | 旧值 | 新值 | 效果 |
-|------|------|------|------|
-| `filter_size_map` | 0.5 | **0.15** | ikd-tree 密度提升 ~37× |
-| `filter_size_surf` | 0.5 | **0.2** | surf 特征点更密 |
-| `mapping.save_voxel_size` | — (默认 0.2) | **0.1** | 保存时不再过度降采样 |
-
-权衡：ikd-tree 内存占用增加 ~37×，大面积建图时需注意内存。
-
-#### B. 额外保存稠密累积点云（推荐）
-
-在 `laserMapping.cpp` 的 `SigHandle()` 中，新增保存 `dense_map.pcd`：
-
-```
-                          方案A: ikd-tree            方案B: dense_map
-                          ──────────────            ────────────────
-feats_undistort ──→ ikd-tree(0.15m体素)          feats_undistort ──→ pcl_wait_save 累积
-                         │                                              │
-                         ▼                                              ▼
-                    robo_map.pcd             Ctrl+C → 0.05m体素滤波 → dense_map.pcd
-                   (~5万点，稀疏)                                  (~10-50万点，稠密)
-```
-
-方案 B 的优势：
-- 不改 ikd-tree 参数（不影响 SLAM 实时性能）
-- 累积所有历史帧的 `laserCloudWorld`，包含多次扫描的冗余信息
-- 密度远超方案 A，FPFH 特征区分力更强
-- 可用更小的体素（0.05m）滤波，细节保留更好
-
-#### C. 重定位 launch 文件适配
-
-两个 launch 文件均改为**优先加载稠密地图，不存在则 fallback**：
-
-```python
-dense_pcd = os.path.join(..., "PCD", "dense_map.pcd")
-legacy_pcd = os.path.join(..., "pcd", "robo_map.pcd")
-pcd_path = dense_pcd if os.path.exists(dense_pcd) else legacy_pcd
-```
+采用 pcl_wait_pub 点云进行保存。
 
 ### 代码位置
 
-- `src/localization/FAST_LIO_ROBOAIRY/config/robosenseAiry.yaml`: `filter_size_map`, `mapping.save_voxel_size`
-- `src/localization/FAST_LIO_ROBOAIRY/src/laserMapping.cpp`: `SigHandle()` 稠密地图保存
+- `src/localization/FAST_LIO_ROBOAIRY/config/robosenseAiry.yaml`: `filter_size_map`, `mapping.save_voxel_size`, `publish.dense_publish_en`
+- `src/localization/FAST_LIO_ROBOAIRY/src/laserMapping.cpp`: `save_to_pcd()` 使用 `pcl_wait_pub` 写入 `map_file_path`（约 724 行）
 - `src/registration/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py`: PCD 路径
 - `src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py`: PCD 路径
+
+---
+
+## 问题 4：Bag 回放建图 cartographer 只看到第一帧
+
+### 现象
+
+重放 `/home/ros/dataset/robosenseAiry/mapping` bag 时，cartographer 只能看到第一帧建图（启动时建的初始空 submap），之后无任何建图/位姿。pc2l 终端持续报：
+
+```
+Warning: TF_OLD_DATA ignoring data from the past for frame base_footprint at time 11865.299657 ...
+```
+
+### 根因
+
+这个 bag 录制于 `use_lidar_clock=true` 时代，消息时间戳 ≈ **11865s**（雷达坏时钟），与任何墙钟都不一致。pc2l 的 tf2 buffer 判旧逻辑 `now() - stamp > cache_time(10s)` 把每帧 `odom→base_footprint` TF 当作"过去的数据"丢弃 → 永远发不出 `/scan` → cartographer 只有初始空 submap，看不到后续建图。
+
+| 场景 | now() | 消息戳 | now() - stamp |
+|------|-------|--------|----------------|
+| 之前（墙钟） | 1.7e9 或 3.3h | 11865 | ≫ 10s → **TF_OLD_DATA** |
+| 现在（桥式模拟时钟） | 11865+ | 11865 | ≈ 0 → **TF 有效** |
+
+### 为什么 `ros2 bag play --clock` 不行
+
+- Humble 里 `--clock` 带**可选** `[Hz]` 参数，`--clock <bag>` 会把 bag 路径当 Hz 报错；正确写法 `ros2 bag play <bag> --clock`。
+- 但即使写对，`--clock` 发布的是**录制起始墙钟**（1785481507），与消息戳差 1.7e9 秒 → 依旧 TF_OLD_DATA。**对这个 bag 本质无效。**
+
+### 解决方案
+
+`scripts/bag_clock_bridge.py` 订阅 bag 内 topic，把最新消息戳以 50Hz RELIABLE 发布为 `/clock`。全链路 `use_sim_time=true` 后各节点 `now() == 消息戳 (~11865)`，TF 不再被判旧 → `/scan` 恢复 → cartographer 正常建图。
+
+附带修复了 FAST-LIO 的隐藏坑：其处理由 `create_timer(get_clock())` 驱动（`laserMapping.cpp:1085`），无推进的 /clock 时 `now()=0`、timer 永不触发，连里程计都不出；桥提供 /clock 后 timer 才工作。
+
+**验证结果（tmux 全链路实测）：** `/registered_scan` ~3.5Hz、`/scan` 360° 正常、cartographer 持续 10Hz 处理 scan 并 `Inserted submap`、`map→odom` TF 正常、pc2l **零 TF_OLD_DATA 错误**。
+
+### 代码位置
+
+- `scripts/robosense_mapping_bag.sh` — bag 回放建图脚本（bag 不带 `--clock` + 桥 + FAST-LIO + pc2l zlim + cartographer）
+- `scripts/bag_clock_bridge.py` — `/clock` 桥（跟随 bag 消息时间戳）
+- `src/planner/nav2_planner/launch/pointcloud_to_laserscan_launch_zlim.py` — 显式 `use_sim_time` 参数
+- `src/gld_robot_description/rviz/nav2_sim.rviz` — 内置 Use Sim Time 的 rviz
+- `docs/bag_replay_sim_time.md` — 详细技术文档（根因 / QoS 要点 / 用法）
 
 ---
 
@@ -232,4 +236,5 @@ pcd_path = dense_pcd if os.path.exists(dense_pcd) else legacy_pcd
 | Z 轴翻转 → SLAM Toolbox 无数据 | ✅ 已解决 (zflip / zlim) |
 | 修正矩阵 XY 互换 → 前进方向不对 | ✅ 已修复 (绕 X 轴 180°) |
 | 位姿未修正 → 点云和 odom 不一致 | ✅ 已修复 (odometry 修正) |
-| 重定位 PCD 太稀疏 → KISS-Matcher 失败 | ✅ 已修复 (dense_map.pcd + 参数调优) |
+| 重定位 PCD 太稀疏 → KISS-Matcher 失败 | ✅ 已解决 (pcl_wait_pub 保存即可满足重定位；稠密 dense_map.pcd 已停用) |
+| Bag 回放 cartographer 只看到第一帧 → TF_OLD_DATA | ✅ 已修复 (bag_clock_bridge 模拟时钟) |

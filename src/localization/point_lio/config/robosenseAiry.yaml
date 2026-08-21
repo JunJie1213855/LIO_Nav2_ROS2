@@ -53,8 +53,8 @@
             plane_thr: 0.1
             match_s: 81.0
             ivox_grid_resolution: 2.0
-            gravity: [ -0.0205, -0.0912, -9.8684 ]       # 实机：Airy 机体 Z 朝下，重力沿 +Z；世界系与机体对齐，避免 180° roll
-            gravity_init: [ -0.0205, -0.0912, -9.8684 ]
+            gravity: [ 0.0205, 0.0912, 9.8684 ]       # 实机：Airy 机体 Z 朝下，重力沿 +Z；世界系与机体对齐，避免 180° roll
+            gravity_init: [ 0.0205, 0.0912, 9.8684 ]
             extrinsic_T: [0.0, 0.0, 0.0]
             extrinsic_R: [0.0, -1.0, 0.0,
                          -1.0, 0.0, 0.0,

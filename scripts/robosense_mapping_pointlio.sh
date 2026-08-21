@@ -28,6 +28,7 @@ cd "$WORKSPACE_ROOT" || exit 1
 
 # ================ Point-LIO 里程计 ================
 # rviz:=False 关闭 Point-LIO 自带的 3D 可视化，统一用下方 nav2.rviz 看 2D 建图结果
+# 注意，因为重力对齐的原因，我把重力设置为世界坐标系的上面，可以看看 robosenseAiry.yaml 文件夹中的 gravity 配置
 gnome-terminal --title="Point-LIO 里程计" -- bash -c "
 source install/setup.bash;
 ros2 launch point_lio point_lio_robosenseAiry.launch.py rviz:=True"
