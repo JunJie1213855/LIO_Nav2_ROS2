@@ -54,7 +54,7 @@ ros2 launch nav2_planner middleware_launch.py \
 gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 source install/setup.bash;
 ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/nav2_planner/config/slam_toolbox_params.yaml"
+    slam_params_file:=src/planner/nav2_planner/config/slam_toolbox_params.yaml"
 
 
 # ================ slam toolbox 建图可视化 ================

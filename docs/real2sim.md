@@ -172,7 +172,7 @@ tmux select-pane -t "$SESSION:slam.0" -T "3d→2d"
 tmux split-window -h -t "$SESSION:slam"
 tmux send-keys -t "$SESSION:slam.1" \
   "source install/setup.bash && ros2 launch slam_toolbox online_async_launch.py \
-   slam_params_file:=src/nav2_planner/config/slam_toolbox_params.yaml \
+   slam_params_file:=src/planner/nav2_planner/config/slam_toolbox_params.yaml \
    use_sim_time:=False" C-m
 tmux select-pane -t "$SESSION:slam.1" -T "SLAM"
 
