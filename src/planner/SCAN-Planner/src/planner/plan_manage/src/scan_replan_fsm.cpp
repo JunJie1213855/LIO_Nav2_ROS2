@@ -517,7 +517,7 @@ namespace scan_planner
     cout << "[FSM]: state: " + state_str[int(exec_state_)] << endl;
   }
 
-  void SCANReplanFSM::execFSMCallback()
+  void SCANReplanFSM::execFSMCallback() // 状态机主线程
   {
     updateLocalTrajTimeFreeze();
 
@@ -535,7 +535,7 @@ namespace scan_planner
 
     switch (exec_state_)
     {
-    case INIT:
+    case INIT: // 查看是否有位姿 odom 、触发器是否启动 trigger，然后更新状态 `等待目标`
     {
       if (!have_odom_)
       {
@@ -549,7 +549,7 @@ namespace scan_planner
       break;
     }
 
-    case WAIT_TARGET:
+    case WAIT_TARGET: // 查看是否存在目标，有就开始生成新的轨迹
     {
       if (!have_target_)
         return;
@@ -575,7 +575,7 @@ namespace scan_planner
         flag_random_poly_init = true;
 
       bool success = callReboundReplan(true, flag_random_poly_init);
-      if (success)
+      if (success) // 成功生成轨迹，就开始执行轨迹
       {
 
         replan_fail_count_ = 0;
@@ -590,7 +590,7 @@ namespace scan_planner
       break;
     }
 
-    case REPLAN_TRAJ:
+    case REPLAN_TRAJ: // 重新规划轨迹
     {
 
       if (planFromCurrentTraj())
@@ -607,7 +607,7 @@ namespace scan_planner
       break;
     }
 
-    case EXEC_TRAJ:
+    case EXEC_TRAJ: // 
     {
       /* determine if need to replan */
       LocalTrajData *info = &planner_manager_->local_data_;
