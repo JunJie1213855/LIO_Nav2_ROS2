@@ -7,16 +7,18 @@
 #     → FAST-LIO(/velodyne_points + /livox/imu, config: mid360_sim.yaml)
 #     → lio_interface(odom→base_footprint TF)
 #     → sensor_scan_generation(/odom + /registered_scan, odom 帧点云)
-#     → topic_tools relay:
-#         /odom           → /state_estimation
-#         /odom           → /state_estimation_at_scan
-#         /registered_scan→ /terrain_map_ext       (地形高程/grid 用，保留地面点)
-#         /next_goal      → /way_point
-#     → ground_ceiling_filter(/terrain_map_ext → /terrain_map_ext_filtered, 滤除 z<0.25 地面点)
-#         ★ 关键: DSV 的 ground-robot RRT 在地面高度(z≈0)规划，若地面点被 octomap 标成 occupied
-#           (z≈0.175 单元)，RRT 扩展线被地面挡住 → 只长几个节点 → gainFound()=false
-#           → 误判 "Exploration completed"。滤除地面后该层变 free/unknown，RRT 才能生长。
-#         ★ /terrain_map_ext 必须保持未滤除: frontier 的地形高程(getZvalue)和 grid 依赖地面点。
+#     → z_offset_relay(/odom → /state_estimation, z += 0.75 = kVehicleHeight)  ← RRT 根高度修复
+#         /odom z 抬到车辆高度: 跳出机器人正下方未知地面体素, 且 keypose 与 RRT 节点
+#         z 一致(|Δz|<0.5) 使图边可建 → 不再误判 returning home
+#     → topic_tools relay: /next_goal → /way_point
+#     → ground_ceiling_filter(/registered_scan → /terrain_map_ext, 保留 body z∈(-0.5,0.35) 地面+低障碍)
+#         ★ 地形高程(getZvalue)用 /terrain_map_ext。必须只含地面(低)点: 若混入墙壁,
+#           地形体素 max-min Z≥0.4 → elev=1000(不可通行) → RRT 扩展被拒(z>=1000 reject)。
+#           下界必须 < -0.3 才保留地面平面(body z≈-0.3), 上界 0.35 去除墙壁。
+#     → topic_tools relay: /registered_scan → /terrain_map_ext_filtered (完整点云)
+#         ★ octomap 必须收到完整点云(地面+墙壁): 地面点射线把 base 下方标 free,
+#           墙壁点射线把 RRT 节点高度带标 free, 扩展的 bounding box 才能全 free。
+#           只喂地面 → 节点带 unknown; 只喂墙壁 → base 下方 unknown → 扩展都被拒。
 #     → dsvp_launch(exploration + dsvplanner_exe + graph_planner + rviz)
 #         octomap 订阅 /terrain_map_ext_filtered (octomap.yaml: octo/velodyne_cloud_topic)
 #     → waypoint_follower(/way_point → /cmd_vel, 带局部避障)
@@ -76,20 +78,39 @@ W "tf_map"   "ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map odom"
 # ============== DSV 需要的话题中继 =======================
 # dsvplanner 订阅 /state_estimation + /terrain_map_ext；发布 /next_goal
 # waypoint_follower 消费 /way_point
-W "relays" "ros2 run topic_tools relay /odom /state_estimation & \
-  ros2 run topic_tools relay /odom /state_estimation_at_scan & \
-  ros2 run topic_tools relay /registered_scan /terrain_map_ext & \
+# ★ z_offset_relay 把 /odom 的 z 抬高 kVehicleHeight(0.75) 后发往 /state_estimation
+#   和 /state_estimation_at_scan —— 这是修复 returning home 的关键:
+#   1) RRT 根节点 z 从地面(≈0)抬到 getZvalue() 一致的高度(≈0.78), 跳出机器人正下方
+#      那个"未知地面体素"[-0.175,+0.175](雷达看不到正下方 → 永远 unknown → 扩展全被拒)。
+#   2) keypose(/state_estimation_at_scan) 与 RRT 节点统一在 z≈0.78, |Δz|≈0 < 0.5
+#      (kMaxVertexDiffAlongZ), 图边能建起来 → 路径非空 → getGain()>0, 不再误判回家。
+#   纯 remap 方案, 未引入 dev 环境前端三节点。
+W "relays" "python3 $WS/scripts/z_offset_relay.py & \
   ros2 run topic_tools relay /next_goal /way_point & \
   wait"
 
-# ============== 地面滤除（octomap 专用） =======================
-# /terrain_map_ext → 滤除 z<0.25 的地面点 → /terrain_map_ext_filtered
-# 只喂给 octomap(octo/velodyne_cloud_topic)，避免地面形成 occupied 层挡住 RRT
-# 输入用 body 帧阈值(flat 车 ≈ odom z)，ceil 置 100 表示不滤上界
+# ============== 地形点云（地面 + 低矮障碍，去除墙壁/天花板） =======================
+# /registered_scan → 保留 body z ∈ (-0.5, 0.35) 的点(地面平面 + 0.35m 以下低障碍) → /terrain_map_ext
+# DSV 的地形高程(getZvalue)、grid 用这份"地面为主"的点云。
+# ★ 地面平面在 body z≈-0.3, 下界必须 < -0.3 才保留地面; 之前用 (-0.05,0.35) 把地面滤掉了,
+#   地形高程取到的是错误值。上界 0.35 去除墙壁: 墙壁混入地形体素会造成 max-min Z≥0.4
+#   → elev=1000(不可通行) → RRT 扩展全被拒(z>=1000 reject)。
 W "groundfilt" "python3 $WS/scripts/ground_ceiling_filter.py --ros-args \
-  -p input_cloud:=/terrain_map_ext -p input_odom:=/odom \
-  -p output_cloud:=/terrain_map_ext_filtered \
-  -p ground_z_threshold:=0.25 -p ceiling_z_threshold:=100.0"
+  -p input_cloud:=/registered_scan -p input_odom:=/odom \
+  -p output_cloud:=/terrain_map_ext \
+  -p ground_z_threshold:=-0.5 -p ceiling_z_threshold:=0.35"
+
+# ============== octomap 专用点云（传感器坐标系完整点云，地面+墙壁） =======================
+# /lidar_frame_pcd(livox_frame 帧的完整点云, 由 sensor_scan_generation 把 /registered_scan
+# 变换进 lidar_frame 后发布) → /terrain_map_ext_filtered 供 octomap。
+# ★ 必须用传感器帧(livox_frame)的点云, 不能用 odom 帧:
+#   octomap_manager::insertPointcloudWithTf 用 lookupTransform(cloud.frame → map) 求射线原点。
+#   odom 帧点云 → 射线原点锁死在 odom 原点(0,0,0), 机器人开走后 octomap 的已知区域仍以
+#   原点为中心 → RRT 节点 5m gain 带全是 free(已知) → gain=0 → 误判 "Exploration completed"。
+#   livox_frame 点云 → 射线原点 = 雷达当前位姿, octomap 已知区域随机器人移动, 前方保持 unknown
+#   → gain() 找到 unknown 单元(每格 +1) → gainFound()=true → 正常探索。这就是原版
+#   octomap_indoor.yaml 的 `velodyne_cloud_topic: /sensor_scan` + `robotFrame: sensor_at_scan` 设计。
+W "relay_terrain" "ros2 run topic_tools relay /lidar_frame_pcd /terrain_map_ext_filtered"
 
 # ============== waypoint_follower（执行 /way_point → /cmd_vel） =======================
 # 复用 tare_planner 的 waypoint_follower.py（带局部避障），参数与 tare_planner_lio_launch.py 一致

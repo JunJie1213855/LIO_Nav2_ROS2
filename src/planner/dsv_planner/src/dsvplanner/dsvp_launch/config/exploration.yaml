@@ -2,10 +2,10 @@
   ros__parameters:
     #Interface Constants
     interface/dtime: 1.0
-    interface/initX: 4.0
-    interface/initY: 0.0
+    interface/initX: 0.0
+    interface/initY: 4.0
     interface/initZ: 0.0
-    interface/initTime: 4.0
+    interface/initTime: 12.0
     interface/returnHomeThres: 1.5
     interface/robotMovingThres: 6.0
     interface/autoExp: true

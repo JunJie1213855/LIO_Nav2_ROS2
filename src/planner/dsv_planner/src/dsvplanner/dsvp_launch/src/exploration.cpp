@@ -392,10 +392,9 @@ int main(int argc, char** argv)
       init_time_count++;
       usleep(100000);
       executor.spin_some();
-      vec_goal = transformToMap * vec_init;
-      wp.point.x = vec_goal.x();
-      wp.point.y = vec_goal.y();
-      wp.point.z = vec_goal.z();
+      // 目标点已在进入循环前按启动位姿固定为 map 帧点(wp 不再变化)。
+      // 不能在这里用当前位姿重算: transformToMap 随 odom 每帧更新,
+      // initY≠0 时目标会跟着车头转 → 永远偏 90° → 机器人一直旋转追不上。
       waypoint_pub->publish(wp);
       double dist = sqrt((wp.point.x - current_odom_x) * (wp.point.x - current_odom_x) +
                         (wp.point.y - current_odom_y) * (wp.point.y - current_odom_y));
