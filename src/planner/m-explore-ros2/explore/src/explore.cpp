@@ -82,15 +82,18 @@ Explore::Explore()
   this->get_parameter("robot_base_frame", robot_base_frame_);
 
   progress_timeout_ = timeout;
+  // 移动控制 action 通信客户端
   move_base_client_ =
       rclcpp_action::create_client<nav2_msgs::action::NavigateToPose>(
           this, ACTION_NAME);
-
+  
+  // frontiner 查找器
   search_ = frontier_exploration::FrontierSearch(costmap_client_.getCostmap(),
                                                  potential_scale_, gain_scale_,
                                                  min_frontier_size, logger_);
 
   if (visualize_) {
+    // frontier 可视化话题
     marker_array_publisher_ =
         this->create_publisher<visualization_msgs::msg::MarkerArray>("explore/"
                                                                      "frontier"
@@ -101,6 +104,7 @@ Explore::Explore()
   // Publisher for exploration status
   rclcpp::QoS status_qos(10);
   status_qos.transient_local();
+  // 状态话题
   status_pub_ = this->create_publisher<explore_lite_msgs::msg::ExploreStatus>("explore/status", status_qos);
 
   // Subscription to resume or stop exploration
@@ -129,6 +133,7 @@ Explore::Explore()
     }
   }
 
+  // 定时器
   exploring_timer_ = this->create_wall_timer(
       std::chrono::milliseconds((uint16_t)(1000.0 / planner_frequency_)),
       [this]() { makePlan(); });

@@ -127,6 +127,7 @@ protected:
 
 private:
   // will be unsubscribed at destruction
+  // 代价图订阅，用于查找 frontier 点
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_sub_;
   rclcpp::Subscription<map_msgs::msg::OccupancyGridUpdate>::SharedPtr
       costmap_updates_sub_;

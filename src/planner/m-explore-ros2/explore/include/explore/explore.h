@@ -116,14 +116,18 @@ private:
   rclcpp::Logger logger_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
-
+  
+  // 2D 代价图处理客户端
   Costmap2DClient costmap_client_;
+
+  // 移动控制  action 通信
   rclcpp_action::Client<nav2_msgs::action::NavigateToPose>::SharedPtr
       move_base_client_;
   frontier_exploration::FrontierSearch search_;
   rclcpp::TimerBase::SharedPtr exploring_timer_;
   // rclcpp::TimerBase::SharedPtr oneshot_;
 
+  // 是否恢复
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr resume_subscription_;
   void resumeCallback(const std_msgs::msg::Bool::SharedPtr msg);
 
