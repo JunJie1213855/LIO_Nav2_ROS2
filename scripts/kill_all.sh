@@ -39,8 +39,13 @@ for arg in "$@"; do
 done
 
 # 尝试 source ROS 2（非强制模式下需要 ros2 node list）
+# 注意：必须在 set +e +u 下 source。colcon 的 install/setup.bash 会引用未设置的环境变量，
+# 在 set -u(nounset) 下 source 会直接退出整个脚本（RC=1、无任何输出，后面的 || true 来不及兜底），
+# 表现为 --dry-run 永远静默退出。临时关掉 errexit+nounset，source 完再恢复。
 if [ "$FORCE" = false ] && [ -f "install/setup.bash" ]; then
-    source install/setup.bash 2>/dev/null || true
+    set +e +u
+    source install/setup.bash 2>/dev/null
+    set -e -u
 fi
 
 echo "╔══════════════════════════════════════════════════════════════╗"
@@ -101,22 +106,32 @@ fi
 sleep 1
 
 # ═══════════════════════════════════════════════════════════════
-# 阶段 1.5: 关闭 tmux 会话（DSV 探索仿真用 tmux 而非 gnome-terminal）
+# 阶段 1.5: 关闭 tmux 会话（探索/扫描仿真用 tmux 而非 gnome-terminal）
 # ═══════════════════════════════════════════════════════════════
 echo ""
-echo "── 阶段 1.5: 关闭 tmux 会话 (DSV 仿真) ──"
+echo "── 阶段 1.5: 关闭 tmux 会话 (探索/扫描仿真) ──"
 
-# DSV Planner 探索仿真 (scripts/dsv_exploration_sim.sh) 全部窗口跑在 tmux 会话 dsv_gz 里，
-# 杀会话即可一次性端掉 Gazebo/FAST-LIO/relay/DSV 整条链路，避免逐进程匹配遗漏。
-DSV_TMUX_SESSION="dsv_gz"
-if command -v tmux &> /dev/null && tmux has-session -t "$DSV_TMUX_SESSION" 2>/dev/null; then
-    if [ "$DRY_RUN" = true ]; then
-        echo "  [DRY-RUN] 将关闭 tmux 会话: $DSV_TMUX_SESSION"
-    else
-        tmux kill-session -t "$DSV_TMUX_SESSION" 2>/dev/null && echo "  ✓ 关闭 tmux 会话: $DSV_TMUX_SESSION" || true
-    fi
+# 所有基于 tmux 的探索/扫描仿真会话：
+#   dsv_gz      — DSV Planner 探索仿真 (exploration_dsv_sim.sh)
+#   frontier_gz — frontier_exploration 探索仿真 (exploration_frontier_sim.sh)
+#   explore_gz  — explore_lite 探索仿真 (exploration_explore_lite_sim.sh)
+#   far_gz      — FAR Planner 探索仿真 (exploration_far_sim.sh)
+#   tare_gz     — TARE Planner 探索仿真 (exploration_tare_sim.sh)
+#   scan_gz     — 扫描规划仿真 (nav_scan_planner.sh)
+# 杀会话即可一次性端掉对应整条链路（Gazebo/FAST-LIO/relay/探索器），避免逐进程匹配遗漏。
+TMUX_SESSIONS=("dsv_gz" "explore_gz" "far_gz" "frontier_gz" "scan_gz" "tare_gz")
+if command -v tmux &> /dev/null; then
+    for sess in "${TMUX_SESSIONS[@]}"; do
+        if tmux has-session -t "$sess" 2>/dev/null; then
+            if [ "$DRY_RUN" = true ]; then
+                echo "  [DRY-RUN] 将关闭 tmux 会话: $sess"
+            else
+                tmux kill-session -t "$sess" 2>/dev/null && echo "  ✓ 关闭 tmux 会话: $sess" || true
+            fi
+        fi
+    done
 else
-    echo "  (无 $DSV_TMUX_SESSION tmux 会话)"
+    echo "  (tmux 未安装，跳过 tmux 会话关闭)"
 fi
 
 sleep 1
@@ -170,7 +185,7 @@ ALL_PROCESS_NAMES=(
     # Livox 驱动
     "livox_ros_driver2"
     # LIO
-    "fastlio_mapping" "fast_lio" "point_lio" "super_lio" "super_lio_node" "relocation_node"
+    "fastlio_mapping" "fast_lio" "point_lio" "pointlio_mapping" "super_lio" "super_lio_node" "relocation_node"
     # 接口 & 传感器
     "lio_interface_node" "sensor_scan_generation"
     "pointcloud_to_laserscan" "ign_sim_pointcloud_tool"
@@ -182,14 +197,17 @@ ALL_PROCESS_NAMES=(
     # Cartographer (robosense_mapping.sh)
     "cartographer_node" "cartographer_occupancy_grid_node"
     # 规划器
-    "far_planner" "tare_planner_node"
+    "far_planner" "far_local_planner.py" "tare_planner_node" "scan_planner_node" "closed_loop_controller"
+    # 探索器 (frontier / explore_lite / 扫描滤波)
+    "frontier_planner" "explore_lite" "cloud_z_filter"
     # DSV Planner (探索仿真)
     "dsvplanner_exe" "graph_planner_exe" "graph_visualization" "navigationBoundary"
     "dsvp_launch" "topic_tools"
     # Nav2
     "map_server" "planner_server" "controller_server"
     "bt_navigator" "behavior_server" "waypoint_follower"
-    "velocity_smoother" "nav2_smoother_server" "lifecycle_manager"
+    "velocity_smoother" "nav2_smoother_server" "smoother_server" "lifecycle_manager"
+    "costmap_2d_cloud" "costmap_2d_markers"
     # 描述 & 状态
     "robot_state_publisher" "static_transform_publisher"
     "joint_state_publisher"
@@ -248,7 +266,16 @@ ALL_LAUNCH_PATTERNS=(
     "dsvp.launch"
     "graph_planner.launch"
     "graph_visualization.launch"
-    "dsv_exploration_sim.sh"
+    # FAR / TARE 探索规划
+    "far_planner_lio_launch.py"
+    "tare_planner_lio_launch.py"
+    # 基于 tmux 的探索/扫描仿真启动脚本（各自建 tmux 会话，进程名匹配不到的兜底）
+    "exploration_dsv_sim.sh"
+    "exploration_frontier_sim.sh"
+    "exploration_explore_lite_sim.sh"
+    "exploration_far_sim.sh"
+    "exploration_tare_sim.sh"
+    "nav_scan_planner.sh"
 )
 
 for pattern in "${ALL_LAUNCH_PATTERNS[@]}"; do
@@ -270,7 +297,7 @@ done
 echo ""
 echo "── 阶段 5: 强制清理 Gazebo ──"
 
-if pgrep -f "gzserver\|gzclient" > /dev/null 2>&1; then
+if pgrep -f "gzserver|gzclient" > /dev/null 2>&1; then
     if [ "$DRY_RUN" = true ]; then
         echo "  [DRY-RUN] 将执行 killall -9 gzserver gzclient"
     else

@@ -38,8 +38,8 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.035         # 到达目标的XY坐标允许误差（米）
-      yaw_goal_tolerance: 0.1745       # 10度 到达目标的角度允许误差（弧度）
+      xy_goal_tolerance: 0.3           # 到达目标的XY坐标允许误差（米）；探索场景放宽到 0.3，对齐 frontier goal_tolerance
+      yaw_goal_tolerance: 3.14         # 到达目标的角度允许误差（弧度，≈180°=任意朝向）；探索只关心到位，朝向由 frontier 的 Rotation 自行处理
 
     # 局部控制器(DWB)配置
     FollowPath:
