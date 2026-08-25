@@ -66,13 +66,13 @@ ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 # ================ 3d点云转2d (zlim; 显式 use_sim_time:=true) ======
 gnome-terminal --title="3d点云转2d" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner pointcloud_to_laserscan_launch_zlim.py \
+ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch_zlim.py \
   use_sim_time:=true"
 
 # =================== cartographer 建图 (sim time) ===================
 gnome-terminal --title="cartographer 建图" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner cartographer_2d_launch.py use_sim_time:=True"
+ros2 launch nav2_planner_bringup cartographer_2d_launch.py use_sim_time:=True"
 
 # ================ cartographer 建图可视化 (sim-time rviz) ================
 gnome-terminal --title="cartographer 建图可视化" -- bash -c "

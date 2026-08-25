@@ -44,7 +44,7 @@ ros2 launch gld_robot_description robosense_description_launch.py"
 # 切片在 base_footprint（Airy 机体帧 Z 朝下）中进行，用负值（zlim）
 gnome-terminal --title="中间层(Point-LIO + sensor + pc2l)" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner middleware_launch.py \
+ros2 launch nav2_planner_bringup middleware_launch.py \
     use_sim_time:=False \
     odometry_sub:=/aft_mapped_to_init \
     pc2l_config:=Pointcloud2d_3d_zlim.yaml"
@@ -54,7 +54,7 @@ ros2 launch nav2_planner middleware_launch.py \
 gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 source install/setup.bash;
 ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/planner/nav2_planner/config/slam_toolbox_params.yaml"
+    slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 
 
 # ================ slam toolbox 建图可视化 ================
@@ -66,4 +66,4 @@ rviz2 -d src/gld_robot_description/rviz/nav2.rviz"
 # 建图阶段不需要导航，建图完成后再用 robosense_nav2_real_zlim.sh 启动导航
 # gnome-terminal --title="Nav2 导航" -- bash -c "
 # source install/setup.bash;
-# ros2 launch nav2_planner my_nav2_launch.py"
+# ros2 launch nav2_planner_bringup my_nav2_launch.py"

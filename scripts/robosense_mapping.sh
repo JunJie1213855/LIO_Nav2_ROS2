@@ -48,12 +48,12 @@ ros2 launch sensor_scan_generation sensor_scan_generation_launch.py use_sim_time
 
 gnome-terminal --title="3d点云转2d" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner pointcloud_to_laserscan_launch_zlim.py use_sim_time:=True"
+ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch_zlim.py use_sim_time:=True"
 
 # =================== cartographer 建图 ===================
 gnome-terminal --title="cartographer 建图" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner cartographer_2d_launch.py use_sim_time:=True"
+ros2 launch nav2_planner_bringup cartographer_2d_launch.py use_sim_time:=True"
 
 # ================ cartographer 建图可视化 ================
 gnome-terminal --title="cartographer 建图可视化" -- bash -c "
@@ -62,4 +62,4 @@ rviz2 -d src/gld_robot_description/rviz/nav2.rviz"
 
 # gnome-terminal --title="Nav2 导航" -- bash -c "
 # source install/setup.bash;
-# ros2 launch nav2_planner my_nav2_launch.py"
+# ros2 launch nav2_planner_bringup my_nav2_launch.py"

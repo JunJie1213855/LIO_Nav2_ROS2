@@ -22,7 +22,7 @@ ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
 # 中间层（三个节点合并为一个 launch，省 ~72MB）
 gnome-terminal --title="中间层(lio+sensor+pc2l)" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner middleware_launch.py use_sim_time:=False"
+ros2 launch nav2_planner_bringup middleware_launch.py use_sim_time:=False"
 
 # ---------
 
@@ -45,4 +45,4 @@ ros2 launch global_relocalization_kiss_matcher global_kiss_matcher_relocalizatio
 # ========== nav2 导航 ==========
 gnome-terminal --title="Nav2 导航" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner my_nav2_launch.py use_sim_time:=False"
+ros2 launch nav2_planner_bringup my_nav2_launch.py use_sim_time:=False"

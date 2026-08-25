@@ -9,11 +9,11 @@ def generate_launch_description():
 
     # 优先使用稠密地图 (Ctrl+C 时自动保存)，fallback 到旧稀疏地图
     dense_pcd = os.path.join(
-        get_package_share_directory("nav2_planner"),
+        get_package_share_directory("nav2_planner_bringup"),
         "pcd", "dense_map.pcd"
     )
     legacy_pcd = os.path.join(
-        get_package_share_directory("nav2_planner"),
+        get_package_share_directory("nav2_planner_bringup"),
         "pcd", "robo_map.pcd"
     )
     pcd_path = dense_pcd if os.path.exists(dense_pcd) else legacy_pcd

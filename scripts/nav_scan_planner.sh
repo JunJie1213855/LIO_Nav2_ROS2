@@ -29,7 +29,7 @@ W "lio_if"    "ros2 launch lio_interface lio_interface_launch.py"
 W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 # =================== scan planner ===================
-W "SCAN"      "ros2 launch nav2_planner scan_planner_lio_launch.py \
+W "SCAN"      "ros2 launch nav2_planner_bringup scan_planner_lio_launch.py \
     use_sim_time:=true \
     z_min:=0.15 z_max:=3.0 \
     double_cylinder_radius:=0.45 double_cylinder_offset:=0.18 \
@@ -40,7 +40,7 @@ W "SCAN"      "ros2 launch nav2_planner scan_planner_lio_launch.py \
     grid_map.local_update_range_x:=25.0 grid_map.local_update_range_y:=25.0"
 
 # =================== scan planner 可视化 ===================
-W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d ./src/nav2_planner/rviz/scan_planner.rviz"
+W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d ./src/nav2_planner_bringup/rviz/scan_planner.rviz"
 
 echo "========================================="
 echo " Gazebo + FAST-LIO + SCAN-Planner"

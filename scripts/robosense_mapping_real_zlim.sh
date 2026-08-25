@@ -48,31 +48,31 @@ ros2 launch gld_robot_description robosense_description_launch.py"
 # ================ 中间层 2 : fast-lio2 ================
 gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner middleware_launch.py use_sim_time:=False"
+ros2 launch nav2_planner_bringup middleware_launch.py use_sim_time:=False"
 
 
 # ================ 中间层 2 : super lio ================
 # gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
 # source install/setup.bash;
-# ros2 launch nav2_planner middleware_launch_superlio.py use_sim_time:=False"
+# ros2 launch nav2_planner_bringup middleware_launch_superlio.py use_sim_time:=False"
 
 
 # ================ 中间层 2 : point lio ================
 # gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
 # source install/setup.bash;
-# ros2 launch nav2_planner pointlio_lio_interface_launch.py use_sim_time:=False"
+# ros2 launch nav2_planner_bringup pointlio_lio_interface_launch.py use_sim_time:=False"
 
 
 # ================ slam toolbox 建图 ================
 # gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 # source install/setup.bash;
 # ros2 launch slam_toolbox online_async_launch.py \
-#     slam_params_file:=src/planner/nav2_planner/config/slam_toolbox_params.yaml"
+#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 
 gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 source install/setup.bash;
 ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/planner/nav2_planner/config/slam_toolbox_params.yaml"
+    slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 
 # ================ slam toolbox 建图可视化 ================
 gnome-terminal --title="slam_toolbox 建图可视化" -- bash -c "
@@ -82,4 +82,4 @@ rviz2 -d src/gld_robot_description/rviz/nav2.rviz"
 # ================ Nav2 导航 ================
 # gnome-terminal --title="Nav2 导航" -- bash -c "
 # source install/setup.bash;
-# ros2 launch nav2_planner my_nav2_launch.py"
+# ros2 launch nav2_planner_bringup my_nav2_launch.py"
