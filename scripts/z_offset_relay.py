@@ -48,13 +48,13 @@ class ZOffsetRelay(Node):
 
         self.pub1 = self.create_publisher(Odometry, out1, 10)
         self.pub2 = self.create_publisher(Odometry, out2, 10)
-        self.sub = self.create_subscription(Odometry, inp, self.odom_cb, 10)
+        self.sub = self.create_subscription(Odometry, inp, self.odom_cb, 10) # 订阅 /odom 话题数据
 
         self.get_logger().info(
             f'Z-offset relay ready: {inp} → {out1} & {out2}  '
             f'(z += {self.z_offset:.2f} = kVehicleHeight)')
 
-    def odom_cb(self, msg: Odometry):
+    def odom_cb(self, msg: Odometry): # 将 z 轴提高 0.75 m后，再做导航规划
         out = Odometry()
         out.header = msg.header
         out.child_frame_id = msg.child_frame_id

@@ -11,12 +11,12 @@
 #         /odom z 抬到车辆高度: 跳出机器人正下方未知地面体素, 且 keypose 与 RRT 节点
 #         z 一致(|Δz|<0.5) 使图边可建 → 不再误判 returning home
 #     → topic_tools relay: /next_goal → /way_point
-#     → topic_tools relay: /registered_scan → /terrain_map_ext (完整点云, 含墙壁)   [实验: 已去掉 ground_ceiling_filter]
-#         ★ 地形高程(getZvalue)用 /terrain_map_ext。完整点云会把含墙壁的体素判为
-#           max-min Z≥0.4 → elev=1000(不可通行) → 墙壁处扩展被拒(z>=1000 reject),
-#           走廊地板格仍可通行。世界无天花板(test_world.world 墙高 2.5 无顶), 不会全图不可通行。
-#           若探索被卡或立刻回家, 说明墙壁体素占比过高, 恢复 ground_ceiling_filter。
-#     → topic_tools relay: /lidar_frame_pcd → /terrain_map_ext_filtered (完整点云)
+#     → ground_ceiling_filter(/registered_scan → /terrain_map_ext, 保留 body z∈(-0.5,0.35) 地面+低障碍)
+#         ★ 地形高程(getZvalue)用 /terrain_map_ext。必须只含地面(低)点: 若混入墙壁,
+#           地形体素 max-min Z≥0.4 → elev=1000(不可通行) → RRT 扩展被拒(z>=1000 reject),
+#           且 2D grid 会把墙壁标成障碍, 改变规划绕行; 而 /way_point 是 relay /next_goal 直线执行,
+#           规划绕墙 → 执行直线冲墙 → 撞障碍物。下界必须 < -0.3 才保留地面平面(body z≈-0.3), 上界 0.35 去除墙壁。
+#     → topic_tools relay: /registered_scan → /terrain_map_ext_filtered (完整点云)
 #         ★ octomap 必须收到完整点云(地面+墙壁): 地面点射线把 base 下方标 free,
 #           墙壁点射线把 RRT 节点高度带标 free, 扩展的 bounding box 才能全 free。
 #           只喂地面 → 节点带 unknown; 只喂墙壁 → base 下方 unknown → 扩展都被拒。
@@ -90,12 +90,17 @@ W "relays" "python3 $WS/scripts/z_offset_relay.py & \
   ros2 run topic_tools relay /next_goal /way_point & \
   wait"
 
-# ============== 地形点云 /terrain_map_ext（实验: 去掉 ground_ceiling_filter, 直接 relay 完整点云） =======================
-# /registered_scan(odom 帧完整点云) → /terrain_map_ext。
-# ★ 效果: 含墙壁的地形体素 max-min Z≥0.4 → elev=1000(不可通行) → 墙壁处扩展被拒(z>=1000 reject),
-#   走廊地板格仍可通行(世界无天花板)。octomap 的 /terrain_map_ext_filtered(/lidar_frame_pcd) 通道不受影响。
-#   若探索被卡或立刻回家, 恢复原 ground_ceiling_filter(地面 z∈(-0.5,0.35))。
-W "terrain_raw" "ros2 run topic_tools relay /registered_scan /terrain_map_ext"
+# ============== 地形点云（地面 + 低矮障碍，去除墙壁/天花板） =======================
+# /registered_scan → 保留 body z ∈ (-0.5, 0.35) 的点(地面平面 + 0.35m 以下低障碍) → /terrain_map_ext
+# DSV 的地形高程(getZvalue)、grid 用这份"地面为主"的点云。
+# ★ 地面平面在 body z≈-0.3, 下界必须 < -0.3 才保留地面; 之前用 (-0.05,0.35) 把地面滤掉了,
+#   地形高程取到的是错误值。上界 0.35 去除墙壁: 墙壁混入地形体素会造成 max-min Z≥0.4
+#   → elev=1000(不可通行) → RRT 扩展全被拒(z>=1000 reject); 且 2D grid 会把墙壁标成障碍,
+#   规划绕墙而 /way_point 是 relay /next_goal 直线执行 → 会撞障碍物(已实测)。
+W "groundfilt" "python3 $WS/scripts/ground_ceiling_filter.py --ros-args \
+  -p input_cloud:=/registered_scan -p input_odom:=/odom \
+  -p output_cloud:=/terrain_map_ext \
+  -p ground_z_threshold:=-0.5 -p ceiling_z_threshold:=0.35"
 
 # ============== octomap 专用点云（传感器坐标系完整点云，地面+墙壁） =======================
 # /lidar_frame_pcd(livox_frame 帧的完整点云, 由 sensor_scan_generation 把 /registered_scan
@@ -125,7 +130,7 @@ W "DSV"      "ros2 launch dsvp_launch dsvp.launch"
 # ============== 启动提示 =======================
 echo "========================================="
 echo " Gazebo + FAST-LIO + DSV Planner Explorer"
-echo " 窗口: Gazebo | convert | FAST-LIO | lio_if | sensor | tf_map | relays | terrain_raw | relay_terrain | follower | DSV"
+echo " 窗口: Gazebo | convert | FAST-LIO | lio_if | sensor | tf_map | relays | groundfilt | relay_terrain | follower | DSV"
 echo " attach: tmux attach -t $SESS"
 echo ""
 echo " DSV autoExp: true → 自动开始探索"
