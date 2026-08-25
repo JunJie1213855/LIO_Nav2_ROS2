@@ -232,40 +232,37 @@ bool FrontierDetector::FrontierDetector::ComputeCentroids(
   frontierClose.clear();
 
   std::vector<int> pop_index;
-  // raw centroid filter: remove one of a too-close, collision-free centroid pair
+  // close-pair filter: keep one of two centroids closer than 3m along a collision-free line
   if (raw_centroids.size() >= 2) {
     for (int m = 0; m < raw_centroids.size(); m++) {
       for (int n = static_cast<int>(raw_centroids.size()) - 1; n > m; n--) {
-        if (!pop_index.empty()) {
-          if (std::find(pop_index.begin(), pop_index.end(), n) != pop_index.end() ||
-              std::find(pop_index.begin(), pop_index.end(), m) != pop_index.end()) {
-            continue;
-          }
+        if (std::find(pop_index.begin(), pop_index.end(), n) != pop_index.end() ||
+            std::find(pop_index.begin(), pop_index.end(), m) != pop_index.end()) {
+          continue;
         }
         float distance = sqrt(pow((raw_centroids[m].x - raw_centroids[n].x), 2) +
                               pow((raw_centroids[m].y - raw_centroids[n].y), 2));
         if (distance < 3 && CheckCollision(raw_map, raw_centroids[m], raw_centroids[n])) {
-          if (!pop_index.empty()) {
-            if (std::find(pop_index.begin(), pop_index.end(), n) == pop_index.end()) {
-              pop_index.push_back(n);
-            }
-          } else {
+          if (std::find(pop_index.begin(), pop_index.end(), n) == pop_index.end()) {
             pop_index.push_back(n);
           }
         }
       }
     }
-    for (int num = 0; num < raw_centroids.size(); num++) {
-      if (std::find(pop_index.begin(), pop_index.end(), num) == pop_index.end()) {
-        centroids.push_back(raw_centroids[num]);
-      }
-    }
-    std::cout << "pop_index: " << pop_index.size() << std::endl;
-    std::cout << "raw_centroids: " << raw_centroids.size() << std::endl;
-    std::cout << "centroids: " << centroids.size() << std::endl;
-    raw_centroids.clear();
-    pop_index.clear();
   }
+  // BUG FIX: 原来 centroids 只在 raw_centroids.size()>=2 分支里填充；单个前沿群组
+  // （探索接近尾声"只剩一片前沿"的常见情形）会得到 0 个质心 → 主循环没目标可探、
+  // 又不满足返航条件，无限空转。现在无论多少 raw centroid 都照常输出。
+  for (int num = 0; num < raw_centroids.size(); num++) {
+    if (std::find(pop_index.begin(), pop_index.end(), num) == pop_index.end()) {
+      centroids.push_back(raw_centroids[num]);
+    }
+  }
+  std::cout << "pop_index: " << pop_index.size() << std::endl;
+  std::cout << "raw_centroids: " << raw_centroids.size() << std::endl;
+  std::cout << "centroids: " << centroids.size() << std::endl;
+  raw_centroids.clear();
+  pop_index.clear();
   return true;
 }
 

@@ -76,8 +76,12 @@ int main(int argc, char ** argv)
     // Only treat "no frontiers" as exploration finished once a map has actually been
     // received; before that, keep looping and wait for the map (the ROS1 original hid
     // this via its initial 360-deg rotation, which the empty-map guard skips).
+    // BUG FIX: "有前沿单元但算不出质心"（如剩 13 个残片前沿，分组≤6 被丢弃）也算探索完成，
+    // 否则 SelectGoal 没目标可挑、MoveToGoal 反复重发旧目标、永不返航。
     if (!frontier_detector.inflated_map.data.empty() &&
-        (frontier_detector.frontier.size() == 0 || actuator.GoHomeFlag == 1)) {  // for homing
+        (frontier_detector.frontier.size() == 0 ||
+         frontier_detector.centroids.size() == 0 ||
+         actuator.GoHomeFlag == 1)) {  // for homing
       actuator.ReturnHome();
       while (rclcpp::ok() &&
              actuator.GetGoalStatus().status != rclcpp_action::GoalStatus::STATUS_SUCCEEDED) {
