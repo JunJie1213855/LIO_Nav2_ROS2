@@ -22,6 +22,13 @@ int main(int argc, char ** argv)
   // create the frontier detector and actuator
   FrontierDetector::FrontierDetector frontier_detector(node);
   Actuator::Actuator actuator(node);
+  // BUG FIX: 等第一帧 /map 到达再做初始 360° 旋转。否则 Rotation() 因 raw_map 为空被跳过，
+  // 机器人原地不动没扫到环境，随后到达的第一帧稀疏地图 frontier≈0 → 立即返航（"直接就返航了"）。
+  while (rclcpp::ok() && frontier_detector.inflated_map.data.empty()) {
+    std::cout << "Waiting for the first map..." << std::endl;
+    rclcpp::spin_some(node);
+    rclcpp::sleep_for(std::chrono::milliseconds(500));
+  }
   // rotate 360 degrees to initialize the environment
   actuator.Rotation(360.0);
 
@@ -83,11 +90,31 @@ int main(int argc, char ** argv)
          frontier_detector.centroids.size() == 0 ||
          actuator.GoHomeFlag == 1)) {  // for homing
       actuator.ReturnHome();
+      // BUG FIX: 返航目标可能被 ABORTED（如机器人本来就在原点附近、控制器报"无进展"），
+      // 原循环只等 SUCCEEDED 会永久卡死（日志反复打印 "Exploration finished! Returning home.."）。
+      // 改为 SUCCEEDED / ABORTED / CANCELED / 60s 超时任一条件退出。
+      time_t home_start, home_now, home_duration;
+      time(&home_start);
+      home_duration = 0;
       while (rclcpp::ok() &&
-             actuator.GetGoalStatus().status != rclcpp_action::GoalStatus::STATUS_SUCCEEDED) {
+             actuator.GetGoalStatus().status != rclcpp_action::GoalStatus::STATUS_SUCCEEDED &&
+             actuator.GetGoalStatus().status != rclcpp_action::GoalStatus::STATUS_ABORTED &&
+             actuator.GetGoalStatus().status != rclcpp_action::GoalStatus::STATUS_CANCELED &&
+             home_duration < 60) {
         std::cout << "Exploration finished! Returning home.." << std::endl;
         rclcpp::sleep_for(std::chrono::seconds(5));
         rclcpp::spin_some(node);
+        time(&home_now);
+        home_duration = home_now - home_start;
+      }
+      if (actuator.GetGoalStatus().status == rclcpp_action::GoalStatus::STATUS_SUCCEEDED) {
+        std::cout << "Returned home!" << std::endl;
+      } else if (home_duration >= 60) {
+        std::cout << "Return home timed out (status: "
+                  << static_cast<int>(actuator.GetGoalStatus().status) << ")." << std::endl;
+      } else {
+        std::cout << "Return home did not succeed (status: "
+                  << static_cast<int>(actuator.GetGoalStatus().status) << ")." << std::endl;
       }
       rclcpp::shutdown();
     }
