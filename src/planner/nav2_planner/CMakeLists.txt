@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(nav2_planner)
+project(nav2_planner_bringup)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -19,6 +19,8 @@ install(PROGRAMS
   scripts/cloud_z_filter.py
   scripts/tf_to_odom.py
   scripts/waypoint_follower.py
+  scripts/terrain_cloud_generator.py
+  scripts/far_local_planner.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

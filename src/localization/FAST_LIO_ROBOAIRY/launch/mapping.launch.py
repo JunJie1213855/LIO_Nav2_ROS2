@@ -11,7 +11,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    package_path = get_package_share_directory('fast_lio')
+    package_path = get_package_share_directory('fast_lio_robosense')
     default_config_path = os.path.join(package_path, 'config')
     default_rviz_config_path = os.path.join(
         package_path, 'rviz', 'fastlio.rviz')

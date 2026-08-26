@@ -21,7 +21,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     tare_share = get_package_share_directory("tare_planner")
-    garage_yaml = os.path.join(tare_share, "garage.yaml")
+    garage_yaml = os.path.join(tare_share, "gazebo_test.yaml")
 
     use_sim_time = LaunchConfiguration("use_sim_time", default="false")
 
@@ -50,6 +50,7 @@ def generate_launch_description():
             "kSensorRange": 15.0,
             "kRushHome": False,            # 不回家
         }],
+        # 话题重映射
         remappings=[
             ("/registered_scan", "/registered_scan"),
             ("/state_estimation_at_scan", "/odom"),

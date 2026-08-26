@@ -17,8 +17,8 @@ def launch_setup(context):
     with open(urdf_file_path, 'r') as infp:
         robot_desc = infp.read()
 
-    rviz_config_path = os.path.join(pkg_share_path, 'rviz', 'nav2_new.rviz')
-    default_world_path = os.path.join(pkg_share_path, 'worlds', 'test_world.world')
+    rviz_config_path = os.path.join(pkg_share_path, 'rviz', 'nav2.rviz')
+    default_world_path = os.path.join(pkg_share_path, 'worlds', 'indoor_office.world')
 
     # Gazebo 模型搜索路径
     dataset_models_path = '/home/ros/dataset/gazebo_models_worlds_collection/models'
@@ -68,7 +68,7 @@ def launch_setup(context):
 
 def generate_launch_description():
     pkg_share_path = get_package_share_directory('get_urdf')
-    default_world_path = os.path.join(pkg_share_path, 'worlds', 'test_world.world')
+    default_world_path = os.path.join(pkg_share_path, 'worlds', 'indoor_2d.world')
 
     return LaunchDescription([
         DeclareLaunchArgument(

@@ -17,11 +17,18 @@ slam_toolbox:
     use_map_saver: true
     mode: mapping
 
+    # 修复: pointcloud_to_laserscan 发布 /scan 用 BEST_EFFORT,
+    # 而 slam_toolbox 默认 RELIABLE 订阅 → QoS 不兼容, slam_toolbox 收不到 /scan
+    qos_overrides:
+      /scan:
+        subscription:
+          reliability: best_effort
+
     debug_logging: false
     throttle_scans: 1
     transform_publish_period: 0.02
     map_update_interval: 0.5
-    resolution: 0.1
+    resolution: 0.05
     min_laser_range: 0.45  # 修复：匹配 Livox 最小范围
     max_laser_range: 40.0
     minimum_time_interval: 0.2

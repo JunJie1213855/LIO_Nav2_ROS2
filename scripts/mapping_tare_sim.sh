@@ -9,7 +9,7 @@ export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 killall -9 gzserver gzclient fastlio_mapping cloud_z_filter \
   tare_planner_node waypoint_follower lio_interface_node \
   sensor_scan_generation_node 2>/dev/null
-sleep 2
+
 tmux kill-session -t "$SESS" 2>/dev/null
 
 W() { tmux new-window -t "$SESS" -n "$1" \
@@ -18,15 +18,15 @@ W() { tmux new-window -t "$SESS" -n "$1" \
 # Gazebo (含 indoor 世界)
 tmux new-session -d -s "$SESS" -n "Gazebo" \
   "bash -c 'cd $WS && source install/setup.bash && ros2 launch get_urdf get_urdf_launch.py rviz:=false; exec bash'"
-sleep 6
 
-W "FAST-LIO" "ros2 launch fast_lio mapping.launch.py rviz:=false"
-sleep 3
+
+W "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py rviz:=false"
+
 W "lio_if"   "ros2 launch lio_interface lio_interface_launch.py"
 W "sensor"   "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
-sleep 2
+
 W "TARE"     "ros2 launch tare_planner tare_planner_lio_launch.py use_sim_time:=true"
-sleep 2
+
 W "RViz"     "rviz2 -d /ws/src/planner/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz"
 
 echo "========================================="

@@ -47,7 +47,7 @@ new_win "RViz"          "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner/rv
 # ---- 最后播放 bag（所有节点就绪后开始推送数据）----
 # 前面所有窗口不依赖 bag 数据即可启动，bag 延迟启动可以给各节点充分初始化时间
 
-# tmux new-window -t "$SESSION" -n "bag播放" \
+# new_win "bag播放" \
 #   "bash -c 'source /opt/ros/humble/setup.bash && \
 #     echo \"播放: $BAG_DIR\" && \
 #     ros2 bag play $BAG_DIR --clock; exec bash'"

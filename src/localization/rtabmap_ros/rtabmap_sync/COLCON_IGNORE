@@ -1,1 +1,0 @@
-rtabmap_sync fails to link due to system libgdal.so depending on CURL_OPENSSL_4 which conflicts with conda's libcurl. This package is not required for the core navigation pipeline.
