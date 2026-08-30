@@ -142,7 +142,7 @@ Failed   <<< gld_robot_description [0.35s, exited with code 1]
 **解决**：
 - `source install/setup.bash`
 - 不再依赖 `ros2 param set`，改为调用 service 后把默认路径的 PCD `mv` 到目标
-- 保存后自动 `ln -sf` 到 `install/nav2_planner/share/...` 目录
+- 保存后自动 `ln -sf` 到 `install/nav2_planner_bringup/share/...` 目录
 
 ---
 
@@ -152,11 +152,11 @@ Failed   <<< gld_robot_description [0.35s, exited with code 1]
 
 **原因**：
 1. `my_nav2_launch.py` 把几百行的 `nav2_params.yaml` 传给了 `map_server`，YAML 中有冲突参数导致 lifecycle configure 失败 → 进程变成 `<defunct>` 僵尸
-2. Python launch 文件改后没重编 `nav2_planner`，`install/` 里的副本还是旧的（`--symlink-install` 只对编译产物做链接）
+2. Python launch 文件改后没重编 `nav2_planner_bringup`，`install/` 里的副本还是旧的（`--symlink-install` 只对编译产物做链接）
 
 **解决**：
 - `my_nav2_launch.py` 中 map_server 的 `parameters` 去掉 `params_file`，只传 `[{yaml_filename}, {use_sim_time}]`
-- 改 Python 文件后重编：`colcon build --packages-select nav2_planner`
+- 改 Python 文件后重编：`colcon build --packages-select nav2_planner_bringup`
 
 ---
 
@@ -305,8 +305,8 @@ docker exec -it lio_nav2 /ws/scripts/nav2_sim_docker.sh
 | `scripts/docker_shutdown.sh` | 新增，容器内节点/容器统一关闭 |
 | `scripts/save_pcd.sh` | 修节点名、source 路径、PCD 同步到 install |
 | `scripts/save_map.sh` | 修 source 路径、地图同步到 install |
-| `src/planner/nav2_planner/launch/my_nav2_launch.py` | map_server 去 params_file，加独立 RViz |
-| `src/planner/nav2_planner/config/nav2_params.yaml` | DWB `trans_stopped_velocity` 等修复 |
+| `src/planner/nav2_planner_bringup/launch/my_nav2_launch.py` | map_server 去 params_file，加独立 RViz |
+| `src/planner/nav2_planner_bringup/config/nav2_params.yaml` | DWB `trans_stopped_velocity` 等修复 |
 | `src/registration/KISS-Matcher/ros/CMakeLists.txt` | small_gicp 优先系统版 |
 | `src/registration/global_relocalization/CMakeLists.txt` | 同上 |
 | `src/localization/rtabmap_ros/COLCON_IGNORE` | 跳过 |

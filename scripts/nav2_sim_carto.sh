@@ -28,7 +28,7 @@ ros2 run gui_teleop gui_teleop_node"
 # FAST-LIO 里程计
 gnome-terminal --title="FAST-LIO 里程计" -- bash -c "
 source install/setup.bash;
-ros2 launch fast_lio mapping.launch.py"
+ros2 launch fast_lio_robosense mapping.launch.py"
 
 # 里程计接口
 gnome-terminal --title="lio_interface" -- bash -c "
@@ -50,7 +50,7 @@ ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 # 3D 点云转 2D LaserScan
 gnome-terminal --title="3d点云转2d" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner pointcloud_to_laserscan_launch.py"
+ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch.py"
 
 # ----------------------------------------------------------------------------
 # Cartographer 纯定位 (替代 KISS-Matcher)
@@ -58,8 +58,8 @@ ros2 launch nav2_planner pointcloud_to_laserscan_launch.py"
 # 发布: map→odom TF (重定位)
 gnome-terminal --title="Cartographer 定位" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner cartographer_localization_launch.py \
-    load_state_filename:=src/planner/nav2_planner/map/map.pbstream"
+ros2 launch nav2_planner_bringup cartographer_localization_launch.py \
+    load_state_filename:=src/planner/nav2_planner_bringup/map/map.pbstream"
 
 # ----------------------------------------------------------------------------
 # Nav2 导航栈
@@ -67,7 +67,7 @@ ros2 launch nav2_planner cartographer_localization_launch.py \
 # 注意: 需要确保 map→odom TF 由 Cartographer 发布后 Nav2 才能正常工作
 gnome-terminal --title="Nav2 导航" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner my_nav2_launch.py"
+ros2 launch nav2_planner_bringup my_nav2_launch.py"
 
 # ============================================================================
 # 注意事项:

@@ -9,7 +9,7 @@ Gazebo 中新建标准 2D 差分小车（单线 LiDAR 输出 LaserScan + IMU）�
 ## 背景
 
 - 现有 pipeline 均为 3D：simple_car（50 线 MID360，输出 PointCloud2）+ FAST-LIO + SCAN-Planner/TARE。
-- 项目已有 2D 软件栈：`nav2_planner` 含 Cartographer 配置、Nav2 配置、pointcloud_to_laserscan 桥。
+- 项目已有 2D 软件栈：`nav2_planner_bringup` 含 Cartographer 配置、Nav2 配置、pointcloud_to_laserscan 桥。
 - 现有 cartographer_simple.lua 是"无外部里程计"模式（Cartographer 自发布 odom TF），
   与差分小车自带 diff_drive 里程计的场景不匹配。
 - 全项目无任何 LaserScan 输出的单线 LiDAR URDF（已确认）。
@@ -40,9 +40,9 @@ Gazebo (indoor_2d.world 封闭室内场景)
 |------|------|
 | `src/get_urdf/model/diff_robot_2d.urdf` | 2D 差分小车（2 驱动轮 + 2 万向轮 + 单线 LiDAR + IMU + diff_drive 插件） |
 | `src/get_urdf/worlds/indoor_2d.world` | 封闭室内场景（四面墙 + 内部障碍物，为 2D SLAM 提供特征） |
-| `src/planner/nav2_planner/config/cartographer_2d.lua` | Cartographer 2D 配置（use_odometry=true + use_imu_data=true） |
-| `src/planner/nav2_planner/launch/cartographer_2d_launch.py` | cartographer_node + occupancy_grid_node |
-| `src/planner/nav2_planner/launch/nav2_online_launch.py` | Nav2 在线导航（无 map_server/AMCL，复用 nav2_params.yaml） |
+| `src/planner/nav2_planner_bringup/config/cartographer_2d.lua` | Cartographer 2D 配置（use_odometry=true + use_imu_data=true） |
+| `src/planner/nav2_planner_bringup/launch/cartographer_2d_launch.py` | cartographer_node + occupancy_grid_node |
+| `src/planner/nav2_planner_bringup/launch/nav2_online_launch.py` | Nav2 在线导航（无 map_server/AMCL，复用 nav2_params.yaml） |
 | `scripts/nav2_2d_sim.sh` | 一键启动（tmux：Gazebo / Carto / Nav2 / RViz） |
 | `docs/nav2_2d_run.md` | 构建/运行/问题文档 |
 

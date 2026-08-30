@@ -32,7 +32,7 @@ cd "$WORKSPACE_ROOT" || exit 1
 # ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio"
 
 
-# fast_lio
+# fast_lio_robosense
 # gnome-terminal --title="Livox Fast-LIO 驱动" -- bash -c "
 # source install/setup.bash;
 # ros2 launch livox_ros_driver2 fast_lio_msg_MID360_launch.py"
@@ -67,7 +67,7 @@ ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 gnome-terminal --title="3d点云转2d" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner pointcloud_to_laserscan_launch.py"
+ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch.py"
 
 # gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 # source install/setup.bash;
@@ -76,13 +76,13 @@ ros2 launch nav2_planner pointcloud_to_laserscan_launch.py"
 # gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 # source install/setup.bash;
 # ros2 launch slam_toolbox online_async_launch.py \
-#     slam_params_file:=src/planner/nav2_planner/config/slam_toolbox_params.yaml"
+#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 
 gnome-terminal --title="slam_toolbox 建图" -- bash -c "
 source install/setup.bash;
 ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/planner/nav2_planner/config/slam_toolbox_params.yaml"
+    slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 
 gnome-terminal --title="Nav2 导航" -- bash -c "
 source install/setup.bash;
-ros2 launch nav2_planner my_nav2_launch.py"
+ros2 launch nav2_planner_bringup my_nav2_launch.py"

@@ -6,10 +6,10 @@
 
 示例:
   # 转成 png（默认）
-  python3 pgm_to_image.py src/planner/nav2_planner/map/test_map__2.pgm
+  python3 pgm_to_image.py src/planner/nav2_planner_bringup/map/test_map__2.pgm
 
   # 指定输出路径和格式
-  python3 pgm_to_image.py src/planner/nav2_planner/map/test_map__2.pgm -o /tmp/map.jpg --format jpg
+  python3 pgm_to_image.py src/planner/nav2_planner_bringup/map/test_map__2.pgm -o /tmp/map.jpg --format jpg
 """
 
 import argparse

@@ -33,7 +33,7 @@ tmux new-session -d -s "$SESSION" -n "GUI控制" \
 new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py rviz:=false"
 
 # ── FAST-LIO 里程计 ──────────────────────────────────────────────────
-new_win "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
+new_win "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py"
 # --- Super-LIO ---
 # new_win "Super-LIO" "ros2 launch super_lio sim_gazebo.py"
 # --- Point-LIO ---

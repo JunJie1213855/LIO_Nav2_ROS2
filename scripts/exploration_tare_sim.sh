@@ -20,12 +20,12 @@ tmux new-session -d -s "$SESS" -n "Gazebo" \
   "bash -c 'cd $WS && source install/setup.bash && ros2 launch get_urdf get_urdf_launch.py rviz:=false; exec bash'"
 sleep 6
 
-W "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
+W "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py"
 sleep 3
 W "lio_if"    "ros2 launch lio_interface lio_interface_launch.py"
 W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 sleep 2
-W "TARE"      "ros2 launch nav2_planner tare_lio_explore_launch.py"
+W "TARE"      "ros2 launch nav2_planner_bringup tare_lio_explore_launch.py"
 
 echo "========================================="
 echo " Gazebo + FAST-LIO + TARE 自主探索"

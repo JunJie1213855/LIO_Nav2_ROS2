@@ -6,7 +6,7 @@ cd "$WORKSPACE_ROOT" || exit 1
 
 source install/setup.bash
 
-MAP_PATH="${1:-$WORKSPACE_ROOT/src/planner/nav2_planner/map/test_map__2}"
+MAP_PATH="${1:-$WORKSPACE_ROOT/src/planner/nav2_planner_bringup/map/test_map__2}"
 
 ros2 run nav2_map_server map_saver_cli -f "$MAP_PATH"
 
@@ -14,7 +14,7 @@ ros2 run nav2_map_server map_saver_cli -f "$MAP_PATH"
 BASE=$(basename "$MAP_PATH")
 for f in "$MAP_PATH" "$MAP_PATH.yaml" "$MAP_PATH.pgm"; do
     [ -f "$f" ] || continue
-    INSTALL_DIR="$WORKSPACE_ROOT/install/nav2_planner/share/nav2_planner/map"
+    INSTALL_DIR="$WORKSPACE_ROOT/install/nav2_planner_bringup/share/nav2_planner_bringup/map"
     mkdir -p "$INSTALL_DIR"
     ln -sf "$f" "$INSTALL_DIR/$(basename "$f")"
 done

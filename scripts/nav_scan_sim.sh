@@ -21,7 +21,7 @@ tmux new-session -d -s "$SESS" -n "Gazebo" \
 sleep 6
 
 # ================ fast-lio2 ================
-W "FAST-LIO" "ros2 launch fast_lio mapping.launch.py rviz:=false"
+W "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py rviz:=false"
 sleep 3
 
 # ================ 中间层 ================
@@ -30,7 +30,7 @@ W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.
 sleep 2
 
 # ================ scan planner ================
-W "SCAN"      "ros2 launch nav2_planner scan_planner_lio_launch.py \
+W "SCAN"      "ros2 launch nav2_planner_bringup scan_planner_lio_launch.py \
     z_min:=0.3 z_max:=3.0 \
     double_cylinder_radius:=0.45 double_cylinder_offset:=0.18 \
     body_height:=0.25 obstacles_inflation_z_down:=1.0 \
@@ -42,7 +42,7 @@ W "SCAN"      "ros2 launch nav2_planner scan_planner_lio_launch.py \
 sleep 2
 
 # ================ scan planner 可视化================
-W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d /ws/src/planner/nav2_planner/rviz/scan_planner.rviz"
+W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d /ws/src/planner/nav2_planner_bringup/rviz/scan_planner.rviz"
 
 echo "========================================="
 echo " Gazebo + FAST-LIO + SCAN-Planner"

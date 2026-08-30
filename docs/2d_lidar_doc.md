@@ -314,7 +314,7 @@ flowchart TB
 | IMU | Gazebo 插件 | `libgazebo_ros_imu_sensor.so` | 输出 /imu |
 | Cartographer 节点 | `cartographer_ros` | `cartographer_node` | 2D SLAM |
 | 栅格地图节点 | `cartographer_ros` | `cartographer_occupancy_grid_node` | 发布 /map |
-| 全局规划器 | `nav2_planner` | `planner_server` | NavFn 全局路径 |
+| 全局规划器 | `nav2_planner_bringup` | `planner_server` | NavFn 全局路径 |
 | 局部控制器 | `nav2_controller` | `controller_server` | DWB 局部规划 |
 | 行为树导航 | `nav2_bt_navigator` | `bt_navigator` | 导航任务调度 |
 | 恢复行为 | `nav2_behaviors` | `behavior_server` | spin/backup 恢复 |
@@ -327,11 +327,11 @@ flowchart TB
 ### 4.1 编译
 
 ```bash
-# 编译 get_urdf（模型/世界）和 nav2_planner（Cartographer/Nav2 配置）
+# 编译 get_urdf（模型/世界）和 nav2_planner_bringup（Cartographer/Nav2 配置）
 # 注意限速 -j4，避免占满 CPU 卡死宿主机
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && cd /ws &&
-  MAKEFLAGS='-j4' colcon build --packages-select get_urdf nav2_planner \
+  MAKEFLAGS='-j4' colcon build --packages-select get_urdf nav2_planner_bringup \
     --symlink-install --executor sequential
 "
 ```

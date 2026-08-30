@@ -130,9 +130,9 @@ FAST-LIO → /Odometry → lio_interface (TF 桥接)
 ```
 
 Cartographer 配置文件：
-- `src/planner/nav2_planner/config/cartographer_mapping.lua` — 建图模式参数
-- `src/planner/nav2_planner/launch/cartographer_mapping_launch.py` — 启动文件
-- `src/planner/nav2_planner/rviz/cartographer_mapping.rviz` — RViz 可视化配置
+- `src/planner/nav2_planner_bringup/config/cartographer_mapping.lua` — 建图模式参数
+- `src/planner/nav2_planner_bringup/launch/cartographer_mapping_launch.py` — 启动文件
+- `src/planner/nav2_planner_bringup/rviz/cartographer_mapping.rviz` — RViz 可视化配置
 
 **RViz 可视化**：Cartographer 建图时 RViz 窗口会自动弹出（tmux 中的 `RViz` 窗口），显示：
 | 显示项 | 话题 | 说明 |
@@ -166,8 +166,8 @@ docker exec lio_nav2 bash -c "
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && source install/setup.bash && \
   ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
-    -pbstream_filename /ws/src/planner/nav2_planner/map/map.pbstream \
-    -map_filestem /ws/src/planner/nav2_planner/map/my_map"
+    -pbstream_filename /ws/src/planner/nav2_planner_bringup/map/map.pbstream \
+    -map_filestem /ws/src/planner/nav2_planner_bringup/map/my_map"
 ```
 
 输出文件：
@@ -225,10 +225,10 @@ Cartographer: Cartographer 纯定位 (加载 .pbstream) ──→ map→odom TF 
 4. 用 **"Nav2 Goal"** 工具发送导航目标
 
 配置文件：
-- `src/planner/nav2_planner/config/cartographer_localization.lua` — 纯定位模式参数
+- `src/planner/nav2_planner_bringup/config/cartographer_localization.lua` — 纯定位模式参数
   - `TRAJECTORY_BUILDER.pure_localization = true` — 不建图，只匹配
   - 搜索窗口比建图模式更大（`linear_search_window = 0.2`），提升鲁棒性
-- `src/planner/nav2_planner/launch/cartographer_localization_launch.py` — 启动文件
+- `src/planner/nav2_planner_bringup/launch/cartographer_localization_launch.py` — 启动文件
 
 ### 3.4 关闭 / 清理
 
@@ -514,7 +514,7 @@ Point-LIO 终端输出：
 
 ```bash
 # FAST-LIO 直接从 Gazebo 订阅 /livox/lidar (PointCloud2)，不需要 ign_sim_pointcloud_tool
-new_win "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
+new_win "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py"
 new_win "lio_interface" "ros2 launch lio_interface fastlio_lio_interface_launch.py"
 ```
 
@@ -562,7 +562,7 @@ Cartographer 节点正常运行，`/map` 话题有数据，但地图不随机器
 **解决**
 1. 确认加载的 `.pbstream` 路径正确：
    ```bash
-   docker exec lio_nav2 ls -la /ws/src/planner/nav2_planner/map/map.pbstream
+   docker exec lio_nav2 ls -la /ws/src/planner/nav2_planner_bringup/map/map.pbstream
    ```
 2. 在 RViz 中用 **"2D Pose Estimate"** 工具给机器人一个近似初始位姿
 3. 如果机器人位置和建图时差别很大（如已移动到地图另一个区域），让机器人原地缓慢旋转几圈，

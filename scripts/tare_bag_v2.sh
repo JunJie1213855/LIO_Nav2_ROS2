@@ -21,7 +21,7 @@ new_win "FAST-LIO" "ros2 launch fast_lio_robosense mapping_robosense_airy.launch
 new_win "robot_desc" "ros2 launch gld_robot_description robosenseAiry_description_launch.py rviz:=false"
 new_win "lio_if" "ros2 launch lio_interface lio_interface_launch.py use_sim_time:=true"
 new_win "sensor" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
-new_win "TARE" "ros2 launch nav2_planner tare_lio_explore_launch.py use_sim_time:=true"
+new_win "TARE" "ros2 launch nav2_planner_bringup tare_lio_explore_launch.py use_sim_time:=true"
 
 echo "===== rosbag + FAST-LIO + TARE (会话: $SESSION) ====="
 echo "窗口: bag | FAST-LIO | robot_desc | lio_if | sensor | TARE"

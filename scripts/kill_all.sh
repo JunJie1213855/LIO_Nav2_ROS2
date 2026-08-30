@@ -143,7 +143,7 @@ ALL_PROCESS_NAMES=(
     # Livox 驱动
     "livox_ros_driver2"
     # LIO
-    "fastlio_mapping" "fast_lio" "point_lio"
+    "fastlio_mapping" "fast_lio_robosense" "point_lio"
     # 接口 & 传感器
     "lio_interface_node" "sensor_scan_generation"
     "pointcloud_to_laserscan" "ign_sim_pointcloud_tool"

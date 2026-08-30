@@ -226,7 +226,7 @@ source ~/.bashrc
 Check whether key packages can be found by ROS 2:
 
 ```bash
-ros2 pkg list | grep -E "me_nav2_bringup|lio_interface|fast_lio|livox_ros_driver2|global_relocalization_kiss_matcher"
+ros2 pkg list | grep -E "me_nav2_bringup|lio_interface|fast_lio_robosense|livox_ros_driver2|global_relocalization_kiss_matcher"
 ```
 
 Check launch-file arguments:

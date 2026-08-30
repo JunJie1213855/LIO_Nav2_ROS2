@@ -16,7 +16,7 @@ sleep 3
 # ── FAST-LIO 3D 里程计 ──────────────────────────────────────────
 gnome-terminal --title="FAST-LIO 里程计" -- bash -c "
 source $WORKSPACE_ROOT/install/setup.bash;
-ros2 launch fast_lio mapping.launch.py"
+ros2 launch fast_lio_robosense mapping.launch.py"
 
 # ── 里程计接口 ──────────────────────────────────────────────────
 gnome-terminal --title="lio_interface" -- bash -c "
@@ -31,7 +31,7 @@ ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 # ── TARE-Planner 自主探索 + waypoint follower + RViz ──────────────
 gnome-terminal --title="TARE 自主探索" -- bash -c "
 source $WORKSPACE_ROOT/install/setup.bash;
-ros2 launch nav2_planner tare_lio_explore_launch.py"
+ros2 launch nav2_planner_bringup tare_lio_explore_launch.py"
 
 # ── GUI 手动控制 (可选, 用于干预) ────────────────────────────────
 gnome-terminal --title="GUI控制" -- bash -c "

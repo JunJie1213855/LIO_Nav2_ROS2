@@ -25,7 +25,7 @@ Gazebo (get_urdf)
 | 节点 | 包 | 作用 |
 |------|-----|------|
 | `get_urdf` | `get_urdf` | Gazebo 仿真世界与机器人模型 |
-| `fast_lio` | `fast_lio` | LiDAR 惯性里程计 + 点云配准 |
+| `fast_lio_robosense` | `fast_lio_robosense` | LiDAR 惯性里程计 + 点云配准 |
 | `lio_interface` | `lio_interface` | 里程计话题转发与格式转换 |
 | `sensor_scan_generation` | `sensor_scan_generation` | 生成 odom 帧点云 |
 | `tare_planner_node` | `tare_planner` | 探索规划核心 |
@@ -116,7 +116,7 @@ cd /ws && source install/setup.bash
 ros2 launch get_urdf get_urdf_launch.py rviz:=false
 
 # 2. FAST-LIO
-ros2 launch fast_lio mapping.launch.py rviz:=false
+ros2 launch fast_lio_robosense mapping.launch.py rviz:=false
 
 # 3. 里程计接口 + 点云生成
 ros2 launch lio_interface lio_interface_launch.py

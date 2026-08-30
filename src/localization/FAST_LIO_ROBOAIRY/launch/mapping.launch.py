@@ -44,7 +44,7 @@ def generate_launch_description():
     )
 
     fast_lio_node = Node(
-        package='fast_lio',
+        package='fast_lio_robosense',
         executable='fastlio_mapping',
         parameters=[PathJoinSubstitution([config_path, config_file]),
                     {'use_sim_time': use_sim_time}],

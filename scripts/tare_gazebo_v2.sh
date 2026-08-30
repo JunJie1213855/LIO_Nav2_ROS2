@@ -26,13 +26,13 @@ tmux new-session -d -s "$SESSION" -n "Gazebo" \
 
 sleep 6
 
-new_win "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
+new_win "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py"
 sleep 3
 new_win "lio_if"     "ros2 launch lio_interface lio_interface_launch.py"
 sleep 1
 new_win "sensor"     "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 sleep 1
-new_win "TARE"       "ros2 launch nav2_planner tare_lio_explore_launch.py"
+new_win "TARE"       "ros2 launch nav2_planner_bringup tare_lio_explore_launch.py"
 
 echo "===== Gazebo + FAST-LIO + TARE (会话: $SESSION) ====="
 echo "窗口: Gazebo | FAST-LIO | lio_if | sensor | TARE"

@@ -36,7 +36,7 @@ tmux new-session -d -s "$SESSION" -n "GUI控制" \
   "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && ros2 run gui_teleop gui_teleop_node; exec bash'"
 
 # --- FAST-LIO 里程计 ---
-new_win "FAST-LIO" "ros2 launch fast_lio mapping.launch.py"
+new_win "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py"
 
 # 里程计接口 (odom TF 桥接)
 new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py"
@@ -48,16 +48,16 @@ new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"
 new_win "sensor_scan" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 # 3D点云转2D LaserScan
-new_win "pc2laser" "ros2 launch nav2_planner pointcloud_to_laserscan_launch.py"
+new_win "pc2laser" "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch.py"
 
 # --- Cartographer 2D 在线建图 (替代 slam_toolbox) ---
 # 订阅: /scan + /livox/imu + /odom
 # 发布: /map (OccupancyGrid) + map→odom TF
-new_win "Cartographer" "ros2 launch nav2_planner cartographer_mapping_launch.py"
+new_win "Cartographer" "ros2 launch nav2_planner_bringup cartographer_mapping_launch.py"
 
 # RViz 可视化 Cartographer 建图
 # 显示: /map (Cartographer OccupancyGrid) + /scan + TF + 机器人模型 + /registered_scan
-new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner/rviz/cartographer_mapping.rviz"
+new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/cartographer_mapping.rviz"
 
 echo "已在 tmux 会话 '$SESSION' 中启动全部节点。"
 echo "查看输出: tmux attach -t $SESSION   (Ctrl-b n/p 切换窗口, Ctrl-b d 退出)"
@@ -71,6 +71,6 @@ echo "      ros2 service call /finish_trajectory cartographer_ros_msgs/srv/Finis
 echo ""
 echo "   2. 导出 pbstream → pgm + yaml:"
 echo "      ros2 run cartographer_ros cartographer_pbstream_to_ros_map \\"
-echo "          -pbstream_filename /ws/src/planner/nav2_planner/map/map.pbstream \\"
-echo "          -map_filestem /ws/src/planner/nav2_planner/map/my_map"
+echo "          -pbstream_filename /ws/src/planner/nav2_planner_bringup/map/map.pbstream \\"
+echo "          -map_filestem /ws/src/planner/nav2_planner_bringup/map/my_map"
 echo "============================================================"
