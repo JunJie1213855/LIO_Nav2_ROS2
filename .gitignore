@@ -28,6 +28,8 @@ bin
 .vscode
 *.pcd
 
+.deps
 .claude/
 .codex
 CLAUDE.md
+!src/planner/tare_planner/src/tare_planner/or-tools/include/absl/log
