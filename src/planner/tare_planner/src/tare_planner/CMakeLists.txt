@@ -153,7 +153,12 @@ install(DIRECTORY scripts/
         DESTINATION lib/${PROJECT_NAME}
         USE_SOURCE_PERMISSIONS
 )
+install(DIRECTORY or-tools/lib/
+        DESTINATION lib/${PROJECT_NAME}
+        FILES_MATCHING PATTERN "libortools*")
 
+# 让节点从自身所在目录找库
+set_target_properties(tare_planner_node PROPERTIES INSTALL_RPATH "$ORIGIN")
 ament_package()
 
 

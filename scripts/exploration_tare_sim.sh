@@ -15,17 +15,26 @@ tmux kill-session -t "$SESS" 2>/dev/null
 W() { tmux new-window -t "$SESS" -n "$1" \
   "bash -c 'cd $WS && source install/setup.bash && $2; exec bash'"; }
 
-# Gazebo
+# ============== Gazebo ==============
 tmux new-session -d -s "$SESS" -n "Gazebo" \
   "bash -c 'cd $WS && source install/setup.bash && ros2 launch get_urdf get_urdf_launch.py rviz:=false; exec bash'"
-sleep 6
+sleep 10
 
+# ============== Fast lio ==============
 W "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py"
-sleep 3
+
+# ============== lio interface ==============
 W "lio_if"    "ros2 launch lio_interface lio_interface_launch.py"
+
+# ============== sensor scan ==============
 W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
-sleep 2
-W "TARE"      "ros2 launch nav2_planner_bringup tare_lio_explore_launch.py"
+
+# ============== tare planner ==============
+sleep 3
+W "TARE"      "ros2 launch tare_planner tare_planner_lio_launch.py"
+
+# ============== tare 可视化 ==============
+W "RViz"     "rviz2 -d $WS/src/planner/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz"
 
 echo "========================================="
 echo " Gazebo + FAST-LIO + TARE 自主探索"
