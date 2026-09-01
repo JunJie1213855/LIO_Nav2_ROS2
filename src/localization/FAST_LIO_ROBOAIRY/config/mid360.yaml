@@ -28,7 +28,7 @@
             gyr_cov: 0.1
             b_acc_cov: 0.0001
             b_gyr_cov: 0.0001
-            gravity_ref: [0.0, 0.0, -9.81]    # world系参考重力方向；标准 z-up 传感器，重力朝 -Z
+            gravity_ref: [ -0.0205, -0.0912, -9.8684 ]    # world系参考重力方向；标准 z-up 传感器，重力朝 -Z
             fov_degree:    360.0
             det_range:     100.0
             extrinsic_est_en:  true      # true: enable the online estimation of IMU-LiDAR extrinsic

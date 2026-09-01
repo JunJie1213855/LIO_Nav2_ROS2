@@ -1,86 +1,73 @@
 #!/usr/bin/env bash
+# ===========================================================================
+# 容器内 Super-LIO + Gazebo 联合仿真建图
+#
+# Super-LIO 自己就是一套完整的 LiDAR-惯性 SLAM 系统:
+#   输入:  /livox/lidar (PointCloud2) + /livox/imu (Imu)
+#   输出:  /lio/odom (里程计) + /lio/cloud_world (地图点云) + /lio/path (轨迹)
+#         TF: world → imu
+#
+#   配合 Super-LIO 自带的 RViz 配置即可看到实时建图效果。
+#
+# 用法:
+#   docker exec -it lio_nav2 /ws/scripts/mapping_sim_superlio_docker.sh
+#   docker exec -it lio_nav2 tmux attach -t mapping_sim
+# 停止:
+#   docker exec lio_nav2 tmux kill-session -t mapping_sim
+# ===========================================================================
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(dirname -- "$SCRIPT_DIR")"
-cd "$WORKSPACE_ROOT" || exit 1
 
-# 仿真建图启动脚本
+SESSION=mapping_sim
+tmux kill-session -t "$SESSION" 2>/dev/null
+killall -9 gzserver gzclient 2>/dev/null
 
-# 杀死之前的 Gazebo 进程
-# killall -9 gzserver gzclient
+new_win() {
+  tmux new-window -t "$SESSION" -n "$1" \
+    "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && $2; exec bash'"
+}
 
-# 键盘控制
-# ros2 run teleop_twist_keyboard teleop_twist_keyboard
+# ============== GUI 控制小车 ==============
+tmux new-session -d -s "$SESSION" -n "GUI控制" \
+  "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && ros2 run gui_teleop gui_teleop_node; exec bash'"
 
-# 可能会导致 /cmd_vel 话题被占用
-# gui控制小车
-gnome-terminal --title="GUI控制" -- bash -c "
-source install/setup.bash;
-ros2 run gui_teleop gui_teleop_node"
+# ── Gazebo 仿真 ==============
+# 发布: /livox/lidar (PointCloud2), /livox/imu (Imu)
+# TF:   base_footprint → chassis → livox_frame
+new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py rviz:=false"
 
-# -----------------------------------------------------------------------------------
-# 使用 Super-LIO 作为里程计
-gnome-terminal --title="Super-LIO 里程计" -- bash -c "
-source install/setup.bash;
-ros2 launch super_lio Livox_mid360.py rviz:=false"
+# ============== Super-LIO SLAM ==============
+# lidar_type:=4 = VELO32 → 订阅标准 sensor_msgs/PointCloud2
+# lidar_type:=1 = LIVOX  → 订阅 Livox CustomMsg (仿真不适用)
+#
+# 使用 launch 参数覆盖 yaml 默认值, 匹配 Gazebo 的话题名
+# new_win "Super-LIO" "ros2 launch super_lio Livox_mid360.py \
+#     lio.sensor.lidar_type:=4 \
+#     lio.ros.lidar_topic:=/livox/lidar \
+#     lio.ros.imu_topic:=/livox/imu"
 
-# 里程计接口 — world→odom 坐标系对齐
-gnome-terminal --title="lio_interface" -- bash -c "
-source install/setup.bash;
-ros2 launch lio_interface lio_interface_launch.py lio_type:=superlio"
+# # ============== 诊断窗口 ==============
+# # 延迟 5 秒等待所有节点就绪, 然后检查话题是否正常
+# new_win "诊断" "sleep 5; \
+#     echo '=== 话题列表 ==='; ros2 topic list | grep -E 'livox|lio|velodyne|imu|world'; \
+#     echo; echo '=== Super-LIO odom (最后一条) ==='; \
+#     timeout 3 ros2 topic echo /lio/odom --once 2>/dev/null || echo '(暂无数据)'; \
+#     echo; echo '=== 如上面 /lio/odom 有数据说明 Super-LIO 正常 ==='; \
+#     echo '=== 在 Super-LIO 的 RViz 中可看到 world 帧下的地图点云 ==='; \
+#     exec bash"
 
-# ------------------------------------------------------------------------------------
-
-# 使用point-lio作为里程计
-# gnome-terminal --title="点云格式转换器" -- bash -c "
-# source install/setup.bash;
-# ros2 run ign_sim_pointcloud_tool ign_sim_pointcloud_tool_node --ros-args \
-#   -p pcd_topic:=/livox/lidar \
-#   -p n_scan:=50 \
-#   -p horizon_scan:=360 \
-#   -p ang_bottom:=7.22 \
-#   -p ang_res_y:=1.248"
-
-# gnome-terminal --title="Point-LIO 里程计" -- bash -c "
-# source install/setup.bash;
-# ros2 launch point_lio point_lio.launch.py \
-#   point_lio_cfg_dir:=/home/pio/Nav2_3D_ws/src/localization/point_lio/config/mid360_sim.yaml"
-
-# gnome-terminal --title="lio_interface" -- bash -c "
-# source install/setup.bash;
-# ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio"
-
-# ------------------------------------------------------------------------------------
-
-# Gazebo 仿真环境
-# gnome-terminal --title="Gazebo 仿真" -- bash -c "
-# killall -9 gzserver gzclient;
-# source install/setup.bash;
-# ros2 launch get_urdf get_urdf_launch.py"
-
-gnome-terminal --title="Gazebo 仿真" -- bash -c "
-killall -9 gzserver gzclient;
-source install/setup.bash;
-ros2 launch get_urdf get_urdf_launch.py"
-
-
-gnome-terminal --title="sensor_scan_generation" -- bash -c "
-source install/setup.bash;
-ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
-
-gnome-terminal --title="3d点云转2d" -- bash -c "
-source install/setup.bash;
-ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch.py"
-
-# gnome-terminal --title="slam_toolbox 建图" -- bash -c "
-# source install/setup.bash;
-# ros2 launch slam_toolbox online_async_launch.py"
-
-gnome-terminal --title="slam_toolbox 建图" -- bash -c "
-source install/setup.bash;
-ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
-
-# gnome-terminal --title="Nav2 导航" -- bash -c "
-# source install/setup.bash;
-# ros2 launch nav2_planner_bringup my_nav2_launch.py"
+echo "=============================================="
+echo " tmux 会话: $SESSION"
+echo " 查看输出:  tmux attach -t $SESSION"
+echo " 切换窗口:  Ctrl-b n / p"
+echo " 退出查看:  Ctrl-b d"
+echo " 全部停止:  tmux kill-session -t $SESSION"
+echo "=============================================="
+echo ""
+echo "Super-LIO 自带 RViz 会自动打开 (Livox_mid360.py 默认 rviz:=true)"
+echo "RViz 中查看:"
+echo "  Fixed Frame: world"
+echo "  → /lio/cloud_world  (地图点云)"
+echo "  → /lio/odom          (轨迹)"
+echo "  → /lio/path          (路径)"

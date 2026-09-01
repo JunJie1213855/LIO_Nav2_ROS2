@@ -30,32 +30,32 @@ new_win() { # new_win <窗口名> <命令>
     "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && $2; exec bash'"
 }
 
-# gui控制小车 (tkinter, 需要 X11)
+# ============== gui控制小车 (tkinter, 需要 X11)  ==============
 tmux new-session -d -s "$SESSION" -n "GUI控制" \
   "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && ros2 run gui_teleop gui_teleop_node; exec bash'"
 
-# --- FAST-LIO 里程计 ---
+# ============== FAST-LIO 里程计 ==============
 new_win "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py"
 
-# 里程计接口
+# ============== 里程计接口 ==============
 new_win "lio_interface" "ros2 launch lio_interface lio_interface_launch.py"
 
-# --- Gazebo 仿真 ---
+# ============== Gazebo 仿真 ==============
 new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"
 
-# 点云组装 + 里程计发布
+# ============== 点云组装 + 里程计发布 ==============
 new_win "sensor_scan" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
-# 3D点云转2D LaserScan
+# ============== 3D点云转2D LaserScan ==============
 new_win "pc2laser" "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch.py"
 
-# --- Cartographer 纯定位 (替代 KISS-Matcher) ---
+# ============== Cartographer 纯定位 (替代 KISS-Matcher) ==============
 # 加载 .pbstream 地图，只做定位不建图
 # 发布: map→odom TF (重定位)
 new_win "Carto定位" "ros2 launch nav2_planner_bringup cartographer_localization_launch.py \
     load_state_filename:=/ws/src/planner/nav2_planner_bringup/map/map.pbstream"
 
-# --- Nav2 导航栈 ---
+# ============== Nav2 导航栈 ==============
 # map_server 在 my_nav2_launch.py 中加载 .pgm 地图 (从 pbstream 导出)
 new_win "Nav2" "ros2 launch nav2_planner_bringup my_nav2_launch.py"
 

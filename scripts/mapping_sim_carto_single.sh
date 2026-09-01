@@ -22,18 +22,18 @@ new_win() {
     "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && $2; exec bash'"
 }
 
-# ---- 节点 ----
-
+# ============== gui 控制 ==============
 tmux new-session -d -s "$SESSION" -n "GUI控制" \
   "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && ros2 run gui_teleop gui_teleop_node; exec bash'"
 
+# ============== gazebo 仿真 ==============
 new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"
 
-# 3D→2D 切片 (直接拿仿真 LiDAR 点云, 不经过 LIO)
+# ============== 3D→2D 切片 (直接拿仿真 LiDAR 点云, 不经过 LIO) ==============
 new_win "pc2laser" "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_simple_launch.py"
 
-# Cartographer 2D 建图 (无外部里程计, 纯 scan matching + IMU)
-# + TF→Odometry 桥接 (给 Nav2 导航用)
+# ============== Cartographer 2D 建图 (无外部里程计, 纯 scan matching + IMU) ==============
+# + TF→Odometry 桥接 (给 Nav2 导航用) 
 new_win "Cartographer" "ros2 launch nav2_planner_bringup cartographer_simple_launch.py rviz:=true"
 
 echo "===== 精简建图已启动 (会话: $SESSION) ====="

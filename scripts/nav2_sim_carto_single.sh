@@ -22,17 +22,17 @@ new_win() {
     "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && $2; exec bash'"
 }
 
-# ---- 节点 ----
-
+# ============== gui 控制 ==============
 tmux new-session -d -s "$SESSION" -n "GUI控制" \
   "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && ros2 run gui_teleop gui_teleop_node; exec bash'"
 
+# ============== gazebo 仿真 ==============
 new_win "Gazebo" "ros2 launch get_urdf get_urdf_launch.py"
 
-# 3D→2D 切片
+# ============== 3D→2D 切片 ==============
 new_win "pc2laser" "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_simple_launch.py"
 
-# Cartographer 纯定位 + TF→Odometry
+# ============== Cartographer 纯定位 + TF→Odometry ==============
 # 带 -pure_localization 命令行参数 + 加载 pbstream
 new_win "Carto定位" "ros2 run cartographer_ros cartographer_node \
     -configuration_directory /ws/src/planner/nav2_planner_bringup/config \
@@ -41,11 +41,11 @@ new_win "Carto定位" "ros2 run cartographer_ros cartographer_node \
     -pure_localization \
     --ros-args -r scan:=/scan -r imu:=/livox/imu -p use_sim_time:=true"
 
-# 上一步 Cartographer 已 start occupancy_grid_node（封装在 cartographer_simple_launch 里）
+# ============== 上一步 Cartographer 已 start occupancy_grid_node（封装在 cartographer_simple_launch 里） ==============
 # 这里单独启动 occupancy_grid 和 tf_to_odom
 new_win "odom桥接" "ros2 run nav2_planner_bringup tf_to_odom.py --ros-args -p use_sim_time:=true"
 
-# Nav2 导航
+# ============== Nav2 导航 ==============
 new_win "Nav2" "ros2 launch nav2_planner_bringup my_nav2_launch.py"
 
 echo "===== 精简导航已启动 (会话: $SESSION) ====="

@@ -52,7 +52,7 @@ TF 坐标树：**`map` &rarr; `odom` &rarr; `base_footprint` &rarr; `chassis` &r
 - **操作系统**：Ubuntu 22.04
 - **ROS 2**：Humble Hawksbill
 - **Gazebo**：Fortress
-- **Livox-SDK2**：实机模式需要；已预编译于 `src/livox_ros_driver2/3rdparty/`，支持 amd64/arm64
+- **Livox-SDK2**：实机模式需要；需要自己编译
 
 ## 2. 构建
 
