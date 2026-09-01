@@ -24,6 +24,7 @@ for arg in "$@"; do
             echo "用法: $0 [--dry-run] [-f|--force]"
             echo ""
             echo "  统一关闭 3d_nav_ws 项目中仿真/实机/建图/导航的所有节点"
+            echo "  (tmux 只清理 scripts/*.sh 创建的会话, 不影响其他会话)"
             echo ""
             echo "  选项:"
             echo "    --dry-run   只列出将要关闭的进程，不实际操作"
@@ -39,8 +40,14 @@ for arg in "$@"; do
 done
 
 # 尝试 source ROS 2（非强制模式下需要 ros2 node list）
+# colcon 生成的 install/setup.bash 在 set -u 下会因 COLCON_TRACE 未定义触发
+# "unbound variable", 进而被 set -e 连带把整个脚本杀掉 (|| true 救不回来)。
+# 这里临时关闭严格选项再 source: 失败最多只影响 ros2 自动发现,
+# 不影响后续按进程名 / tmux 会话名的清理。
 if [ "$FORCE" = false ] && [ -f "install/setup.bash" ]; then
-    source install/setup.bash 2>/dev/null || true
+    set +euo pipefail
+    source install/setup.bash 2>/dev/null
+    set -euo pipefail
 fi
 
 echo "╔══════════════════════════════════════════════════════════════╗"
@@ -111,7 +118,18 @@ if [ "$FORCE" = false ] && command -v ros2 &> /dev/null; then
         done
 
         # 获取所有 ROS 相关进程的 PID 并终止
-        ROS_PIDS=$(ps aux | grep -E "ros2|/ros/" | grep -v "grep\|kill_all" | awk '{print $2}' || true)
+        # 修复: 原 grep -E "ros2|/ros/" 会把 /home/ros/... 下的 bash 外壳也杀光,
+        #       导致所有 tmux 窗口/会话一起消失。现在用 comm 跳过 shell,
+        #       只匹配真实 ROS 进程; tmux 会话统一由 阶段 6 按项目会话名精确清理。
+        ROS_PIDS=$(
+          ps -eo pid=,comm=,args= 2>/dev/null \
+            | awk '
+                $2 ~ /^(bash|sh|zsh|fish|tmux)$/ { next }
+                $0 !~ /grep|kill_all/ &&
+                $0 ~ /(^|[ \/])(ros2|ros2cli|ros2daemon)( |$)|(\/opt\/ros\/)|(LIO_Nav2_ROS2\/install\/)/ { print $1 }
+              ' \
+            | sort -u || true
+        )
         for pid in $ROS_PIDS; do
             if [ -n "$pid" ] && [ "$pid" != "$$" ]; then
                 if [ "$DRY_RUN" = true ]; then
@@ -223,7 +241,7 @@ done
 echo ""
 echo "── 阶段 5: 强制清理 Gazebo ──"
 
-if pgrep -f "gzserver\|gzclient" > /dev/null 2>&1; then
+if pgrep -f "gzserver|gzclient" > /dev/null 2>&1; then
     if [ "$DRY_RUN" = true ]; then
         echo "  [DRY-RUN] 将执行 killall -9 gzserver gzclient"
     else
@@ -231,6 +249,41 @@ if pgrep -f "gzserver\|gzclient" > /dev/null 2>&1; then
     fi
 else
     echo "  (Gazebo 未运行)"
+fi
+
+# ═══════════════════════════════════════════════════════════════
+# 阶段 6: 清理本项目 tmux 会话 (只杀 scripts/*.sh 创建的会话)
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "── 阶段 6: 清理项目 tmux 会话 ──"
+
+if command -v tmux >/dev/null 2>&1 && tmux ls >/dev/null 2>&1; then
+    # 从 scripts/*.sh 动态提取项目会话名 (SESS=xxx / SESSION=xxx),
+    # 这样新增/改名脚本时 kill_all 自动同步, 也不会误伤其他 tmux 会话
+    PROJECT_SESSIONS=$(
+        grep -rhoE '^[[:space:]]*(SESS|SESSION)=[^#[:space:]]+' \
+            "$WORKSPACE_ROOT"/scripts/*.sh 2>/dev/null \
+            | sed -E 's/^[[:space:]]*(SESS|SESSION)=//; s/"//g' \
+            | sort -u || true
+    )
+
+    if [ -n "$PROJECT_SESSIONS" ]; then
+        echo "  项目相关 tmux 会话: $(echo "$PROJECT_SESSIONS" | tr '\n' ' ')"
+        for sess in $PROJECT_SESSIONS; do
+            if tmux has-session -t "$sess" 2>/dev/null; then
+                if [ "$DRY_RUN" = true ]; then
+                    echo "  [DRY-RUN] 将关闭 tmux 会话: $sess"
+                else
+                    tmux kill-session -t "$sess" 2>/dev/null \
+                        && echo "  ✓ 关闭 tmux 会话: $sess" || true
+                fi
+            fi
+        done
+    else
+        echo "  (scripts/ 下未发现 tmux 会话名定义)"
+    fi
+else
+    echo "  (tmux 未运行或没有会话)"
 fi
 
 # ═══════════════════════════════════════════════════════════════

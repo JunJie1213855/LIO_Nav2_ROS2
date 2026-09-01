@@ -11,7 +11,11 @@ options = {
   trajectory_builder = TRAJECTORY_BUILDER,
   map_frame = "map",
   tracking_frame = "base_footprint",
-  published_frame = "odom",
+  -- published_frame 必须是 TF 树中已存在的 link（= tracking_frame 或其子 link）。
+  -- cartographer 会发布 odom_frame→published_frame，并在刷新时 lookup
+  -- published_frame→tracking_frame。若设成 "odom"，因 odom 帧尚不存在而 lookup
+  -- 失败 → published_to_tracking 为 nullptr → 整条 TF/位姿都不发布（无位姿+漂移）。
+  published_frame = "base_footprint",
   odom_frame = "odom",
   -- 由 Cartographer 自己发布 odom→base_footprint TF
   provide_odom_frame = true,

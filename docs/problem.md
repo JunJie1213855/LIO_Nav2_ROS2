@@ -255,6 +255,64 @@ pt_corrected_b[2] = -pt_b[2]
 
 ---
 
+### P21：Cartographer 精简建图无位姿输出 + 漂移（`published_frame` 设错）
+
+**现象**：`scripts/mapping_sim_carto_single.sh`（Gazebo + Cartographer 2D 纯 scan matching）运行后：
+- **无位姿输出**：`map→base_footprint` / `odom→base_footprint` TF 查不到，`/odom` 话题有发布者但 0 数据
+- 小车在 Gazebo 里开动，但地图/位姿从不跟随，表现为**漂移**
+- cartographer 日志每秒刷屏：
+  ```text
+  [WARN] tf_bridge.cpp:53] "odom" passed to lookupTransform argument source_frame does not exist.
+  ```
+
+**排查（排除的误判）**：
+1. **配置 include 缺失**：`cartographer_simple.lua` `include "map_builder.lua"`/`"trajectory_builder.lua"`，工作空间和 cartographer_ros 配置目录里都没有——实测 cartographer_ros 会自动回退到 `/opt/ros/humble/share/cartographer/configuration_files/`，配置加载完全正常
+2. **数据链路不通**：实测 `/scan` 正常（10Hz、真实墙距 4.9~5.2m）、`base_footprint→livox_frame` TF 正常、cartographer 确实收到 scan(9.69Hz)/imu(9.72Hz)
+
+**根因**：`cartographer_simple.lua` 中 `published_frame = "odom"` 设错。
+
+cartographer_ros 每次发布位姿都会 lookup `published_frame→tracking_frame`
+（`map_builder_bridge.cpp:254`）：
+
+```cpp
+sensor_bridge.tf_bridge().LookupToTracking(time, trajectory_options_[...].published_frame)
+```
+
+`published_frame="odom"` → 去查 `base_footprint→"odom"`，但 **`odom` 帧在 TF 树里不存在**
+（Gazebo skid steer 插件 `publish_odom_tf=false`；`provide_odom_frame=true` 本应让 cartographer
+自己发布 `odom→base_footprint`，却正是这个 lookup 卡住了发布）。查找失败返回 `nullptr`，
+而 `node.cpp:315` 是 `if (published_to_tracking != nullptr)` 才发 TF → **整个 TF 发布块被跳过**，
+`map→odom` / `odom→base_footprint` 一个都不发。官方 demo（`backpack_2d.lua`）里 `published_frame`
+都等于 tracking_frame，不是 `odom`。
+
+**解决**（`src/planner/nav2_planner_bringup/config/cartographer_simple.lua`，1 行）：
+
+```lua
+- published_frame = "odom",
++ published_frame = "base_footprint",   -- tracking_frame，TF 树中存在
+```
+
+改后必须重编 `colcon build --packages-select nav2_planner_bringup`（cartographer 读的是
+`install/nav2_planner_bringup/share/.../config` 下的副本），再重启 cartographer_node。
+
+**验证（修复后实测）**：
+
+| 项目 | 修复前 | 修复后 |
+| --- | --- | --- |
+| "odom 不存在"警告 | 每秒刷屏 | 0 条 |
+| `map→odom` / `odom→base_footprint` TF | 无 | 有，且随车移动 |
+| `/odom` 话题 | 0 数据 | 有真实数据 |
+| `/map` | 无 | 420×282@0.05m，56.7% 已探索 |
+| 子图 | 无 | `Inserted submap` 持续增长 |
+| IMU 流入频率 | 9.7Hz（被拖累丢弃） | 142Hz |
+
+**相关要点**：
+- `published_frame` 必须设为 TF 树中已存在的 link（tracking_frame 或其子 link），cartographer 会发布 `odom_frame→published_frame`
+- `scripts/mapping_sim_carto.sh` 用 `cartographer_mapping.lua` + FAST-LIO + sensor_scan_generation，有外部 `odom` 帧，`published_frame="odom"` 没问题，不受此 bug 影响
+- 次要发现：`/livox/imu` 的 frame_id 是 `base_footprint`（与 tracking_frame 相同），cartographer 恰好要求 IMU 与 tracking frame 同位置，能正常工作；如需更规范可给 IMU 插件加 `<frame_name>livox_frame</frame_name>`
+
+---
+
 ## 三、编译/运行命令速查
 
 ```bash

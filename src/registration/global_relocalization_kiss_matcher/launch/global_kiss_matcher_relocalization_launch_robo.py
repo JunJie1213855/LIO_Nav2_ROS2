@@ -9,7 +9,7 @@ def generate_launch_description():
 
     pcd_path = os.path.join(
         get_package_share_directory("nav2_planner_bringup"),
-        "pcd", "map.pcd"
+        "pcd", "robo_map.pcd"
     )
 
     print("pcd path : ", pcd_path)

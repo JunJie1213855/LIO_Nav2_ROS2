@@ -26,7 +26,7 @@ new_win() {
 
 # ================= FAST-LIO 里程计 + 3D RViz =================
 tmux new-session -d -s "$SESSION" -n "FAST-LIO" \
-  "bash -c 'source /opt/ros/humble/setup.bash && source /ws/install/setup.bash && \
+  "bash -c 'source /opt/ros/humble/setup.bash && source install/setup.bash && \
     ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py use_sim_time:=true rviz:=true; exec bash'"
 
 # ================= robot desc =================
@@ -46,7 +46,7 @@ new_win "slam_toolbox"  "ros2 launch slam_toolbox online_async_launch.py \
     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 
 # ================= slam toolbox 可视化 =================
-new_win "RViz"          "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/nav2.rviz"
+new_win "RViz"          "ros2 run rviz2 rviz2 -d src/planner/nav2_planner_bringup/rviz/nav2.rviz"
 
 # ---- 最后播放 bag（所有节点就绪后开始推送数据）----
 # 前面所有窗口不依赖 bag 数据即可启动，bag 延迟启动可以给各节点充分初始化时间

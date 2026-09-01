@@ -32,7 +32,7 @@ sleep 2
 # ================ scan planner ================
 # z_min:=0.3 z_max:=3.0 很重要，最好替换成地面分割算法，否则容易把当前目标的障碍物都丢失，然后路径变成一条直线
 W "SCAN"      "ros2 launch nav2_planner_bringup scan_planner_lio_launch.py \
-    z_min:=0.3 z_max:=3.0 \ 
+    z_min:=0.15 z_max:=3.0 \ 
     double_cylinder_radius:=0.45 double_cylinder_offset:=0.18 \
     body_height:=0.25 obstacles_inflation_z_down:=1.0 \
     optimization.lambda_collision:=50.0 optimization.dist0:=3.0 \

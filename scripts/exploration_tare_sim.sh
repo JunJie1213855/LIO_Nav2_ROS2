@@ -4,7 +4,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WS="$(dirname -- "$SCRIPT_DIR")"
 SESS=tare
 export LIBGL_ALWAYS_SOFTWARE=0
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+# export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 # 清理
 killall -9 gzserver gzclient fastlio_mapping lio_interface_node \

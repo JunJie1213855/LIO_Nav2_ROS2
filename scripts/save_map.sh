@@ -6,7 +6,7 @@ cd "$WORKSPACE_ROOT" || exit 1
 
 source install/setup.bash
 
-MAP_PATH="${1:-$WORKSPACE_ROOT/src/planner/nav2_planner_bringup/map/test_map__2}"
+MAP_PATH="${1:-$WORKSPACE_ROOT/src/planner/nav2_planner_bringup/map/robo_map}"
 
 ros2 run nav2_map_server map_saver_cli -f "$MAP_PATH"
 

@@ -35,7 +35,7 @@ new_win "pc2laser" "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_sim
 # ============== Cartographer 纯定位 + TF→Odometry ==============
 # 带 -pure_localization 命令行参数 + 加载 pbstream
 new_win "Carto定位" "ros2 run cartographer_ros cartographer_node \
-    -configuration_directory /ws/src/planner/nav2_planner_bringup/config \
+    -configuration_directory ./src/planner/nav2_planner_bringup/config \
     -configuration_basename cartographer_simple.lua \
     -load_state_filename $PBSTREAM \
     -pure_localization \

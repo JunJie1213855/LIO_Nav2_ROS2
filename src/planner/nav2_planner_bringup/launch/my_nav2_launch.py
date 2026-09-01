@@ -12,8 +12,7 @@ def generate_launch_description():
 
     # 配置文件与地图路径
     params_file = os.path.join(me_share_path, 'config', 'nav2_params.yaml')
-    # map_yaml_file = os.path.join(me_share_path, 'map', 'nav_test_4_27.yaml')
-    map_yaml_file = os.path.join(me_share_path, 'map', 'test_map__2.yaml')
+    map_yaml_file = os.path.join(me_share_path, 'map', 'robo_map.yaml')
     rviz_file = os.path.join(me_share_path, 'rviz', 'nav2.rviz')
     
     print("map file : ",map_yaml_file)

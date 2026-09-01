@@ -68,7 +68,7 @@ def launch_setup(context):
 
 def generate_launch_description():
     pkg_share_path = get_package_share_directory('get_urdf')
-    default_world_path = os.path.join(pkg_share_path, 'worlds', 'indoor_2d.world')
+    default_world_path = os.path.join(pkg_share_path, 'worlds', 'test_world.world')
 
     return LaunchDescription([
         DeclareLaunchArgument(

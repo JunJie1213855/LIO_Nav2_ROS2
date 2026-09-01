@@ -57,7 +57,7 @@ new_win "Cartographer" "ros2 launch nav2_planner_bringup cartographer_mapping_la
 
 # ============== RViz 可视化 Cartographer 建图 ==============
 # 显示: /map (Cartographer OccupancyGrid) + /scan + TF + 机器人模型 + /registered_scan
-new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/cartographer_mapping.rviz"
+# new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/cartographer_mapping.rviz"
 
 echo "已在 tmux 会话 '$SESSION' 中启动全部节点。"
 echo "查看输出: tmux attach -t $SESSION   (Ctrl-b n/p 切换窗口, Ctrl-b d 退出)"
