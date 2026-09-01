@@ -35,29 +35,29 @@ new_win() {
     "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && $2; exec bash'"
 }
 
-# ── 窗口 1: 数据集回放 ──────────────────────────────────────────────
-tmux new-session -d -s "$SESSION" -n "bag播放" \
-  "bash -c 'source /opt/ros/humble/setup.bash && ros2 bag play $BAG_DIR/robosenseAiry-slamtoolbox_0.db3 --clock; exec bash'"
+# # ============== 窗口 1: 数据集回放 ==============
+# tmux new-session -d -s "$SESSION" -n "bag播放" \
+#   "bash -c 'source /opt/ros/humble/setup.bash && ros2 bag play $BAG_DIR/robosenseAiry-slamtoolbox_0.db3 --clock; exec bash'"
 
-# ── 窗口 2: FAST-LIO 3D 里程计 ──────────────────────────────────────
-new_win "FAST-LIO" "ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py \
-    use_sim_time:=true rviz:=true"
+# ============== 窗口 2: FAST-LIO 3D 里程计 ==============
+tmux new-session -d -s "$SESSION" -n "FAST-LIO" \
+  "bash -c 'source /opt/ros/humble/setup.bash && cd $WORKSPACE_ROOT && source install/setup.bash  && ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py use_sim_time:=true rviz:=true; exec bash'"
 
-# ── 窗口 3: 机器人描述 (静态 TF: base_footprint→livox_frame) ────────
+# ============== 窗口 3: 机器人描述 (静态 TF: base_footprint→livox_frame) ==============
 new_win "robot_desc" "ros2 launch gld_robot_description robosenseAiry_description_launch.py rviz:=false"
 
-# ── 窗口 4: LIO 接口 (坐标系转换) ────────────────────────────────────
+# ============== 窗口 4: LIO 接口 (坐标系转换) ==============
 new_win "lio_if" "ros2 launch lio_interface lio_interface_launch.py use_sim_time:=true"
 
-# ── 窗口 5: 传感器扫描生成 (odom→base_footprint TF + /odom 话题) ────
+# ============== 窗口 5: 传感器扫描生成 (odom→base_footprint TF + /odom 话题) ==============
 new_win "sensor" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
-# ── 窗口 6: SCAN-Planner (ESDF建图 + 局部规划) ────────────────────
+# ============== 窗口 6: SCAN-Planner (ESDF建图 + 局部规划) ==============
 new_win "SCAN-Planner" "ros2 launch nav2_planner_bringup scan_planner_lio_launch.py \
     use_sim_time:=true navi_mode:=1"
 
-# ── 窗口 7: SCAN-Planner RViz ──────────────────────────────────────
-new_win "SP-RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan_planner -p use_sim_time:=true -- -d /ws/src/planner/nav2_planner_bringup/rviz/scan_planner.rviz"
+# ============== 窗口 7: SCAN-Planner RViz ==============
+new_win "SP-RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan_planner -p use_sim_time:=true -- -d src/planner/nav2_planner_bringup/rviz/scan_planner.rviz"
 
 echo "===== SCAN-Planner + LIO 建图定位导航一体化 (会话: $SESSION) ====="
 echo "窗口: bag播放 | FAST-LIO | robot_desc | lio_if | sensor | SCAN-Planner | SP-RViz"

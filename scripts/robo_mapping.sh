@@ -30,7 +30,7 @@ tmux new-session -d -s "$SESSION" -n "FAST-LIO" \
     ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py use_sim_time:=true rviz:=true; exec bash'"
 
 # ================= robot desc =================
-new_win "robot_desc"    "ros2 launch gld_robot_description gld_robot_description_launch.py rviz:=false use_sim_time:=true"
+new_win "robot_desc"    "ros2 launch gld_robot_description robosenseAiry_description_launch.py rviz:=false use_sim_time:=true"
 
 # ================= lio interface =================
 new_win "lio_if"        "ros2 launch lio_interface lio_interface_launch.py use_sim_time:=true"
