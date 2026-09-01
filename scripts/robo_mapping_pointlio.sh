@@ -18,25 +18,34 @@ new_win() {
     "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && $2; exec bash'"
 }
 
-# ---- 先启动所有节点 ----
+# ============== 先启动所有节点 ==============
 
-# Point-LIO（自带 RViz, robosenseAiry 配置）
+# ============== Point-LIO（自带 RViz, robosenseAiry 配置） ==============
 tmux new-session -d -s "$SESSION" -n "Point-LIO" \
   "bash -c 'source /opt/ros/humble/setup.bash && source /ws/install/setup.bash && \
     ros2 launch point_lio point_lio_robosenseAiry.launch.py rviz:=true; exec bash'"
 
-# lio_interface — 用 pointlio 模式（话题: /aft_mapped_to_init → /cloud_registered）
+# ============== robot desc ==============
 new_win "robot_desc"   "ros2 launch gld_robot_description gld_robot_description_launch.py rviz:=false use_sim_time:=true"
+
+# ============== lio interface ==============
 new_win "lio_if"       "ros2 launch lio_interface lio_interface_launch.py lio_type:=pointlio use_sim_time:=true"
+
+# ============== sensor scan ==============
 new_win "sensor"       "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
+
+# ============== 3D to 2D ==============
 new_win "pc2laser"     "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch_robo.py"
+
+# ============== slam toolbox ==============
 new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+
+# ============== rviz ==============
 new_win "RViz"         "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/nav2.rviz"
 
-# ---- 最后播放 bag ----
+# ============== 最后播放 bag ==============
 sleep 3
-
 tmux new-window -t "$SESSION" -n "bag播放" \
   "bash -c 'source /opt/ros/humble/setup.bash && \
     echo \"播放: $BAG_DIR\" && \

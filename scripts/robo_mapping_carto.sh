@@ -18,21 +18,30 @@ new_win() {
     "bash -c 'cd $WORKSPACE_ROOT && source install/setup.bash && $2; exec bash'"
 }
 
+# ============== bag 播放 ==============
 tmux new-session -d -s "$SESSION" -n "bag播放" \
   "bash -c 'source /opt/ros/humble/setup.bash && ros2 bag play $BAG_DIR/robosenseAiry-slamtoolbox_0.db3 --clock; exec bash'"
 
+# ============== Fast lio ==============
 new_win "FAST-LIO" "ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py \
     use_sim_time:=true rviz:=true"
 
+# ============== robot desc ==============
 new_win "robot_desc" "ros2 launch gld_robot_description gld_robot_description_launch.py rviz:=false"
+
+# ============== lio interface ==============
 new_win "lio_if"     "ros2 launch lio_interface lio_interface_launch.py use_sim_time:=true"
+
+# ============== 中间层转换 ==============
 new_win "sensor"     "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
+
+# ============== 3D to 2D ==============
 new_win "pc2laser"   "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch.py"
 
-# Cartographer 2D 建图
+# ============== Cartographer 2D 建图 ==============
 new_win "Cartographer" "ros2 launch nav2_planner_bringup cartographer_mapping_launch.py"
 
-# 建图 RViz（显示 /map + /scan + TF + 点云）
+# ============== 建图 RViz（显示 /map + /scan + TF + 点云） ==============
 new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/cartographer_mapping.rviz"
 
 echo "===== RoboSense Airy 数据集建图 — Cartographer (会话: $SESSION) ====="
