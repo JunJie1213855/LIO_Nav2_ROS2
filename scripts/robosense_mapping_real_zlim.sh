@@ -69,10 +69,24 @@ ros2 launch nav2_planner_bringup middleware_launch.py use_sim_time:=False"
 # ros2 launch slam_toolbox online_async_launch.py \
 #     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 
-gnome-terminal --title="slam_toolbox 建图" -- bash -c "
-source install/setup.bash;
-ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+# gnome-terminal --title="slam_toolbox 建图" -- bash -c "
+# source install/setup.bash;
+# ros2 launch slam_toolbox online_async_launch.py \
+#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+
+# ============== 静态变换 ==============
+gnome-terminal --title="tf_correction"  -- bash -c "
+ros2 run tf2_ros static_transform_publisher --x 0 --y 0 --z 0 --qx 0.7071 --qy -0.7071 --qz 0 --qw 0 \
+--frame-id base_footprint --child-frame-id base_footprint_nav"
+
+# ============== slam toolbox ==============
+# new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
+#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+gnome-terminal --title="slam_toolbox" -- bash -c "
+ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
+    --params-file src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml \
+    -p use_sim_time:=true -p base_frame:=base_footprint_nav"
+
 
 # ================ slam toolbox 建图可视化 ================
 gnome-terminal --title="slam_toolbox 建图可视化" -- bash -c "

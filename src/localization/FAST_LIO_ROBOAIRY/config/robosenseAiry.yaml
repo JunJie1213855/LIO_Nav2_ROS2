@@ -25,7 +25,7 @@
       gyr_cov: 0.1
       b_acc_cov: 0.0001
       b_gyr_cov: 0.0001
-      gravity_ref: [0.0, 0.0, 9.81]    # world系参考重力方向；Airy z-flip（z向下）重力朝 +Z，保持现有翻转系约定
+      gravity_ref: [-0.0205, -0.0912, -9.8684]    # world系参考重力方向；Airy z-flip（z向下）重力朝 +Z，保持现有翻转系约定
       fov_degree: 360.0
       det_range: 15.0
       save_voxel_size: 0.5   # 保存 PCD 时的体素 (m)，比 filter_size_map 稍小保留细节
