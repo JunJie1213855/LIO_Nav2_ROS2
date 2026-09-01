@@ -19,8 +19,8 @@
             cut_frame: False
             cut_frame_time_interval: 0.1
             time_diff_lidar_to_imu: 0.0
-            cut_frame_init: True      
-            cut_frame_num: 5 # 10 帧
+            cut_frame_init: False      
+            cut_frame_num: 1 # 10 帧
 
         prior_pcd:
             enable: False
