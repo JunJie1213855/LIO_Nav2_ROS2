@@ -45,7 +45,7 @@
     lio.output.ml_map: false
     lio.output.planner: false
     lio.output.map: true
-    lio.output.dense: true
+    lio.output.dense: false
     lio.output.pub_step: 1
 
     lio.eva.timer: false

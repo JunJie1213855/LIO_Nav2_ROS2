@@ -41,9 +41,17 @@ new_win "sensor"        "ros2 launch sensor_scan_generation sensor_scan_generati
 # ================= 3D 转 2D =================
 new_win "pc2laser"      "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch_robo.py"
 
-# ================= slam toolbox =================
-new_win "slam_toolbox"  "ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+# ============== 静态变换 ==============
+new_win  "tf_correction" \
+  "ros2 run tf2_ros static_transform_publisher --x 0 --y 0 --z 0 --qx 0.7071 --qy -0.7071 --qz 0 --qw 0 \
+  --frame-id base_footprint --child-frame-id base_footprint_nav"
+
+# ============== slam toolbox ==============
+# new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
+#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+new_win "slam_toolbox" "ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
+    --params-file $WORKSPACE_ROOT/src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml \
+    -p use_sim_time:=true -p base_frame:=base_footprint_nav"
 
 # ================= slam toolbox 可视化 =================
 new_win "RViz"          "ros2 run rviz2 rviz2 -d src/planner/nav2_planner_bringup/rviz/nav2.rviz"

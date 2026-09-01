@@ -22,11 +22,11 @@ new_win() {
 
 # ============== Super-LIO（自带 RViz） ==============
 tmux new-session -d -s "$SESSION" -n "Super-LIO" \
-  "bash -c 'source /opt/ros/humble/setup.bash && source /ws/install/setup.bash && \
+  "bash -c 'source /opt/ros/humble/setup.bash && source install/setup.bash && \
     ros2 launch super_lio robosense_airy.py rviz:=true; exec bash'"
 
 # ============== robot desc ==============
-new_win "robot_desc"   "ros2 launch gld_robot_description gld_robot_description_launch.py rviz:=false use_sim_time:=true"
+new_win "robot_desc"   "ros2 launch gld_robot_description robosenseAiry_description_launch.py rviz:=false use_sim_time:=true"
 
 # ============== lio interface ==============
 new_win "lio_if"       "ros2 launch lio_interface lio_interface_launch.py lio_type:=superlio use_sim_time:=true"
@@ -37,19 +37,27 @@ new_win "sensor"       "ros2 launch sensor_scan_generation sensor_scan_generatio
 # ============== 3d to 2D ==============
 new_win "pc2laser"     "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch_robo.py"
 
+# ============== 静态变换 ==============
+new_win  "tf_correction" \
+  "ros2 run tf2_ros static_transform_publisher --x 0 --y 0 --z 0 --qx 0.7071 --qy -0.7071 --qz 0 --qw 0 \
+  --frame-id base_footprint --child-frame-id base_footprint_nav"
+
 # ============== slam toolbox ==============
-new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+# new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
+#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+new_win "slam_toolbox" "ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
+    --params-file $WORKSPACE_ROOT/src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml \
+    -p use_sim_time:=true -p base_frame:=base_footprint_nav"
 
 # ============== slam toolvox 可视化 ==============
-new_win "RViz"         "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/nav2.rviz"
+new_win "RViz"         "ros2 run rviz2 rviz2 -d src/planner/nav2_planner_bringup/rviz/nav2.rviz"
 
 # ============== 最后播放 bag ==============
-sleep 3
-tmux new-window -t "$SESSION" -n "bag播放" \
-  "bash -c 'source /opt/ros/humble/setup.bash && \
-    echo \"播放: $BAG_DIR\" && \
-    ros2 bag play $BAG_DIR --clock; exec bash'"
+# sleep 3
+# tmux new-window -t "$SESSION" -n "bag播放" \
+#   "bash -c 'source /opt/ros/humble/setup.bash && \
+#     echo \"播放: $BAG_DIR\" && \
+#     ros2 bag play $BAG_DIR --clock; exec bash'"
 
 echo "===== RoboSense Airy 数据集建图 — Super-LIO (会话: $SESSION) ====="
 echo "窗口: Super-LIO | robot_desc | lio_if | sensor | pc2laser | slam_toolbox | RViz | bag播放"
