@@ -24,13 +24,16 @@ gnome-terminal --title="中间层(lio+sensor+pc2l)" -- bash -c "
 source install/setup.bash;
 ros2 launch nav2_planner_bringup middleware_launch.py use_sim_time:=False"
 
-# ---------
-
+# 机器人描述
 gnome-terminal --title="机器人描述" -- bash -c "
 killall -9 gzserver gzclient;
 source install/setup.bash;
 ros2 launch gld_robot_description robosense_description_launch.py"
 
+# ============== 静态变换 ==============
+gnome-terminal --title="tf_correction"  -- bash -c "
+ros2 run tf2_ros static_transform_publisher --x 0 --y 0 --z 0 --qx 0.7071 --qy -0.7071 --qz 0 --qw 0 \
+--frame-id base_footprint --child-frame-id base_footprint_nav"
 
 # ========== 重定位 ==========
 # gnome-terminal --title="small_gicp 重定位" -- bash -c "

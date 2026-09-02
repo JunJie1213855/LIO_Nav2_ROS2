@@ -5,61 +5,95 @@ WORKSPACE_ROOT="$(dirname -- "$SCRIPT_DIR")"
 cd "$WORKSPACE_ROOT" || exit 1
 
 # ╔══════════════════════════════════════════════════════════════════════╗
-# ║  Airy 实机建图 (Cartographer 后端)                                    ║
+# ║  Airy 实机建图（方案一：airy_unflip.py 修正 Z 轴翻转）               ║
 # ║                                                                      ║
 # ║  数据流：                                                            ║
-# ║  FAST-LIO → /cloud_registered → lio_interface → /registered_scan     ║
-# ║    → sensor_scan_generation → odom→base_footprint TF + /odom         ║
-# ║      → pointcloud_to_laserscan → /scan (livox_frame)                 ║
-# ║        → Cartographer 2D 建图 (/map)                                 ║
+# ║  FAST-LIO → /cloud_registered (Z 翻转)                               ║
+# ║    → airy_unflip.py → /cloud_registered_unflipped (Z 正常朝上)       ║
+# ║      → lio_interface → /registered_scan                              ║
+# ║        → sensor_scan_generation → pointcloud_to_laserscan            ║
+# ║          → /scan → SLAM Toolbox                                      ║
 # ║                                                                      ║
-# ║  TF 树：                                                            ║
-# ║    map→odom (cartographer 发布) + odom→base_footprint (LIO)          ║
-# ║    + base_footprint→chassis→livox_frame (URDF)                       ║
-# ║                                                                      ║
-# ║  Pointcloud2d_3d.yaml 切片：min_height=0.3, max_height=2.0           ║
+# ║  Pointcloud2d_3d.yaml 使用标准正值：min_height=0.2, max_height=1.0  ║
 # ╚══════════════════════════════════════════════════════════════════════╝
 
+
+# ================ rslidar 驱动 ================
 # gnome-terminal --title="robosense lidar SDK" -- bash -c "
 # source install/setup.bash;
 # ros2 launch rslidar_sdk driver_only.launch.py"
 
-# ================ fast-lio ================
+# ================ 建图定位算法 1：fast-lio2 ================
 gnome-terminal --title="FAST-LIO 里程计" -- bash -c "
 source install/setup.bash;
-ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py \
-  use_sim_time:=True"
+ros2 launch fast_lio_robosense mapping_robosense_airy.launch.py"
 
-# ================ lio_interface ================
-gnome-terminal --title="Fast-LIO lio_interface" -- bash -c "
-source install/setup.bash;
-ros2 launch lio_interface fastlio_lio_interface_launch.py \
-  use_sim_time:=True"
+# =============== 建图定位算法 2：super-lio =================
+# gnome-terminal --title="Super-LIO 里程计" -- bash -c "
+# source install/setup.bash;
+# ros2 launch super_lio robosense_airy.py"
 
-# ================ 中间一些必要的节点 ================
+# =============== 建图定位算法 3: point-lio =================
+# gnome-terminal --title="Super-LIO 里程计" -- bash -c "
+# source install/setup.bash;
+# ros2 launch point_lio point_lio_robosenseAiry.launch.py"
+
+
+# ================ robosense airy 描述 ================
 gnome-terminal --title="机器人描述" -- bash -c "
 killall -9 gzserver gzclient;
 source install/setup.bash;
 ros2 launch gld_robot_description robosense_description_launch.py"
 
-gnome-terminal --title="sensor_scan_generation" -- bash -c "
+# ================ 中间层 2 : fast-lio2 ================
+gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
 source install/setup.bash;
-ros2 launch sensor_scan_generation sensor_scan_generation_launch.py use_sim_time:=True"
+ros2 launch nav2_planner_bringup middleware_launch.py use_sim_time:=False"
 
-gnome-terminal --title="3d点云转2d" -- bash -c "
-source install/setup.bash;
-ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch_zlim.py use_sim_time:=True"
 
-# =================== cartographer 建图 ===================
-gnome-terminal --title="cartographer 建图" -- bash -c "
-source install/setup.bash;
-ros2 launch nav2_planner_bringup cartographer_2d_launch.py use_sim_time:=True"
+# ================ 中间层 2 : super lio ================
+# gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
+# source install/setup.bash;
+# ros2 launch nav2_planner_bringup middleware_launch_superlio.py use_sim_time:=False"
 
-# ================ cartographer 建图可视化 ================
-gnome-terminal --title="cartographer 建图可视化" -- bash -c "
+
+# ================ 中间层 2 : point lio ================
+# gnome-terminal --title="中间层(lio + sensor + pc2l)" -- bash -c "
+# source install/setup.bash;
+# ros2 launch nav2_planner_bringup pointlio_lio_interface_launch.py use_sim_time:=False"
+
+
+# ================ slam toolbox 建图 ================
+# gnome-terminal --title="slam_toolbox 建图" -- bash -c "
+# source install/setup.bash;
+# ros2 launch slam_toolbox online_async_launch.py \
+#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+
+# gnome-terminal --title="slam_toolbox 建图" -- bash -c "
+# source install/setup.bash;
+# ros2 launch slam_toolbox online_async_launch.py \
+#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+
+# ============== 静态变换 ==============
+gnome-terminal --title="tf_correction"  -- bash -c "
+ros2 run tf2_ros static_transform_publisher --x 0 --y 0 --z 0 --qx 0.7071 --qy -0.7071 --qz 0 --qw 0 \
+--frame-id base_footprint --child-frame-id base_footprint_nav"
+
+# ============== slam toolbox ==============
+# new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
+#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+gnome-terminal --title="slam_toolbox" -- bash -c "
+ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
+    --params-file src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml \
+    -p use_sim_time:=true -p base_frame:=base_footprint_nav"
+
+
+# ================ slam toolbox 建图可视化 ================
+gnome-terminal --title="slam_toolbox 建图可视化" -- bash -c "
 source install/setup.bash;
 rviz2 -d src/gld_robot_description/rviz/nav2.rviz"
 
+# ================ Nav2 导航 ================
 # gnome-terminal --title="Nav2 导航" -- bash -c "
 # source install/setup.bash;
 # ros2 launch nav2_planner_bringup my_nav2_launch.py"
