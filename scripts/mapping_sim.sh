@@ -28,9 +28,6 @@ gnome-terminal --title="lio_interface" -- bash -c "
 source install/setup.bash;
 ros2 launch lio_interface lio_interface_launch.py"
 
-
-
-
 gnome-terminal --title="sensor_scan_generation" -- bash -c "
 source install/setup.bash;
 ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
