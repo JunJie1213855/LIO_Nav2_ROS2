@@ -37,7 +37,7 @@ def generate_launch_description():
     ]
 
     planner_server = Node(
-        package='nav2_planner_bringup',
+        package='nav2_planner',
         executable='planner_server',
         name='planner_server',
         output='screen',
