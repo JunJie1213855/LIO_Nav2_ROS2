@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     # runtime_pos_log_enable: true
-    map_file_path: /home/ros/rosws/3d_nav_ws/src/localization/FAST_LIO_ROBOAIRY/PCD/robo_map.pcd
+    map_file_path: src/localization/FAST_LIO_ROBOAIRY/PCD/robo_map.pcd
     point_filter_num: 3       # 不过滤，保留每 1 个点
     filter_size_surf: 0.5    # surf 点降采样体素 (m)
     filter_size_map: 0.5   # ikd-tree 地图体素 (m) — 越小 → 保存的 PCD 越密，重定位越准
@@ -34,10 +34,6 @@
       extrinsic_R: [0.0, -1.0, 0.0,
                     -1.0, 0.0, 0.0,
                     0.0, 0.0, -1.0]
-      # extrinsic_T: [ 0.004250 , 0.004180  , -0.004460]
-      # extrinsic_R: [-0.011259 , -0.999927 ,  0.004350,
-      #               -0.999937 ,  0.011259 ,  0.000023,
-      #               -0.000072 , -0.004350 , -0.999990]
     publish:
       path_en: true
       scan_publish_en: true  # false: close all the point cloud output

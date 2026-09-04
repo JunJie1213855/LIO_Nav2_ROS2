@@ -24,15 +24,21 @@ sleep 6
 W "FAST-LIO" "ros2 launch fast_lio_robosense mapping.launch.py rviz:=false"
 sleep 3
 
+# ================ GroundSeg 地面分割 ================
+# 消费原始 /livox/lidar，去地面点，输出 /no_ground_cloud(livox_frame)；
+# 由 scan_planner_lio_launch.py 里的 cloud_frame_transform 转到 odom
+W "GroundSeg" "ros2 launch efficient_online_segmentation ground_separation.launch.py"
+sleep 2
+
 # ================ 中间层 ================
 W "lio_if"    "ros2 launch lio_interface lio_interface_launch.py"
 W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 sleep 2
 
 # ================ scan planner ================
-# z_min:=0.3 z_max:=3.0 很重要，最好替换成地面分割算法，否则容易把当前目标的障碍物都丢失，然后路径变成一条直线
+# 地面已由 GroundSeg 去掉，z_min:=0.0 只保留天花板过滤（z_max:=3.0）
 W "SCAN"      "ros2 launch nav2_planner_bringup scan_planner_lio_launch.py \
-    z_min:=0.15 z_max:=3.0 \ 
+    z_min:=0.0 z_max:=3.0 \
     double_cylinder_radius:=0.45 double_cylinder_offset:=0.18 \
     body_height:=0.25 obstacles_inflation_z_down:=1.0 \
     optimization.lambda_collision:=50.0 optimization.dist0:=3.0 \

@@ -17,6 +17,7 @@ install(DIRECTORY
 install(PROGRAMS
   scripts/send_goal.py
   scripts/cloud_z_filter.py
+  scripts/cloud_frame_transform.py
   scripts/tf_to_odom.py
   scripts/waypoint_follower.py
   scripts/terrain_cloud_generator.py

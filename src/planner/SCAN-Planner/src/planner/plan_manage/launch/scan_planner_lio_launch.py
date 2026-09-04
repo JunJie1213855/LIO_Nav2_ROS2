@@ -36,8 +36,8 @@ def generate_launch_description():
         "use_pcd_map", default_value="false")
     declare_pcd_map_file = DeclareLaunchArgument(
         "pcd_map_file", default_value="")
-    declare_z_min = DeclareLaunchArgument("z_min", default_value="-1.0")
-    declare_z_max = DeclareLaunchArgument("z_max", default_value="2.0")
+    declare_z_min = DeclareLaunchArgument("z_min", default_value="0.0")
+    declare_z_max = DeclareLaunchArgument("z_max", default_value="3.0")
     declare_body_h = DeclareLaunchArgument("body_height", default_value="0.4")
     declare_cyl_r = DeclareLaunchArgument("double_cylinder_radius", default_value="0.25")
     declare_cyl_o = DeclareLaunchArgument("double_cylinder_offset", default_value="0.18")
@@ -48,9 +48,26 @@ def generate_launch_description():
     declare_p_hit = DeclareLaunchArgument("grid_map.p_hit", default_value="0.85")
     declare_p_miss = DeclareLaunchArgument("grid_map.p_miss", default_value="0.30")
 
-    # Z 轴过滤节点: 去除天花板和地面，只保留机器人高度范围的点云
-    z_min = LaunchConfiguration("z_min", default="-1.0")
-    z_max = LaunchConfiguration("z_max", default="2.0")
+    # GroundSeg 输出 /no_ground_cloud 在 livox_frame 系，转成 SCAN 期望的 odom 系
+    cloud_frame_transform = Node(
+        package="nav2_planner_bringup",
+        executable="cloud_frame_transform.py",
+        name="cloud_frame_transform",
+        output="screen",
+        parameters=[{
+            "use_sim_time": use_sim_time,
+            "source_frame": "livox_frame",
+            "target_frame": "odom",
+        }],
+        remappings=[
+            ("cloud_in", "/no_ground_cloud"),
+            ("cloud_out", "/no_ground_cloud_odom"),
+        ],
+    )
+
+    # Z 轴过滤节点: 只去天花板（地面已由 GroundSeg 去掉），z_min 设 0 不再切地板
+    z_min = LaunchConfiguration("z_min", default="0.0")
+    z_max = LaunchConfiguration("z_max", default="3.0")
     z_filter = Node(
         package="nav2_planner_bringup",
         executable="cloud_z_filter.py",
@@ -62,7 +79,7 @@ def generate_launch_description():
             "z_max": z_max,
         }],
         remappings=[
-            ("cloud_in", "/registered_scan"),
+            ("cloud_in", "/no_ground_cloud_odom"),
             ("cloud_out", "/registered_scan_filtered"),
         ],
     )
@@ -111,7 +128,7 @@ def generate_launch_description():
             # LIO 管线 → SCAN-Planner 输入
             ("body_pose", "/odom"),                       # odom→base_footprint (sensor_scan_generation)
             ("sensor_pose", "/odom"),                      # IMU≈body, 共用
-            ("cloud", "/registered_scan_filtered"),        # Z 轴过滤后的点云
+            ("cloud", "/registered_scan_filtered"),        # GroundSeg去地面 → 转odom → Z轴去天花板 后的点云
         ],
     )
 
@@ -156,6 +173,7 @@ def generate_launch_description():
         declare_p_hit,
         declare_p_miss,
         world_tf,
+        cloud_frame_transform,
         z_filter,
         scan_planner_node,
         closed_loop_controller,

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>efficient_online_segmentation</name>
+  <version>0.0.1</version>
+  <description>advanced segmentation of ground and wall.</description>
+
+  <maintainer email="wgh@XXX.com">Lorenz Wellhausen</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>pcl_conversions</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+
+  <depend>libpcl-all-dev</depend>
+  <depend>libopencv-dev</depend>
+  <depend>eigen</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
