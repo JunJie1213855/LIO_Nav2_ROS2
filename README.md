@@ -304,7 +304,11 @@ FAR Planner 可见图（visibility graph）全局规划器。
 
 ## 10. RoboSense Airy 数据集（实机 / 回放）
 
-以下脚本针对 RoboSense Airy 实机 / rosbag 数据集回放，通过脚本第一个参数指定本机数据集路径（原 Docker 挂载的 `/dataset` 对应本机 `/home/ros/dataset`）。
+以下脚本针对 RoboSense Airy 实机 / rosbag 数据集回放，通过脚本第一个参数指定本机数据集路径（原 Docker 挂载的 `/dataset` 对应本机 `/home/ros/dataset`）。数据集下载地址
+
+* Google Drive : https://drive.google.com/drive/folders/1l8Ts39PHLIR1IYDnXauxOk8rdCijk1wr?usp=drive_link
+
+下载后，将其解压即可
 
 ### 10.1 建图
 
