@@ -1,4 +1,4 @@
-# Lidar_nav2_ws
+# LIO_Nav
 
 A ROS 2-based 3D LiDAR autonomous navigation system
 
