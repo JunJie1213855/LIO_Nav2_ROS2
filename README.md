@@ -13,7 +13,7 @@
   <img src="docs/KISS%20show_2.gif" alt="KISS demo 2" width="48%">
 </p>
 
-**LIO_Nav2_ROS2** 是一个面向四轮滑移转向机器人的 ROS 2 Humble 导航工作空间。系统以 Livox MID-360 / RoboSense Airy 3D LiDAR 和 IMU 为核心传感器，集成 LiDAR-Inertial Odometry (LIO) 里程计、2D SLAM 建图、3D 点云重定位和 Nav2 导航框架。支持 **Gazebo 仿真**、**实机部署**和**数据集回放**。
+**LIO_Nav2_ROS2** 是一个面向四轮滑移转向机器人的 ROS 2 Humble 导航工作空间。系统以 Livox MID-360 / RoboSense Airy 3D LiDAR 和 IMU 为核心传感器，集成 LiDAR-Inertial Odometry (LIO) 里程计、2D SLAM 建图、3D 点云重定位和 Nav2 导航框架。支持 **Gazebo 仿真**、**实机部署**和**数据集回放**。具体效果见 [知乎](https://zhuanlan.zhihu.com/p/2079912666554962334)
 
 核心特性：
 
