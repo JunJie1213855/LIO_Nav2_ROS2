@@ -12,7 +12,7 @@ using namespace std;
 typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointCloud<PointType> PointCloudXYZI;
 
-enum LID_TYPE { AVIA = 1, VELO16, OUST64, HESAIxt32, ROBOAIRY};  //{1, 2, 3, 4}
+enum LID_TYPE { AVIA = 1, VELO16, OUST64, HESAIxt32, ROBOAIRY, UNILIDAR};  //{1, 2, 3, 4, 5, 6}
 enum TIME_UNIT { SEC = 0, MS = 1, US = 2, NS = 3 };
 enum Feature { Nor, Poss_Plane, Real_Plane, Edge_Jump, Edge_Plane, Wire, ZeroPoint };
 enum Surround { Prev, Next };
@@ -52,6 +52,27 @@ struct EIGEN_ALIGN16 Point
 POINT_CLOUD_REGISTER_POINT_STRUCT(
   velodyne_ros::Point, (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)(
                          float, time, time)(std::uint16_t, ring, ring))
+
+
+/**
+ * @brief Unilidar Point Type
+ */
+namespace unilidar_ros {
+struct Point
+{
+  PCL_ADD_POINT4D
+  PCL_ADD_INTENSITY
+  std::uint16_t ring;
+  float time;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+} EIGEN_ALIGN16;
+}
+POINT_CLOUD_REGISTER_POINT_STRUCT(unilidar_ros::Point,
+  (float, x, x)(float, y, y)(float, z, z)
+  (float, intensity, intensity)
+  (std::uint16_t, ring, ring)
+  (float, time, time)
+)
 
 namespace hesai_ros
 {
@@ -151,6 +172,7 @@ class Preprocess
   void oust64_handler(const sensor_msgs::msg::PointCloud2::SharedPtr &msg);
   void velodyne_handler(const sensor_msgs::msg::PointCloud2::SharedPtr &msg);
   void hesai_handler(const sensor_msgs::msg::PointCloud2::SharedPtr &msg);
+  void unilidar_handler(const sensor_msgs::msg::PointCloud2::SharedPtr &msg);
   void robosense_handler(const sensor_msgs::msg::PointCloud2::SharedPtr& msg,
                          int i_sub_cloud, int num_sub_cloud, double& start_time, double& end_time);
   void give_feature(PointCloudXYZI &pl, vector<orgtype> &types);

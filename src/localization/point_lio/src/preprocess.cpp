@@ -88,7 +88,9 @@ void Preprocess::process(
     double start_time, end_time;
     robosense_handler(msg, 0, 1, start_time, end_time);
     break;
-
+  case UNILIDAR:
+    unilidar_handler(msg);
+    break;
   default:
     printf("Error LiDAR Type");
     break;
@@ -357,10 +359,10 @@ void Preprocess::process_cut_frame_pcl2(
     }
   }
   else
-    {
-      std::cout << "Wrong LiDAR Type!!!" << '\n';
-      return;
-    }
+  {
+    std::cout << "Wrong LiDAR Type!!!" << '\n';
+    return;
+  }
 
   sort(pl_surf.points.begin(), pl_surf.points.end(), time_list_cut_frame);
 
@@ -488,7 +490,50 @@ void Preprocess::oust64_handler(const sensor_msgs::msg::PointCloud2::SharedPtr &
     pl_surf.points.push_back(added_pt);
   }
 }
+void Preprocess::unilidar_handler(const sensor_msgs::msg::PointCloud2::SharedPtr &msg)
+{
+  pl_surf.clear();
+  pl_corn.clear();
+  pl_full.clear();
 
+  pcl::PointCloud<unilidar_ros::Point> pl_orig;
+  pcl::fromROSMsg(*msg, pl_orig);
+  int plsize = pl_orig.points.size();
+  if (plsize == 0)
+    return;
+
+  pl_surf.reserve(plsize);
+
+  // std::cout << "plsize = " << plsize << ", given_offset_time = " << given_offset_time << std::endl;
+  int countElimnated = 0;
+  for (int i = 0; i < plsize; i++)
+  {
+    PointType added_pt;
+
+    added_pt.normal_x = 0;
+    added_pt.normal_y = 0;
+    added_pt.normal_z = 0;
+
+    added_pt.x = pl_orig.points[i].x;
+    added_pt.y = pl_orig.points[i].y;
+    added_pt.z = pl_orig.points[i].z;
+
+    added_pt.intensity = pl_orig.points[i].intensity;
+
+    added_pt.curvature = pl_orig.points[i].time * time_unit_scale;
+
+    if (added_pt.x * added_pt.x + added_pt.y * added_pt.y + added_pt.z * added_pt.z > (blind * blind))
+    {
+      pl_surf.points.push_back(added_pt);
+    }
+    else
+    {
+      countElimnated++;
+    }
+  }
+
+  // std::cout << "pl_surf.size() = " << pl_surf.size() << ", countElimnated = " << countElimnated << std::endl;
+}
 void Preprocess::velodyne_handler(const sensor_msgs::msg::PointCloud2::SharedPtr &msg)
 {
   pl_surf.clear();

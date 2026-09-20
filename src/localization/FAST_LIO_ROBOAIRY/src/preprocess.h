@@ -17,8 +17,9 @@ enum LID_TYPE
   OUST64,
   MID360,
   RSM1,
-  RSM1_BREAK
-};  //{1, 2, 3} RSM1: robosense M1 lidar, RSM1_BREAK: break the scan into smaller sub-scan
+  RSM1_BREAK,
+  UNILIDAR
+}; //{1, 2, 3} RSM1: robosense M1 lidar, RSM1_BREAK: break the scan into smaller sub-scan
 enum TIME_UNIT
 {
   SEC = 0,
@@ -70,15 +71,15 @@ struct orgtype
 
 namespace velodyne_ros
 {
-struct EIGEN_ALIGN16 Point
-{
-  PCL_ADD_POINT4D;
-  float intensity;
-  float time;
-  uint16_t ring;
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
-}  // namespace velodyne_ros
+  struct EIGEN_ALIGN16 Point
+  {
+    PCL_ADD_POINT4D;
+    float intensity;
+    float time;
+    uint16_t ring;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  };
+} // namespace velodyne_ros
 POINT_CLOUD_REGISTER_POINT_STRUCT(velodyne_ros::Point,
                                   (float, x, x)(float, y, y)(float, z, z)(float, intensity,
                                                                           intensity)(float, time, time)(uint16_t, ring,
@@ -86,18 +87,18 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(velodyne_ros::Point,
 
 namespace ouster_ros
 {
-struct EIGEN_ALIGN16 Point
-{
-  PCL_ADD_POINT4D;
-  float intensity;
-  uint32_t t;
-  uint16_t reflectivity;
-  uint8_t ring;
-  uint16_t ambient;
-  uint32_t range;
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
-}  // namespace ouster_ros
+  struct EIGEN_ALIGN16 Point
+  {
+    PCL_ADD_POINT4D;
+    float intensity;
+    uint32_t t;
+    uint16_t reflectivity;
+    uint8_t ring;
+    uint16_t ambient;
+    uint32_t range;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  };
+} // namespace ouster_ros
 
 // clang-format off
 POINT_CLOUD_REGISTER_POINT_STRUCT(ouster_ros::Point,
@@ -155,6 +156,24 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (
         (double, timestamp, timestamp)
 )
 
+namespace unilidar_ros {
+struct Point
+{
+  PCL_ADD_POINT4D
+  PCL_ADD_INTENSITY
+  std::uint16_t ring;
+  float time;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+} EIGEN_ALIGN16;
+}
+POINT_CLOUD_REGISTER_POINT_STRUCT(unilidar_ros::Point,
+  (float, x, x)(float, y, y)(float, z, z)
+  (float, intensity, intensity)
+  (std::uint16_t, ring, ring)
+  (float, time, time)
+)
+
+
 class Preprocess
 {
   public:
@@ -186,6 +205,7 @@ private:
                            int i_sub_cloud, int num_sub_cloud, double & start_time, double & end_time);
   void velodyne_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &msg);
   void mid360_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &msg);
+  void unilidar_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &msg);
   void default_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &msg);
   void give_feature(PointCloudXYZI &pl, vector<orgtype> &types);
   void pub_func(PointCloudXYZI &pl, const rclcpp::Time &ct);

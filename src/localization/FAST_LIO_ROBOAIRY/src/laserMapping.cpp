@@ -167,26 +167,6 @@ void SigHandle(int sig)
         std::cout << CLR_GRN "[INFO] Auto-saving map before exit..." CLR_RST << std::endl;
         save_to_pcd();
     }
-    // 同时保存稠密累积点云用于重定位（来自每帧 feats_undistort 的累积）
-    // if (pcd_save_en && pcl_wait_save->size() > 0)
-    // {
-    //     string dense_path(string(string(ROOT_DIR) + "PCD/dense_map.pcd"));
-    //     std::filesystem::path p(dense_path);
-    //     if (!p.parent_path().empty() && !std::filesystem::exists(p.parent_path()))
-    //         std::filesystem::create_directories(p.parent_path());
-
-    //     pcl::VoxelGrid<PointType> vg;
-    //     vg.setLeafSize(0.05, 0.05, 0.05);
-    //     auto filtered = std::make_shared<PointCloudXYZI>();
-    //     vg.setInputCloud(pcl_wait_save);
-    //     vg.filter(*filtered);
-    //     std::cout << "[INFO] Dense map: " << pcl_wait_save->size()
-    //               << " -> " << filtered->size() << " pts (0.05m voxel)" << std::endl;
-
-    //     pcl::PCDWriter pcd_writer;
-    //     pcd_writer.writeBinary(dense_path, *filtered);
-    //     std::cout << "[INFO] Dense map saved to " << dense_path << std::endl;
-    // }
     rclcpp::shutdown();
 }
 
@@ -684,34 +664,6 @@ void save_to_pcd()
         RCLCPP_ERROR(rclcpp::get_logger("laser_mapping"), "Cannot save map: pcl_wait_pub is empty!");
         return;
     }
-
-    // Get all points from ikdtree
-    // PointVector().swap(ikdtree.PCL_Storage);
-    // ikdtree.flatten(ikdtree.Root_Node, ikdtree.PCL_Storage, NOT_RECORD);
-
-    // // Convert to PCL point cloud
-    // PointCloudXYZI::Ptr map_cloud(new PointCloudXYZI());
-    // map_cloud->points = ikdtree.PCL_Storage;
-    // map_cloud->width = map_cloud->points.size();
-    // map_cloud->height = 1;
-    // map_cloud->is_dense = false;
-
-    // if (map_cloud->points.size() == 0)
-    // {
-    //     std::cerr << "[ERROR] Cannot save map: no points in ikdtree!" << std::endl;
-    //     return;
-    // }
-
-    // if (save_voxel_size > 1e-6)
-    // {
-    //     pcl::VoxelGrid<PointType> sf;
-    //     sf.setLeafSize(save_voxel_size, save_voxel_size, save_voxel_size);
-    //     auto sc = std::make_shared<PointCloudXYZI>();
-    //     sf.setInputCloud(map_cloud);
-    //     sf.filter(*sc);
-    //     std::cout << "[INFO] Save voxel " << save_voxel_size << "m: " << map_cloud->points.size() << " -> " << sc->points.size() << " pts" << std::endl;
-    //     map_cloud = sc;
-    // }
     // 自动创建父目录
     std::filesystem::path p(map_file_path);
     if (!p.parent_path().empty() && !std::filesystem::exists(p.parent_path()))
