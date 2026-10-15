@@ -1,6 +1,6 @@
 closed_loop_controller:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: true 
     time_forward: 0.8
     heading_error_threshold: 0.8
     kp_pos: 0.8

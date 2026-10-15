@@ -6,7 +6,7 @@
   - 导航：SCAN-Planner 局部避障轨迹规划 → /cmd_vel
 
 用法:
-  ros2 launch nav2_planner_bringup scan_planner_lio_launch.py use_sim_time:=true
+  ros2 launch scan_planner scan_planner_lio_launch.py use_sim_time:=true
 """
 
 import os
@@ -22,78 +22,7 @@ def generate_launch_description():
     planner_yaml = os.path.join(scan_share, "config", "planner.yaml")
     controllers_yaml = os.path.join(scan_share, "config", "controllers.yaml")
 
-    use_sim_time = LaunchConfiguration("use_sim_time", default="false")
-    navi_mode = LaunchConfiguration("navi_mode", default="1")
-    use_pcd_map = LaunchConfiguration("use_pcd_map", default="false")
-    pcd_map_file = LaunchConfiguration("pcd_map_file", default="")
-
-    declare_use_sim_time = DeclareLaunchArgument(
-        "use_sim_time", default_value="false")
-    declare_navi_mode = DeclareLaunchArgument(
-        "navi_mode", default_value="1",
-        description="1=Rviz2DGoal, 2=waypoints, 3=initial_path")
-    declare_use_pcd_map = DeclareLaunchArgument(
-        "use_pcd_map", default_value="false")
-    declare_pcd_map_file = DeclareLaunchArgument(
-        "pcd_map_file", default_value="")
-    declare_z_min = DeclareLaunchArgument("z_min", default_value="0.0")
-    declare_z_max = DeclareLaunchArgument("z_max", default_value="3.0")
-    declare_body_h = DeclareLaunchArgument("body_height", default_value="0.4")
-    declare_cyl_r = DeclareLaunchArgument("double_cylinder_radius", default_value="0.25")
-    declare_cyl_o = DeclareLaunchArgument("double_cylinder_offset", default_value="0.18")
-    declare_inf_d = DeclareLaunchArgument("obstacles_inflation_z_down", default_value="0.4")
-    declare_lambda_col = DeclareLaunchArgument("optimization.lambda_collision", default_value="1.0")
-    declare_dist0 = DeclareLaunchArgument("optimization.dist0", default_value="0.2")
-    declare_p_occ = DeclareLaunchArgument("grid_map.p_occ", default_value="0.8")
-    declare_p_hit = DeclareLaunchArgument("grid_map.p_hit", default_value="0.85")
-    declare_p_miss = DeclareLaunchArgument("grid_map.p_miss", default_value="0.30")
-
-    # GroundSeg 输出 /no_ground_cloud 在 livox_frame 系，转成 SCAN 期望的 odom 系
-    cloud_frame_transform = Node(
-        package="nav2_planner_bringup",
-        executable="cloud_frame_transform.py",
-        name="cloud_frame_transform",
-        output="screen",
-        parameters=[{
-            "use_sim_time": use_sim_time,
-            "source_frame": "livox_frame",
-            "target_frame": "odom",
-        }],
-        remappings=[
-            ("cloud_in", "/no_ground_cloud"),
-            ("cloud_out", "/no_ground_cloud_odom"),
-        ],
-    )
-
-    # Z 轴过滤节点: 只去天花板（地面已由 GroundSeg 去掉），z_min 设 0 不再切地板
-    z_min = LaunchConfiguration("z_min", default="0.0")
-    z_max = LaunchConfiguration("z_max", default="3.0")
-    z_filter = Node(
-        package="nav2_planner_bringup",
-        executable="cloud_z_filter.py",
-        name="cloud_z_filter",
-        output="screen",
-        parameters=[{
-            "use_sim_time": use_sim_time,
-            "z_min": z_min,
-            "z_max": z_max,
-        }],
-        remappings=[
-            ("cloud_in", "/no_ground_cloud_odom"),
-            ("cloud_out", "/registered_scan_filtered"),
-        ],
-    )
-
-    # 自碰撞模型参数（可通过 launch 覆盖，适配不同机器人）
-    body_height = LaunchConfiguration("body_height", default="0.4")
-    cylinder_radius = LaunchConfiguration("double_cylinder_radius", default="0.25")
-    cylinder_offset = LaunchConfiguration("double_cylinder_offset", default="0.18")
-    inflate_z_down = LaunchConfiguration("obstacles_inflation_z_down", default="0.4")
-    lambda_collision = LaunchConfiguration("optimization.lambda_collision", default="1.0")
-    dist0 = LaunchConfiguration("optimization.dist0", default="0.2")
-    p_occ = LaunchConfiguration("grid_map.p_occ", default="0.8")
-    p_hit = LaunchConfiguration("grid_map.p_hit", default="0.85")
-    p_miss = LaunchConfiguration("grid_map.p_miss", default="0.30")
+    use_sim_time = LaunchConfiguration("use_sim_time", default="true")
 
     # SCAN-Planner 核心规划节点
     # 将 LIO 管线话题映射到 SCAN-Planner 的输入
@@ -102,33 +31,12 @@ def generate_launch_description():
         executable="scan_planner_node",
         name="scan_planner_node",
         output="screen",
-        parameters=[planner_yaml, {
-            "use_sim_time": use_sim_time,
-            "fsm.navi_mode": navi_mode,
-            # LIO 管线: 点云已经在 odom 坐标系，不需要额外外参变换
-            "grid_map.cloud_is_world": True,
-            "grid_map.need_extrinsic": False,
-            "grid_map.frame_id": "odom",
-            # PCD 全局地图（可选）
-            "grid_map.use_pcd_map": use_pcd_map,
-            "grid_map.pcd_map_file": pcd_map_file,
-            # 自碰撞模型
-            "grid_map.double_cylinder_radius": cylinder_radius,
-            "grid_map.double_cylinder_offset": cylinder_offset,
-            "grid_map.body_height": body_height,
-            "grid_map.obstacles_inflation_z_down": inflate_z_down,
-            # B-spline 优化
-            "optimization.lambda_collision": lambda_collision,
-            "optimization.dist0": dist0,
-            "grid_map.p_occ": p_occ,
-            "grid_map.p_hit": p_hit,
-            "grid_map.p_miss": p_miss,
-        }],
+        parameters=[planner_yaml],
         remappings=[
             # LIO 管线 → SCAN-Planner 输入
             ("body_pose", "/odom"),                       # odom→base_footprint (sensor_scan_generation)
-            ("sensor_pose", "/odom"),                      # IMU≈body, 共用
-            ("cloud", "/registered_scan_filtered"),        # GroundSeg去地面 → 转odom → Z轴去天花板 后的点云
+            ("sensor_pose", "/odom"),                     # IMU≈body, 共用
+            ("cloud", "/registered_scan"),                # lio 点云
         ],
     )
 
@@ -138,9 +46,7 @@ def generate_launch_description():
         executable="closed_loop_controller",
         name="closed_loop_controller",
         output="screen",
-        parameters=[controllers_yaml, {
-            "use_sim_time": use_sim_time,
-        }],
+        parameters=[controllers_yaml],
         remappings=[
             ("body_pose", "/odom"),
             ("cmd_vel", "/cmd_vel"),
@@ -157,24 +63,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        declare_use_sim_time,
-        declare_navi_mode,
-        declare_use_pcd_map,
-        declare_pcd_map_file,
-        declare_z_min,
-        declare_z_max,
-        declare_body_h,
-        declare_cyl_r,
-        declare_cyl_o,
-        declare_inf_d,
-        declare_lambda_col,
-        declare_dist0,
-        declare_p_occ,
-        declare_p_hit,
-        declare_p_miss,
         world_tf,
-        cloud_frame_transform,
-        z_filter,
         scan_planner_node,
         closed_loop_controller,
     ])

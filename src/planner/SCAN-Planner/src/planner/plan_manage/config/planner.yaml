@@ -1,6 +1,6 @@
 scan_planner_node:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: true # 仿真时为 true，实机为 false
 
     fsm.navi_mode: 1
     fsm.thresh_replan: 1.0
@@ -10,7 +10,7 @@ scan_planner_node:
     fsm.fail_safe: true
     fsm.max_replan_fail_count: 1000
 
-    grid_map.resolution: 0.05
+    grid_map.resolution: 0.1
     grid_map.sliding_map_size_x: 10.0
     grid_map.sliding_map_size_y: 10.0
     grid_map.sliding_map_size_z: 5.0
@@ -23,7 +23,7 @@ scan_planner_node:
     grid_map.double_cylinder_offset: 0.18
     grid_map.body_height: 0.4
     grid_map.obstacles_inflation_z_up: 0.1
-    grid_map.obstacles_inflation_z_down: 0.4
+    grid_map.obstacles_inflation_z_down: 0.1
     grid_map.frame_id: world
     grid_map.sliding_map_frame_id: sliding_map
     grid_map.ground_height: 0.0
@@ -47,7 +47,7 @@ scan_planner_node:
     grid_map.p_max: 0.98
     grid_map.p_occ: 0.80
     grid_map.max_ray_length: 5.0
-    grid_map.vis_height: 0.3
+    grid_map.vis_height: 1.0
     grid_map.show_occ_time: false
 
     manager.max_vel: 0.75
