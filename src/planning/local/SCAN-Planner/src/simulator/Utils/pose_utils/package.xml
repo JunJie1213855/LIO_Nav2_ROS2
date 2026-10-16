@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pose_utils</name>
+  <version>0.1.0</version>
+  <description>Armadillo-based pose conversion utilities.</description>
+  <maintainer email="eeshaojie@todo.todo">Shaojie Shen</maintainer>
+  <license>BSD-3-Clause</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>armadillo</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

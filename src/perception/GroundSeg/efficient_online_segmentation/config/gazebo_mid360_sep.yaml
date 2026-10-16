@@ -1,0 +1,51 @@
+# Ground-vs-nonground separation for the LIO_Nav2_ROS2 Gazebo Mid-360 sim.
+#
+# 由 config/gazebo_mid360.yaml 派生，仅把 key 改成 ground_separation 节点名，
+# 并补上 ground_separation_node 需要的两个输出话题名。
+#
+# 接入位置：FAST-LIO 之前，与 fastlio_mapping 并行消费原始 /livox/lidar。
+# 输出 /no_ground_cloud 在 livox_frame 系（ground_separation_node 会强制把
+# 输出 frame 写成 sensor_frame_id），之后交给 cloud_frame_transform 转到 odom。
+#
+# 该节点走「仰角路径」：Gazebo ray 传感器输出无 ring 字段，故 kLidarRows/Cols
+# 与垂直 FOV 参数必须与 URDF 的 ray 配置一致（50 行 x 360 列，-7.2°~55.2°）。
+
+ground_separation:
+  ros__parameters:
+    # ROS interface.
+    sub_cloud_topic:          "/livox/lidar"          # Gazebo ray 传感器原始话题。
+    pub_ground_cloud_topic:   "/ground_cloud"          # 地面点（label==1）。
+    pub_no_ground_cloud_topic: "/no_ground_cloud"      # 墙 + unknown（含天花板）。
+    base_link_frame_id:       "ground_seg_base"        # 仅用于节点广播的 TF，改成 dummy 避免与
+                                                       # robot_state_publisher 的 base_footprint->livox 链冲突。
+    sensor_frame_id:          "livox_frame"            # 输入云携带的 frame；输出也写成它。
+
+    # LiDAR type (Gazebo Mid-360 emulation，50 行 x 360 列)。
+    kLidarRows: 50
+    kLidarCols: 360
+    kLidarHorizRes: 1.0
+    kLidarVertRes:  1.273
+    kLidarVertFovMax:  55.2
+    kLidarVertFovMin: -7.2
+    kLidarProjectionError: 0.5
+
+    # basic parameters.
+    kNumSectors: 180
+
+    # extinsics (from base(ground) to sensor)。传感器直立，无翻转，0.25 m 高。
+    kExtrinsicTrans: [0.0, 0.0, 0.25]
+    kExtrinsicRot: [1.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0,
+                    0.0, 0.0, 1.0]
+
+    # Identify ground.
+    kGroundSameLineTolerance: 2.0
+    kGroundSlopeTolerance: 10.0
+    kGroundYInterceptTolerance: 0.5
+    kGroundPointLineDistThres: 0.1
+
+    # Identify wall (仍计算；墙点进 /no_ground_cloud)。
+    kWallSameLineTolerance: 10.0
+    kWallSlopeTolerance: 75.0
+    kWallLineMinBinNum: 3
+    kWallPointLineDistThres: 0.1

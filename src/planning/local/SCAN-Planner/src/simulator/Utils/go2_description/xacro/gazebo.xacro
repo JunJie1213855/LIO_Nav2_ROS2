@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="go2_foot_contact" params="leg">
+    <gazebo reference="${leg}_foot">
+      <mu1>0.6</mu1>
+      <mu2>0.6</mu2>
+      <sensor name="${leg}_foot_contact" type="contact">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <topic>/go2/${leg}_foot_contact</topic>
+        <contact>
+          <collision>${leg}_foot_collision</collision>
+        </contact>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:macro name="go2_gazebo">
+    <gazebo>
+      <plugin filename="libgz_ros2_control-system.so"
+              name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+        <parameters>$(find go2_description)/config/ros2_controllers.yaml</parameters>
+      </plugin>
+    </gazebo>
+
+    <gazebo reference="imu_link">
+      <sensor name="imu_sensor" type="imu">
+        <always_on>true</always_on>
+        <update_rate>200</update_rate>
+        <topic>/go2/imu</topic>
+        <imu/>
+      </sensor>
+    </gazebo>
+
+    <xacro:go2_foot_contact leg="FL"/>
+    <xacro:go2_foot_contact leg="FR"/>
+    <xacro:go2_foot_contact leg="RL"/>
+    <xacro:go2_foot_contact leg="RR"/>
+  </xacro:macro>
+</robot>

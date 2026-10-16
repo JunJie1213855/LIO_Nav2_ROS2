@@ -1,0 +1,54 @@
+# Efficient Online Segmentation - ROS2 parameters for the Gazebo "Mid-360" ray sensor
+# used by LIO_Nav2_ROS2 (get_urdf/simple_car.urdf + mapping_sim.sh).
+#
+# This is NOT a real Livox Mid-360: it is a Gazebo <ray> sensor that emulates the
+# Mid-360 FOV as an organized multi-line scan. Verified from the URDF:
+#   - topic      /livox/lidar,  frame_id livox_frame
+#   - horizontal: 360 samples over [-pi, pi]  -> 1.0 deg resolution
+#   - vertical:   50 samples over [-0.126, 0.963] rad  (-7.2 .. +55.2 deg)
+#   - mounted upright (rpy 0 0 0) at z = 0.1 (chassis) + 0.15 (livox_joint)
+#     = 0.25 m above base_footprint (ground).
+#
+# The Gazebo ray plugin outputs an UNORGANIZED PointCloud2 with NO `ring` field,
+# so the node falls back to the elevation-angle path (implementation 1), which is
+# why the vertical FOV parameters matter here (unlike the real Airy, which has ring).
+
+efficient_online_segmentation:
+  ros__parameters:
+    # ROS interface.
+    sub_cloud_topic:          "/livox/lidar"          # Gazebo ray sensor topic.
+    pub_cloud_topic:          "/EOS_segmted_cloud"
+    pub_rangeimage_topic:     "/EOS_range_image"
+    pub_extractedlines_topic: "/EOS_extracted_lines"
+    base_link_frame_id:       "base_link"              # standalone ground frame (z-up, z=0 on ground).
+    sensor_frame_id:          "livox_frame"            # frame_id carried by the Gazebo plugin.
+
+    # LiDAR type (Gazebo Mid-360 emulation).
+    kLidarRows: 50             # vertical samples
+    kLidarCols: 360            # horizontal samples (360 / 1 deg)
+    kLidarHorizRes: 1.0        # all in degree
+    kLidarVertRes:  1.273      # degree: (55.18 - (-7.22)) / 49
+    kLidarVertFovMax:  55.2    # degree (0.963 rad)
+    kLidarVertFovMin: -7.2     # degree (-0.126 rad)
+    kLidarProjectionError: 0.5
+
+    # basic parameters.
+    kNumSectors: 180                   # 360 cols / 180 = 2 cols per sector.
+
+    # extinsics (from base(ground) to sensor). Sensor is upright (no flip) at 0.25 m.
+    kExtrinsicTrans: [0.0, 0.0, 0.25]  # livox_frame is 0.25 m above base_footprint.
+    kExtrinsicRot: [1.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0,
+                    0.0, 0.0, 1.0]
+
+    # Identify ground.
+    kGroundSameLineTolerance: 2.0     # 2 degree
+    kGroundSlopeTolerance: 10.0        # 10 degrees
+    kGroundYInterceptTolerance: 0.5
+    kGroundPointLineDistThres: 0.1
+
+    # Identify wall.
+    kWallSameLineTolerance: 10.0      # 10 degrees
+    kWallSlopeTolerance: 75.0           # 75 degrees
+    kWallLineMinBinNum: 3
+    kWallPointLineDistThres: 0.1

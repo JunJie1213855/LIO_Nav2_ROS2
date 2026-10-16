@@ -1,0 +1,120 @@
+name: Publish to PyPI
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/pypi-publish.yml'
+      - 'python/**'
+      - 'cpp/kiss_matcher/**'
+      - 'pyproject.toml'
+
+jobs:
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: pipx run build --sdist ${{ github.workspace }}/python/
+
+      - name: Move sdist to dist
+        run: mkdir -p dist && mv ${{ github.workspace }}/python/dist/*.tar.gz dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-sdist
+          path: dist/*.tar.gz
+
+  build_wheels:
+    name: Build wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux wheels: manylinux x86_64 (cibuildwheel runs inside the
+        #   container and yum-installs the system deps below).
+        # macOS: arm64 only (macos-14). macos-13 (Intel) is intentionally
+        #   omitted — GitHub's macos-13 hosted runners are being phased out
+        #   and routinely sit in the queue for many hours, blocking the
+        #   release pipeline. Intel-Mac users can install from sdist.
+        # Windows is not yet supported (ROBIN's src/pkc.cpp uses GCC builtin
+        #   atomics + size_t OpenMP for indices that MSVC OpenMP 2.0 rejects).
+        os: [ubuntu-22.04, macos-14]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up macOS toolchain
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install cmake ninja eigen tbb lz4 flann llvm libomp
+          LLVM_PREFIX="$(brew --prefix llvm)"
+          echo "CC=$LLVM_PREFIX/bin/clang"   >> "$GITHUB_ENV"
+          echo "CXX=$LLVM_PREFIX/bin/clang++" >> "$GITHUB_ENV"
+          echo "MACOSX_DEPLOYMENT_TARGET=$([ '${{ matrix.os }}' = 'macos-14' ] && echo '14.0' || echo '13.0')" >> "$GITHUB_ENV"
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22.0
+        env:
+          # Build cp38..cp312 for Linux/macOS, skip 32-bit (xenium needs
+          # 64-bit pointers), skip musllinux (no Homebrew/yum parity).
+          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
+          CIBW_SKIP: "*-musllinux*"
+          # manylinux_2_28 (AlmaLinux 8) is the newest alias cibuildwheel v2.22
+          # natively supports. Its repos only ship TBB 2018, so we build oneTBB
+          # v2022 from source in CIBW_BEFORE_ALL_LINUX and install it to /usr.
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_BEFORE_ALL_LINUX: |
+            dnf install -y epel-release
+            dnf install -y eigen3-devel flann-devel lz4-devel git cmake gcc-c++
+            git clone --depth 1 --branch v2022.0.0 \
+              https://github.com/oneapi-src/oneTBB.git /tmp/oneTBB
+            cmake -S /tmp/oneTBB -B /tmp/oneTBB/build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=/usr \
+              -DCMAKE_INSTALL_LIBDIR=lib64 \
+              -DTBB_TEST=OFF -DTBB_EXAMPLES=OFF -DTBB_STRICT=OFF
+            cmake --build /tmp/oneTBB/build -j
+            cmake --install /tmp/oneTBB/build
+          # CIBW_ENVIRONMENT uses shell-like parsing — without the explicit
+          # double quotes, the YAML folded scalar collapses to a single line
+          # and cibuildwheel only picks up the first -D flag of CMAKE_ARGS.
+          CIBW_ENVIRONMENT_LINUX: 'CMAKE_ARGS="-DUSE_SYSTEM_EIGEN3=ON -DUSE_SYSTEM_TBB=ON -DUSE_SYSTEM_ROBIN=OFF"'
+          CIBW_ENVIRONMENT_MACOS: 'CMAKE_PREFIX_PATH="$(brew --prefix)" CC="${{ env.CC }}" CXX="${{ env.CXX }}" CMAKE_ARGS="-DUSE_SYSTEM_EIGEN3=ON -DUSE_SYSTEM_TBB=ON -DUSE_SYSTEM_ROBIN=OFF"'
+        with:
+          package-dir: ${{ github.workspace }}/python/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  publish:
+    name: Upload to PyPI
+    needs: [build_sdist, build_wheels]
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'release'
+    # Trusted publishing via PyPI's GitHub OIDC. The PyPI project page must
+    # have a Pending Publisher configured for:
+    #   owner: MIT-SPARK / repo: KISS-Matcher / workflow: pypi-publish.yml
+    # No PYPI_API_TOKEN secret is needed.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/kiss-matcher
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: pypa/gh-action-pypi-publish@release/v1

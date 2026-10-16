@@ -1,0 +1,22 @@
+SCAN-Planner ROS 2
+Copyright 2026 xiaoqi371317
+
+This repository is a ROS 2 Humble and Ubuntu 22.04 port of:
+
+  SCAN-Planner
+  https://github.com/wuyi2121/SCAN-Planner
+
+Original research authors:
+  Han Zheng, Zhe Chen, Yiwen Fu, Ming Yang, and Tong Qin
+
+Original project:
+  SCAN-Planner: Spatial Collision-Aware Local Planning for
+  Route-Guided Long-Range Quadruped Navigation
+  https://arxiv.org/abs/2606.19555
+
+The upstream project is licensed under the Apache License, Version 2.0.
+This derivative preserves that license and adds ROS 2 Humble, Ubuntu 22.04,
+ament_cmake, colcon, rclcpp, RViz2, tf2_ros and ROS 2 launch integration.
+
+The upstream authors and maintainers are not affiliated with, and do not
+necessarily endorse, this port.

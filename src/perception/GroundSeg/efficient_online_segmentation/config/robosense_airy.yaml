@@ -1,0 +1,54 @@
+# Efficient Online Segmentation - ROS2 parameters for RoboSense Airy (96-line).
+# The node name below must match the node name in the launch file.
+
+efficient_online_segmentation:
+  ros__parameters:
+    # ROS interface.
+    sub_cloud_topic:          "/rslidar_points"       # RoboSense Airy topic in the bag.
+    pub_cloud_topic:          "/EOS_segmted_cloud"
+    pub_rangeimage_topic:     "/EOS_range_image"
+    pub_extractedlines_topic: "/EOS_extracted_lines"
+    base_link_frame_id:       "base_link"
+    sensor_frame_id:          "rslidar"               # frame_id carried by the Airy driver.
+
+    # LiDAR type (RoboSense Airy, 96 lines, 360 deg, ~0.4 deg horizontal res).
+    # Verified from the bag: 96 rings (0..95), ~900 points per ring,
+    # median azimuth spacing 0.40 deg, native vertical FOV ~0 .. ~88 deg.
+    kLidarRows: 96
+    kLidarCols: 900
+    kLidarHorizRes: 0.4        # all in degree (0.4 deg -> 900 pts / 360 deg)
+    kLidarVertRes:  0.92       # native vertical resolution (88 deg / 96 rings).
+                               # NOTE: not used on the `ring` path (see below).
+    kLidarVertFovMax:  88.0    # native vertical FOV. not used on the `ring` path.
+    kLidarVertFovMin:  0.0     # native vertical FOV. not used on the `ring` path.
+    kLidarProjectionError: 0.5
+
+    # basic parameters.
+    kNumSectors: 360                    # Number of angular segments, {180, 240, 360} are recommended.
+
+    # extinsics (from base(ground) to sensor).
+    #
+    # The Airy in this dataset is mounted "z-flipped": its native +z points DOWN
+    # toward the ground. A plane fit on the bag gave the ground plane at native
+    # z ~= +2.07 with normal ~= [0,0,1], i.e. the sensor is ~2.07 m above the
+    # ground and the ground is a horizontal plane in the native frame.
+    #
+    # kExtrinsicRot therefore flips z (180 deg about the x axis) so that the base
+    # frame becomes a conventional "z-up" frame, and kExtrinsicTrans lifts the
+    # base origin onto the ground plane.
+    kExtrinsicTrans: [0.0, 0.0, 2.07]  # sensor height above ground (measured ~2.07 m).
+    kExtrinsicRot: [1.0, 0.0, 0.0,
+                    0.0, -1.0, 0.0,
+                    0.0, 0.0, -1.0]
+
+    # Identify ground.
+    kGroundSameLineTolerance: 2.0     # 2 degree(0.035, around 0.1m/3m)
+    kGroundSlopeTolerance: 10.0        # 10 degrees(0.176)
+    kGroundYInterceptTolerance: 0.5       # the intercept(b) of a line.
+    kGroundPointLineDistThres: 0.1        # Maximum point-line distance for a point to be labelled as ground.
+
+    # Identify wall.
+    kWallSameLineTolerance: 10.0      # 10 degrees(0.176), 6 degree(0.1051), 3 degree(0.0524)
+    kWallSlopeTolerance: 75.0           # 85 degrees(11.43), 80 degrees(5.67), 75 degrees(3.73)
+    kWallLineMinBinNum: 3                 # a wall line should cover at least 3 rings.
+    kWallPointLineDistThres: 0.1          # Maximum point-line distance for a point to be labelled as wall.

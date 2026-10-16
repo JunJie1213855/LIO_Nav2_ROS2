@@ -1,0 +1,74 @@
+/**:
+    ros__parameters:
+        use_imu_as_input: False
+        prop_at_freq_of_imu: True
+        check_satu: True
+        init_map_size: 10
+        point_filter_num: 4
+        space_down_sample: True
+        filter_size_surf: 0.25
+        filter_size_map: 0.25
+        ivox_nearby_type: 6
+        runtime_pos_log_enable: False
+
+        common:
+            lid_topic: "/rslidar_points"
+            imu_topic: "/rslidar_imu_data"
+            con_frame: False
+            con_frame_num: 1
+            cut_frame: False
+            cut_frame_time_interval: 0.1
+            time_diff_lidar_to_imu: 0.0
+            cut_frame_init: False      
+            cut_frame_num: 1 # 10 帧
+
+        prior_pcd:
+            enable: False
+            prior_pcd_map_path: ""
+            init_pose: [ 0.0, 0.0, 0.0 ]
+
+        preprocess:
+            lidar_type: 5                               # 5 
+            scan_line: 96                                 # 96 线
+            timestamp_unit: 0                            # SEC=0, Airy秒级时间戳→curvature=ms
+            blind: 0.5
+
+        mapping:
+            imu_en: True
+            extrinsic_est_en: False                       
+            imu_time_inte: 0.005
+            lidar_time_inte: 0.1
+            satu_acc: 3.0
+            satu_gyro: 35.0
+            acc_norm: 1.0
+            lidar_meas_cov: 0.01
+            acc_cov_output: 500.0
+            gyr_cov_output: 1000.0
+            b_acc_cov: 0.0001
+            b_gyr_cov: 0.0001
+            imu_meas_acc_cov: 0.01
+            imu_meas_omg_cov: 0.01
+            gyr_cov_input: 0.01
+            acc_cov_input: 0.1
+            plane_thr: 0.1
+            match_s: 81.0
+            ivox_grid_resolution: 2.0
+            gravity: [ -0.0205, -0.0912, -9.8684 ]       # 实机：重力方向 Z 轴正方向
+            gravity_init: [ -0.0205, -0.0912, -9.8684 ]
+            extrinsic_T: [0.0, 0.0, 0.0]
+            extrinsic_R: [0.0, -1.0, 0.0,
+                         -1.0, 0.0, 0.0,
+                          0.0, 0.0, -1.0]
+
+        odometry:
+            publish_odometry_without_downsample: False
+
+        publish:
+            path_en: True
+            scan_publish_en: True
+            scan_bodyframe_pub_en: True
+            tf_send_en: True
+
+        pcd_save:
+            pcd_save_en: True
+            interval: -1

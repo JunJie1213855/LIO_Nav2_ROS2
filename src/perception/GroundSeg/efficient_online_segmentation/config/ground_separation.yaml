@@ -1,0 +1,57 @@
+# Ground-vs-nonground separation - ROS2 parameters.
+#
+# The `ground_separation` node runs the same EfficientOnlineSegmentation core as
+# `efficient_online_segmentation`, but only publishes two clouds:
+#   - /ground_cloud    : points labelled as ground.
+#   - /no_ground_cloud : everything else (wall + unknown).
+#
+# The node name below must match the `name:` of the node you launch. This file
+# is preconfigured for the RoboSense Airy (96-line, z-flipped, ~2.07 m high).
+# To use the Gazebo Mid-360 emulation instead, copy the LiDAR/extrinsic values
+# from config/gazebo_mid360.yaml (sensor_frame_id livox_frame, topic
+# /livox/lidar, kExtrinsicTrans [0,0,0.25], identity rotation).
+
+ground_separation:
+  ros__parameters:
+    # ROS interface.
+    sub_cloud_topic:          "/rslidar_points"       # RoboSense Airy topic in the bag.
+    pub_ground_cloud_topic:   "/ground_cloud"
+    pub_no_ground_cloud_topic: "/no_ground_cloud"
+    base_link_frame_id:       "base_link"
+    sensor_frame_id:          "rslidar"               # frame_id carried by the Airy driver.
+
+    # LiDAR type (RoboSense Airy, 96 lines, 360 deg, ~0.4 deg horizontal res).
+    kLidarRows: 96
+    kLidarCols: 900
+    kLidarHorizRes: 0.4        # all in degree (0.4 deg -> 900 pts / 360 deg)
+    kLidarVertRes:  0.92       # native vertical resolution (88 deg / 96 rings).
+                               # NOTE: not used on the `ring` path (see below).
+    kLidarVertFovMax:  88.0    # native vertical FOV. not used on the `ring` path.
+    kLidarVertFovMin:  0.0     # native vertical FOV. not used on the `ring` path.
+    kLidarProjectionError: 0.5
+
+    # basic parameters.
+    kNumSectors: 360                    # Number of angular segments, {180, 240, 360} are recommended.
+
+    # extinsics (from base(ground) to sensor).
+    #
+    # The Airy in this dataset is mounted "z-flipped": its native +z points DOWN
+    # toward the ground. kExtrinsicRot flips z (180 deg about x) so the base frame
+    # becomes a conventional "z-up" frame, and kExtrinsicTrans lifts the base
+    # origin onto the ground plane (~2.07 m below the sensor).
+    kExtrinsicTrans: [0.0, 0.0, 2.07]
+    kExtrinsicRot: [1.0, 0.0, 0.0,
+                    0.0, -1.0, 0.0,
+                    0.0, 0.0, -1.0]
+
+    # Identify ground.
+    kGroundSameLineTolerance: 2.0     # 2 degree
+    kGroundSlopeTolerance: 10.0        # 10 degrees
+    kGroundYInterceptTolerance: 0.5
+    kGroundPointLineDistThres: 0.1
+
+    # Identify wall (still computed; wall points fall into /no_ground_cloud).
+    kWallSameLineTolerance: 10.0
+    kWallSlopeTolerance: 75.0
+    kWallLineMinBinNum: 3
+    kWallPointLineDistThres: 0.1
