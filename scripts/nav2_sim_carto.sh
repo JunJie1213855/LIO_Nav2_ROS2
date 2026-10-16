@@ -53,7 +53,7 @@ new_win "pc2laser" "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_lau
 # 加载 .pbstream 地图，只做定位不建图
 # 发布: map→odom TF (重定位)
 new_win "Carto定位" "ros2 launch nav2_planner_bringup cartographer_localization_launch.py \
-    load_state_filename:=/ws/src/planner/nav2_planner_bringup/map/map.pbstream"
+    load_state_filename:=/ws/src/bringup/nav2_planner_bringup/map/map.pbstream"
 
 # ============== Nav2 导航栈 ==============
 # map_server 在 my_nav2_launch.py 中加载 .pgm 地图 (从 pbstream 导出)

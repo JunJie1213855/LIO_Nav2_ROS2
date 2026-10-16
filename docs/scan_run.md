@@ -35,7 +35,7 @@ Gazebo (get_urdf, simple_car + 50线LiDAR + IMU)
 ### SCAN-Planner 多包结构（重要）
 
 ```
-src/planner/SCAN-Planner/src/planner/
+src/planning/local/SCAN-Planner/src/planner/
 ├── bspline_opt/        # B-spline 优化器 (bspline_optimizer.cpp)
 ├── path_searching/     # A* 搜索 (dyn_a_star.cpp)
 ├── plan_env/           # 占据栅格地图 (grid_map.cpp)

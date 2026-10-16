@@ -41,7 +41,7 @@ W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.
 W "FAR"       "ros2 launch far_planner far_planner_lio.launch.py use_sim_time:=true"
 
 # ============== RViz 可视化（FAR 自带 config，含 Goalpoint 插件）=======================
-W "RViz"      "rviz2 -d $WS/src/planner/far_planner/src/far_planner/rviz/default.rviz"
+W "RViz"      "rviz2 -d $WS/src/planning/exploration/far_planner/src/far_planner/rviz/default.rviz"
 
 # ============== 启动提示 =======================
 echo "========================================="

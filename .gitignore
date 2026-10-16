@@ -27,5 +27,9 @@ CLAUDE.md
 
 # 参考备份（含大文件，不入库）
 refer/
-!src/planner/tare_planner/src/tare_planner/or-tools/include/absl/log
-!src/planner/nav2_planner_bringup/pcd
+!src/planning/exploration/tare_planner/src/tare_planner/or-tools/include/absl/log
+!src/bringup/nav2_planner_bringup/pcd
+# 迁移后继续保留原本受版本管理的 PCD 目录说明，不纳入运行数据。
+!src/localization/lio/point_lio/PCD/
+src/localization/lio/point_lio/PCD/*
+!src/localization/lio/point_lio/PCD/readme.md

@@ -38,7 +38,7 @@ RUN git clone --depth 1 https://github.com/koide3/small_gicp.git /tmp/small_gicp
 
 # KISS-Matcher C++ 库（kiss_matcher + ROBIN，FetchContent 需要联网）
 # 只 COPY 该子目录，见 .dockerignore
-COPY src/registration/KISS-Matcher /tmp/KISS-Matcher
+COPY src/localization/relocalization/KISS-Matcher /tmp/KISS-Matcher
 RUN cd /tmp/KISS-Matcher && make cppinstall && ldconfig && rm -rf /tmp/KISS-Matcher
 
 WORKDIR /ws

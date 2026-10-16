@@ -47,7 +47,7 @@ new_win "KISS+GICP" "ros2 launch global_relocalization_kiss_matcher global_kiss_
 
 # ============== Nav2 导航（使用已有地图，非 slam 模式） ==============
 # RViz 可视化（独立窗口，与 Nav2 解耦，关掉 Nav2 也不影响看地图和点云）
-# new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/nav2.rviz"
+# new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/bringup/nav2_planner_bringup/rviz/nav2.rviz"
 new_win "Nav2" "ros2 launch nav2_planner_bringup my_nav2_launch.py"
 
 echo "已在 tmux 会话 '$SESSION' 中启动全部节点。"

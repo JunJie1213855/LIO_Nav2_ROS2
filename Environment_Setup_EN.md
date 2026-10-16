@@ -147,12 +147,12 @@ sudo apt install -y \
 
 ### 4.1 Livox-SDK2
 
-`src/livox_ros_driver2` already includes a prebuilt Livox-SDK2, so installing the SDK separately is usually unnecessary.
+`src/drivers/livox_ros_driver2` already includes a prebuilt Livox-SDK2, so installing the SDK separately is usually unnecessary.
 
 Before real-robot deployment, check the MID-360 network configuration:
 
 ```bash
-vim src/livox_ros_driver2/config/MID360_config.json
+vim src/drivers/livox_ros_driver2/config/MID360_config.json
 ```
 
 Confirm the following:
@@ -166,7 +166,7 @@ Confirm the following:
 `scripts/nav2_sim.sh` and `scripts/nav2_real.sh` use `global_relocalization_kiss_matcher` by default. If the build reports missing `kiss_matcher` or `robin`, install the C++ libraries:
 
 ```bash
-cd ~/Lidar_nav2_ws/src/registration/KISS-Matcher
+cd ~/Lidar_nav2_ws/src/localization/relocalization/KISS-Matcher
 make deps
 make cppinstall
 ```
@@ -286,8 +286,8 @@ Before navigation, check the map paths:
 ```bash
 cd ~/Lidar_nav2_ws
 vim src/me_nav2_bringup/launch/my_nav2_launch.py
-vim src/registration/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py
-vim src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py
+vim src/localization/relocalization/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py
+vim src/localization/relocalization/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py
 ```
 
 Confirm the following:
@@ -319,7 +319,7 @@ Use `Nav2 Goal` in RViz to send a navigation goal.
 Before real-robot mapping or navigation, confirm:
 
 - MID-360 network connectivity: `ping <MID360_IP>`.
-- `src/livox_ros_driver2/config/MID360_config.json` is configured correctly.
+- `src/drivers/livox_ros_driver2/config/MID360_config.json` is configured correctly.
 - Robot power, LiDAR, IMU, chassis controller, emergency stop, and manual takeover are working correctly.
 - The workspace has been sourced: `source ~/Lidar_nav2_ws/install/setup.bash`.
 
@@ -395,7 +395,7 @@ cd ~/Lidar_nav2_ws/scripts
 ### Missing `kiss_matcher` or `robin`
 
 ```bash
-cd ~/Lidar_nav2_ws/src/registration/KISS-Matcher
+cd ~/Lidar_nav2_ws/src/localization/relocalization/KISS-Matcher
 make deps
 make cppinstall
 cd ~/Lidar_nav2_ws/scripts

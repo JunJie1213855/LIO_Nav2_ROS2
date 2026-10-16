@@ -57,7 +57,7 @@ new_win "SCAN-Planner" "ros2 launch nav2_planner_bringup scan_planner_lio_launch
     use_sim_time:=true navi_mode:=1"
 
 # ============== 窗口 7: SCAN-Planner RViz ==============
-new_win "SP-RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan_planner -p use_sim_time:=true -- -d src/planner/nav2_planner_bringup/rviz/scan_planner.rviz"
+new_win "SP-RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan_planner -p use_sim_time:=true -- -d src/bringup/nav2_planner_bringup/rviz/scan_planner.rviz"
 
 echo "===== SCAN-Planner + LIO 建图定位导航一体化 (会话: $SESSION) ====="
 echo "窗口: bag播放 | FAST-LIO | robot_desc | lio_if | sensor | SCAN-Planner | SP-RViz"

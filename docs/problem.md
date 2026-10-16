@@ -29,7 +29,7 @@ Failed   <<< gld_robot_description [0.35s, exited with code 1]
 
 **原因**：CMakeLists 无条件 `FetchContent` 从 GitHub 克隆 small_gicp，国内网络不稳
 
-**解决**：修改 `src/registration/KISS-Matcher/ros/CMakeLists.txt`，优先 `find_package` 用系统安装版（镜像里已装），找不到才回退 FetchContent
+**解决**：修改 `src/localization/relocalization/KISS-Matcher/ros/CMakeLists.txt`，优先 `find_package` 用系统安装版（镜像里已装），找不到才回退 FetchContent
 
 ---
 
@@ -45,7 +45,7 @@ Failed   <<< gld_robot_description [0.35s, exited with code 1]
 
 **原因**：同 P2，CMakeLists 无条件 FetchContent
 
-**解决**：修改 `src/registration/global_relocalization/CMakeLists.txt`，同 P2 逻辑
+**解决**：修改 `src/localization/relocalization/global_relocalization/CMakeLists.txt`，同 P2 逻辑
 
 ---
 
@@ -285,7 +285,7 @@ sensor_bridge.tf_bridge().LookupToTracking(time, trajectory_options_[...].publis
 `map→odom` / `odom→base_footprint` 一个都不发。官方 demo（`backpack_2d.lua`）里 `published_frame`
 都等于 tracking_frame，不是 `odom`。
 
-**解决**（`src/planner/nav2_planner_bringup/config/cartographer_simple.lua`，1 行）：
+**解决**（`src/bringup/nav2_planner_bringup/config/cartographer_simple.lua`，1 行）：
 
 ```lua
 - published_frame = "odom",
@@ -363,12 +363,12 @@ docker exec -it lio_nav2 /ws/scripts/nav2_sim_docker.sh
 | `scripts/docker_shutdown.sh` | 新增，容器内节点/容器统一关闭 |
 | `scripts/save_pcd.sh` | 修节点名、source 路径、PCD 同步到 install |
 | `scripts/save_map.sh` | 修 source 路径、地图同步到 install |
-| `src/planner/nav2_planner_bringup/launch/my_nav2_launch.py` | map_server 去 params_file，加独立 RViz |
-| `src/planner/nav2_planner_bringup/config/nav2_params.yaml` | DWB `trans_stopped_velocity` 等修复 |
-| `src/registration/KISS-Matcher/ros/CMakeLists.txt` | small_gicp 优先系统版 |
-| `src/registration/global_relocalization/CMakeLists.txt` | 同上 |
+| `src/bringup/nav2_planner_bringup/launch/my_nav2_launch.py` | map_server 去 params_file，加独立 RViz |
+| `src/bringup/nav2_planner_bringup/config/nav2_params.yaml` | DWB `trans_stopped_velocity` 等修复 |
+| `src/localization/relocalization/KISS-Matcher/ros/CMakeLists.txt` | small_gicp 优先系统版 |
+| `src/localization/relocalization/global_relocalization/CMakeLists.txt` | 同上 |
 | `src/localization/rtabmap_ros/COLCON_IGNORE` | 跳过 |
-| `src/registration/3d_bbs/COLCON_IGNORE` | 跳过 |
+| `src/localization/relocalization/3d_bbs/COLCON_IGNORE` | 跳过 |
 | `docs/docker_build.md` | Docker 编译运行详细指南 |
 
 ## 五、已知待解决问题
@@ -394,7 +394,7 @@ TARE (Technically-Aware Robotic Exploration) 是一个自主探索规划器，�
 
 ```bash
 docker exec lio_nav2 bash -c "
-  cd /ws/src/planner/tare_planner &&
+  cd /ws/src/planning/exploration/tare_planner &&
   git checkout humble-jazzy &&
   cd /ws &&
   source /opt/ros/humble/setup.bash &&
@@ -447,9 +447,9 @@ tmux 窗口：`Gazebo | FAST-LIO | lio_if | sensor | TARE | RViz`
 
 | 文件 | 说明 |
 |------|------|
-| `src/planner/tare_planner/src/tare_planner/config/gazebo_indoor.yaml` | Gazebo 仿真参数 |
-| `src/planner/tare_planner/src/tare_planner/launch/tare_planner_lio_launch.py` | ROS 2 Launch 文件 |
-| `src/planner/tare_planner/src/tare_planner/scripts/waypoint_follower.py` | PID 航点跟随器 |
+| `src/planning/exploration/tare_planner/src/tare_planner/config/gazebo_indoor.yaml` | Gazebo 仿真参数 |
+| `src/planning/exploration/tare_planner/src/tare_planner/launch/tare_planner_lio_launch.py` | ROS 2 Launch 文件 |
+| `src/planning/exploration/tare_planner/src/tare_planner/scripts/waypoint_follower.py` | PID 航点跟随器 |
 | `scripts/gazebo_tare.sh` | 一键启动脚本 |
 
 ### 调试过程中的关键问题与修复

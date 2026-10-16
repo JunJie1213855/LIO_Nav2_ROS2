@@ -40,8 +40,8 @@ Gazebo (get_urdf)
 TARE 官方仓库 `caochao39/tare_planner` 已有 ROS 2 迁移分支 `humble-jazzy`，直接使用：
 
 ```bash
-# 本仓库源码已放在 src/planner/tare_planner，无需重新 clone
-cd /ws/src/planner/tare_planner
+# 本仓库源码已放在 src/planning/exploration/tare_planner，无需重新 clone
+cd /ws/src/planning/exploration/tare_planner
 git branch          # 确认当前在 humble-jazzy
 git checkout humble-jazzy   # 若不在该分支则切换
 ```
@@ -126,14 +126,14 @@ ros2 launch sensor_scan_generation sensor_scan_generation_launch.py
 ros2 launch tare_planner tare_planner_lio_launch.py use_sim_time:=true
 
 # 5. RViz
-rviz2 -d /ws/src/planner/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz
+rviz2 -d /ws/src/planning/exploration/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz
 ```
 
 ---
 
 ## 4. TARE 配置（config/gazebo_indoor.yaml）
 
-配置位于 `src/planner/tare_planner/src/tare_planner/config/gazebo_indoor.yaml`，关键参数：
+配置位于 `src/planning/exploration/tare_planner/src/tare_planner/config/gazebo_indoor.yaml`，关键参数：
 
 ### 4.1 话题映射
 
@@ -184,7 +184,7 @@ rviz2 -d /ws/src/planner/tare_planner/src/tare_planner/rviz/tare_planner_ground.
 
 ## 5. RViz 可视化
 
-RViz 配置：`src/planner/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz`（Fixed Frame 已改为 `odom`）。
+RViz 配置：`src/planning/exploration/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz`（Fixed Frame 已改为 `odom`）。
 
 | 显示项 | 话题 | 含义 |
 |--------|------|------|

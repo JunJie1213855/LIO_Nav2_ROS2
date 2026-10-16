@@ -44,14 +44,14 @@ new_win  "tf_correction" \
 
 # ============== slam toolbox ==============
 # new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
-#     slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+#     slam_params_file:=src/bringup/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 new_win "slam_toolbox" "ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
-    --params-file $WORKSPACE_ROOT/src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml \
+    --params-file $WORKSPACE_ROOT/src/bringup/nav2_planner_bringup/config/slam_toolbox_params.yaml \
     -p use_sim_time:=true -p base_frame:=base_footprint_nav"
 
 
 # ============== rviz ==============
-new_win "RViz"         "ros2 run rviz2 rviz2 -d src/planner/nav2_planner_bringup/rviz/nav2.rviz"
+new_win "RViz"         "ros2 run rviz2 rviz2 -d src/bringup/nav2_planner_bringup/rviz/nav2.rviz"
 
 # ============== 最后播放 bag ==============
 # sleep 3

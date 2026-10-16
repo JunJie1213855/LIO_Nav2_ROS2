@@ -11,7 +11,7 @@
 RoboSense Airy 的 LiDAR-IMU 外参矩阵（`robosenseAiry.yaml`）将 Z 轴翻转了：
 
 ```yaml
-# src/localization/FAST_LIO_ROBOAIRY/config/robosenseAiry.yaml
+# src/localization/lio/FAST_LIO_ROBOAIRY/config/robosenseAiry.yaml
 mapping:
   extrinsic_R: [0.0, -1.0, 0.0,
                 -1.0,  0.0, 0.0,
@@ -128,7 +128,7 @@ max_height: 1.0
 ### 方案二：`Pointcloud2d_3d.yaml` 中将高度切片范围也翻转
 
 ```yaml
-# src/planner/nav2_planner_bringup/config/Pointcloud2d_3d.yaml
+# src/bringup/nav2_planner_bringup/config/Pointcloud2d_3d.yaml
 Pointcloud2d_3d:
   ros__parameters:
     target_frame: "livox_frame"

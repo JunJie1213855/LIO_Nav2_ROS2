@@ -57,7 +57,7 @@ new_win "Cartographer" "ros2 launch nav2_planner_bringup cartographer_mapping_la
 
 # ============== RViz 可视化 Cartographer 建图 ==============
 # 显示: /map (Cartographer OccupancyGrid) + /scan + TF + 机器人模型 + /registered_scan
-# new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/cartographer_mapping.rviz"
+# new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/bringup/nav2_planner_bringup/rviz/cartographer_mapping.rviz"
 
 echo "已在 tmux 会话 '$SESSION' 中启动全部节点。"
 echo "查看输出: tmux attach -t $SESSION   (Ctrl-b n/p 切换窗口, Ctrl-b d 退出)"
@@ -71,6 +71,6 @@ echo "      ros2 service call /finish_trajectory cartographer_ros_msgs/srv/Finis
 echo ""
 echo "   2. 导出 pbstream → pgm + yaml:"
 echo "      ros2 run cartographer_ros cartographer_pbstream_to_ros_map \\"
-echo "          -pbstream_filename /ws/src/planner/nav2_planner_bringup/map/map.pbstream \\"
-echo "          -map_filestem /ws/src/planner/nav2_planner_bringup/map/my_map"
+echo "          -pbstream_filename /ws/src/bringup/nav2_planner_bringup/map/map.pbstream \\"
+echo "          -map_filestem /ws/src/bringup/nav2_planner_bringup/map/my_map"
 echo "============================================================"

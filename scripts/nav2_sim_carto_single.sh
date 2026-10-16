@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(dirname -- "$SCRIPT_DIR")"
 
 SESSION=nav2_simple
-PBSTREAM="${1:-/ws/src/planner/nav2_planner_bringup/map/map_simple.pbstream}"
+PBSTREAM="${1:-/ws/src/bringup/nav2_planner_bringup/map/map_simple.pbstream}"
 
 tmux kill-session -t "$SESSION" 2>/dev/null
 killall -9 gzserver gzclient 2>/dev/null
@@ -35,7 +35,7 @@ new_win "pc2laser" "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_sim
 # ============== Cartographer 纯定位 + TF→Odometry ==============
 # 带 -pure_localization 命令行参数 + 加载 pbstream
 new_win "Carto定位" "ros2 run cartographer_ros cartographer_node \
-    -configuration_directory ./src/planner/nav2_planner_bringup/config \
+    -configuration_directory ./src/bringup/nav2_planner_bringup/config \
     -configuration_basename cartographer_simple.lua \
     -load_state_filename $PBSTREAM \
     -pure_localization \

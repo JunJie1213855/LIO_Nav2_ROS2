@@ -38,11 +38,11 @@ Gazebo (indoor_2d.world 封闭室内场景)
 
 | 文件 | 内容 |
 |------|------|
-| `src/get_urdf/model/diff_robot_2d.urdf` | 2D 差分小车（2 驱动轮 + 2 万向轮 + 单线 LiDAR + IMU + diff_drive 插件） |
-| `src/get_urdf/worlds/indoor_2d.world` | 封闭室内场景（四面墙 + 内部障碍物，为 2D SLAM 提供特征） |
-| `src/planner/nav2_planner_bringup/config/cartographer_2d.lua` | Cartographer 2D 配置（use_odometry=true + use_imu_data=true） |
-| `src/planner/nav2_planner_bringup/launch/cartographer_2d_launch.py` | cartographer_node + occupancy_grid_node |
-| `src/planner/nav2_planner_bringup/launch/nav2_online_launch.py` | Nav2 在线导航（无 map_server/AMCL，复用 nav2_params.yaml） |
+| `src/simulation/get_urdf/model/diff_robot_2d.urdf` | 2D 差分小车（2 驱动轮 + 2 万向轮 + 单线 LiDAR + IMU + diff_drive 插件） |
+| `src/simulation/get_urdf/worlds/indoor_2d.world` | 封闭室内场景（四面墙 + 内部障碍物，为 2D SLAM 提供特征） |
+| `src/bringup/nav2_planner_bringup/config/cartographer_2d.lua` | Cartographer 2D 配置（use_odometry=true + use_imu_data=true） |
+| `src/bringup/nav2_planner_bringup/launch/cartographer_2d_launch.py` | cartographer_node + occupancy_grid_node |
+| `src/bringup/nav2_planner_bringup/launch/nav2_online_launch.py` | Nav2 在线导航（无 map_server/AMCL，复用 nav2_params.yaml） |
 | `scripts/nav2_2d_sim.sh` | 一键启动（tmux：Gazebo / Carto / Nav2 / RViz） |
 | `docs/nav2_2d_run.md` | 构建/运行/问题文档 |
 
@@ -50,7 +50,7 @@ Gazebo (indoor_2d.world 封闭室内场景)
 
 | 文件 | 内容 |
 |------|------|
-| `src/get_urdf/launch/get_urdf_launch.py` | 加 `robot` 参数选择 URDF（默认 simple_car，不影响 3D 版） |
+| `src/simulation/get_urdf/launch/get_urdf_launch.py` | 加 `robot` 参数选择 URDF（默认 simple_car，不影响 3D 版） |
 
 ## 关键技术决策
 

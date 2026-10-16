@@ -74,11 +74,11 @@ new_win "sensor_scan" "ros2 launch sensor_scan_generation sensor_scan_generation
 new_win "pc2laser" "ros2 launch nav2_planner_bringup pointcloud_to_laserscan_launch.py"
 
 # ============== RViz 可视化 slam_toolbox 建图过程 ==============
-new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/planner/nav2_planner_bringup/rviz/nav2.rviz"
+new_win "RViz" "ros2 run rviz2 rviz2 -d /ws/src/bringup/nav2_planner_bringup/rviz/nav2.rviz"
 
 # ============== slam_toolbox 建图 ==============
 new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
-    slam_params_file:=src/planner/nav2_planner_bringup/config/slam_toolbox_params.yaml"
+    slam_params_file:=src/bringup/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 
 # ============== Nav2 导航（可选——关掉不影响建图和 RViz 显示） ==============
 # new_win "Nav2" "ros2 launch nav2_planner_bringup my_nav2_launch.py"

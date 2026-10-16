@@ -130,9 +130,9 @@ FAST-LIO → /Odometry → lio_interface (TF 桥接)
 ```
 
 Cartographer 配置文件：
-- `src/planner/nav2_planner_bringup/config/cartographer_mapping.lua` — 建图模式参数
-- `src/planner/nav2_planner_bringup/launch/cartographer_mapping_launch.py` — 启动文件
-- `src/planner/nav2_planner_bringup/rviz/cartographer_mapping.rviz` — RViz 可视化配置
+- `src/bringup/nav2_planner_bringup/config/cartographer_mapping.lua` — 建图模式参数
+- `src/bringup/nav2_planner_bringup/launch/cartographer_mapping_launch.py` — 启动文件
+- `src/bringup/nav2_planner_bringup/rviz/cartographer_mapping.rviz` — RViz 可视化配置
 
 **RViz 可视化**：Cartographer 建图时 RViz 窗口会自动弹出（tmux 中的 `RViz` 窗口），显示：
 | 显示项 | 话题 | 说明 |
@@ -166,8 +166,8 @@ docker exec lio_nav2 bash -c "
 docker exec lio_nav2 bash -c "
   source /opt/ros/humble/setup.bash && source install/setup.bash && \
   ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
-    -pbstream_filename /ws/src/planner/nav2_planner_bringup/map/map.pbstream \
-    -map_filestem /ws/src/planner/nav2_planner_bringup/map/my_map"
+    -pbstream_filename /ws/src/bringup/nav2_planner_bringup/map/map.pbstream \
+    -map_filestem /ws/src/bringup/nav2_planner_bringup/map/my_map"
 ```
 
 输出文件：
@@ -225,10 +225,10 @@ Cartographer: Cartographer 纯定位 (加载 .pbstream) ──→ map→odom TF 
 4. 用 **"Nav2 Goal"** 工具发送导航目标
 
 配置文件：
-- `src/planner/nav2_planner_bringup/config/cartographer_localization.lua` — 纯定位模式参数
+- `src/bringup/nav2_planner_bringup/config/cartographer_localization.lua` — 纯定位模式参数
   - `TRAJECTORY_BUILDER.pure_localization = true` — 不建图，只匹配
   - 搜索窗口比建图模式更大（`linear_search_window = 0.2`），提升鲁棒性
-- `src/planner/nav2_planner_bringup/launch/cartographer_localization_launch.py` — 启动文件
+- `src/bringup/nav2_planner_bringup/launch/cartographer_localization_launch.py` — 启动文件
 
 ### 3.4 关闭 / 清理
 
@@ -362,7 +362,7 @@ Failed   <<< kiss_matcher_ros [exited with code 1]
 ```
 
 **原因**
-`src/registration/KISS-Matcher/ros/CMakeLists.txt` 无条件使用 `FetchContent` 从 GitHub 拉取
+`src/localization/relocalization/KISS-Matcher/ros/CMakeLists.txt` 无条件使用 `FetchContent` 从 GitHub 拉取
 `small_gicp` master，国内网络不稳定。而镜像里其实已通过源码安装了 small_gicp。
 
 **解决**
@@ -436,7 +436,7 @@ osrf 镜像默认以 root 运行，挂载目录里生成的 `build/ install/ log
 
 - `src/localization/rtabmap_ros` 是 **0.22.1 源码**（14 个子包），需要同版本的
   librtabmap 库；apt 二进制版本不匹配，从源码编 librtabmap 需额外 30 分钟以上。
-- `src/registration/3d_bbs/ros2_test/*` 依赖 `gpu_bbs3d`（需要 **CUDA**）和
+- `src/localization/relocalization/3d_bbs/ros2_test/*` 依赖 `gpu_bbs3d`（需要 **CUDA**）和
   `Iridescence` 可视化库，镜像内均不具备。
 
 同时，`scripts/` 下所有启动脚本**都没有用到这两组包**，不在 LIO + Nav2 主链路上。
@@ -446,7 +446,7 @@ osrf 镜像默认以 root 运行，挂载目录里生成的 `build/ install/ log
 
 ```text
 src/localization/rtabmap_ros/COLCON_IGNORE
-src/registration/3d_bbs/COLCON_IGNORE
+src/localization/relocalization/3d_bbs/COLCON_IGNORE
 ```
 
 如需恢复编译：删除对应 `COLCON_IGNORE` 后，安装匹配版本 librtabmap / CUDA 运行时。
@@ -520,7 +520,7 @@ new_win "lio_interface" "ros2 launch lio_interface fastlio_lio_interface_launch.
 
 如果必须使用 Point-LIO，需在源码层面修改：
 
-- `src/localization/point_lio/src/preprocess.cpp`：将 `VELO16` 分支的 `N_SCANS` 从 6 改为
+- `src/localization/lio/point_lio/src/preprocess.cpp`：将 `VELO16` 分支的 `N_SCANS` 从 6 改为
   与仿真扫描线数一致的值（或改用 `MAX_LINE_NUM`）
 - 在 `point_lio.launch.py` 中设置 `rviz:=False` 避免 Point-LIO 自带 RViz 的
   `camera_init` 帧问题，改用 Nav2 的 RViz 查看数据
@@ -562,7 +562,7 @@ Cartographer 节点正常运行，`/map` 话题有数据，但地图不随机器
 **解决**
 1. 确认加载的 `.pbstream` 路径正确：
    ```bash
-   docker exec lio_nav2 ls -la /ws/src/planner/nav2_planner_bringup/map/map.pbstream
+   docker exec lio_nav2 ls -la /ws/src/bringup/nav2_planner_bringup/map/map.pbstream
    ```
 2. 在 RViz 中用 **"2D Pose Estimate"** 工具给机器人一个近似初始位姿
 3. 如果机器人位置和建图时差别很大（如已移动到地图另一个区域），让机器人原地缓慢旋转几圈，

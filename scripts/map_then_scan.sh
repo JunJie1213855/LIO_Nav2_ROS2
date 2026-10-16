@@ -7,7 +7,7 @@ WS="$(dirname -- "$SCRIPT_DIR")"
 SESS=map_scan
 export LIBGL_ALWAYS_SOFTWARE=0
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-MAP_FILE="$WS/src/planner/nav2_planner_bringup/pcd/test_world.pcd"
+MAP_FILE="$WS/src/bringup/nav2_planner_bringup/pcd/test_world.pcd"
 
 killall -9 gzserver gzclient fastlio_mapping lio_interface_node \
   sensor_scan_generation_node scan_planner_node \
@@ -39,7 +39,7 @@ W "SCAN"      "ros2 launch nav2_planner_bringup scan_planner_lio_launch.py \
     use_pcd_map:=true pcd_map_file:=$MAP_FILE"
 
 W "GUI"       "ros2 run gui_teleop gui_teleop_node"
-W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d /ws/src/planner/nav2_planner_bringup/rviz/scan_planner.rviz"
+W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d /ws/src/bringup/nav2_planner_bringup/rviz/scan_planner.rviz"
 
 echo "========================================="
 echo " 步骤1: 用 GUI 遥控小车在环境里走一圈建图"

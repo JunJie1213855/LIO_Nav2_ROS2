@@ -8,7 +8,7 @@ export LIBGL_ALWAYS_SOFTWARE=0
 
 # 世界文件（默认 indoor_2d 封闭室内场景，特征丰富 SLAM 稳定）
 WORLD=${1:-indoor_2d}
-WORLD_PATH=src/get_urdf/worlds/${WORLD}.world
+WORLD_PATH=src/simulation/get_urdf/worlds/${WORLD}.world
 
 # ================ 关闭相关进程 ================
 killall -9 gzserver gzclient cartographer_node cartographer_occupancy_grid_node \
@@ -32,7 +32,7 @@ W "Carto" "ros2 launch nav2_planner_bringup cartographer_2d_launch.py"
 W "Nav2" "ros2 launch nav2_planner_bringup nav2_online_launch.py"
 
 # ================ RViz 2D 导航视图 ================
-W "RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_2d -p use_sim_time:=true -- -d src/planner/nav2_planner_bringup/rviz/nav2.rviz"
+W "RViz" "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_2d -p use_sim_time:=true -- -d src/bringup/nav2_planner_bringup/rviz/nav2.rviz"
 
 echo "========================================="
 echo " 2D 单线 LiDAR 导航 (Cartographer + Nav2)"

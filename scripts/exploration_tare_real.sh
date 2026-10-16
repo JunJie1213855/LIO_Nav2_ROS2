@@ -34,7 +34,7 @@ new_win "sensor" "ros2 launch sensor_scan_generation sensor_scan_generation_laun
 new_win "TARE" "ros2 launch nav2_planner_bringup tare_lio_explore_launch.py use_sim_time:=true"
 
 # ============== tare 可视化 ==============
-W "RViz"     "rviz2 -d $WS/src/planner/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz"
+W "RViz"     "rviz2 -d $WS/src/planning/exploration/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz"
 
 
 echo "===== rosbag + FAST-LIO + TARE (会话: $SESSION) ====="

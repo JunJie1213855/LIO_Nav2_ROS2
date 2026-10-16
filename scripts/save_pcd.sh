@@ -6,7 +6,7 @@ cd "$WORKSPACE_ROOT" || exit 1
 
 source install/setup.bash
 
-PCD_DEST_DIR="$WORKSPACE_ROOT/src/planner/nav2_planner_bringup/pcd"
+PCD_DEST_DIR="$WORKSPACE_ROOT/src/bringup/nav2_planner_bringup/pcd"
 
 # FAST-LIO 节点名: /laserMapping（注意驼峰）
 # 服务注册在节点命名空间下: /laserMapping/map_save
@@ -54,7 +54,7 @@ fi
 
 # --- 处理文件 2: 稠密累积点云 (PCD/dense_map.pcd → dense_map.pcd) ---
 # FAST-LIO 中 ROOT_DIR 编译期固定，dense_map.pcd 保存在 PCD/dense_map.pcd
-FAST_LIO_PCD_DIR="$WORKSPACE_ROOT/src/localization/FAST_LIO_ROBOAIRY/PCD"
+FAST_LIO_PCD_DIR="$WORKSPACE_ROOT/src/localization/lio/FAST_LIO_ROBOAIRY/PCD"
 DENSE_SRC="$FAST_LIO_PCD_DIR/dense_map.pcd"
 if [ -f "$DENSE_SRC" ]; then
     cp "$DENSE_SRC" "$PCD_DEST_DIR/dense_map.pcd"

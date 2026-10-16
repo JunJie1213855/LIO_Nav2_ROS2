@@ -7,5 +7,7 @@ cd "$WORKSPACE_ROOT" || exit 1
 # USE_SYSTEM_TBB=ON: kiss_matcher_ros 会 add_subdirectory 编译 KISS-Matcher 核心，
 # 该核心默认 FetchContent 从 GitHub 拉 oneTBB；make cppinstall 已把 oneTBB 装到系统，
 # 打开此开关避免编译期联网（网络不通时 GnuTLS/SSL 报错）。
-MAKEFLAGS="-j12" colcon build --executor sequential \
+# 目录迁移后首次运行：./scripts/build.sh --cmake-clean-cache
+# 可用 MAKEFLAGS="-j2" 限制单包编译并行度，其余参数透传给 colcon。
+MAKEFLAGS="${MAKEFLAGS:--j12}" colcon build --executor sequential "$@" \
                 --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_SYSTEM_TBB=ON

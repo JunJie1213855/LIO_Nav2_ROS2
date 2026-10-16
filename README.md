@@ -2,6 +2,8 @@
 
 [English Documentation](./README_EN.md)
 
+源码按驱动、仿真、定位、规划和系统集成等功能域组织，完整目录及迁移后构建方法见 [源码目录管理](src/README.md)。
+
 基于 ROS 2 的 3D LiDAR 自主导航系统
 
 [![ROS2](https://img.shields.io/badge/ROS2-Humble-22313F?logo=ros)](https://docs.ros.org/en/humble/)
@@ -138,7 +140,7 @@ cd scripts && ./show_tf_tree.sh
 用 `map_saver_cli` 保存 2D 栅格地图（`.pgm` + `.yaml`），并软链到 `install/` 供 launch 引用。
 
 ```bash
-./scripts/save_map.sh [输出路径]   # 默认 src/planner/nav2_planner_bringup/map/robo_map
+./scripts/save_map.sh [输出路径]   # 默认 src/bringup/nav2_planner_bringup/map/robo_map
 ```
 
 ### 4.6 保存 3D 点云 `save_pcd.sh`
@@ -248,7 +250,7 @@ ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
 
 ```bash
 ./scripts/nav2_2d_sim.sh [world]
-# world 默认 indoor_2d（src/get_urdf/worlds/indoor_2d.world）
+# world 默认 indoor_2d（src/simulation/get_urdf/worlds/indoor_2d.world）
 ```
 
 在 RViz 中用 "2D Goal Pose" 发目标，机器人实时建图并自主导航。
@@ -277,7 +279,7 @@ SCAN-Planner 是 B-spline 轨迹优化 + A* 绕障的局部反应式规划器，
 
 ```bash
 source install/setup.bash && ros2 service call /map_save std_srvs/srv/Trigger
-# 然后把 PCD 拷到 src/planner/nav2_planner_bringup/pcd/test_world.pcd，重新运行本脚本
+# 然后把 PCD 拷到 src/bringup/nav2_planner_bringup/pcd/test_world.pcd，重新运行本脚本
 ```
 
 ## 9. 仿真 · 自主探索

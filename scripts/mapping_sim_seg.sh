@@ -92,7 +92,7 @@ new_win "SCAN" "ros2 launch scan_planner scan_planner_lio_launch.py use_sim_time
 # sleep 2
 
 # ============== SCAN-Planner 可视化 ==============
-new_win "SP-RViz" "ros2 run rviz2 rviz2 -d src/planner/nav2_planner_bringup/rviz/scan_planner.rviz"
+new_win "SP-RViz" "ros2 run rviz2 rviz2 -d src/bringup/nav2_planner_bringup/rviz/scan_planner.rviz"
 
 echo "已在 tmux 会话 '$SESSION' 中启动 Gazebo + LIO + GroundSeg + SCAN-Planner (LIO: $LIO_WIN)。"
 echo "查看输出: tmux attach -t $SESSION   (Ctrl-b n/p 切换窗口, Ctrl-b d 退出)"

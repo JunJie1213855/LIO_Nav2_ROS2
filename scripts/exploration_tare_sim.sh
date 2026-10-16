@@ -34,7 +34,7 @@ sleep 3
 W "TARE"      "ros2 launch tare_planner tare_planner_lio_launch.py"
 
 # ============== tare 可视化 ==============
-W "RViz"     "rviz2 -d $WS/src/planner/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz"
+W "RViz"     "rviz2 -d $WS/src/planning/exploration/tare_planner/src/tare_planner/rviz/tare_planner_ground.rviz"
 
 echo "========================================="
 echo " Gazebo + FAST-LIO + TARE 自主探索"

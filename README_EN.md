@@ -36,7 +36,7 @@ TF tree: **`map` &rarr; `odom` &rarr; `base_footprint` &rarr; `chassis` &rarr; `
 - **Operating system**: Ubuntu 22.04
 - **ROS 2**: Humble Hawksbill
 - **Gazebo**: Fortress
-- **Livox-SDK2**: Required for real-robot mode; prebuilt under `src/livox_ros_driver2/3rdparty/`, with amd64/arm64 support
+- **Livox-SDK2**: Required for real-robot mode; prebuilt under `src/drivers/livox_ros_driver2/3rdparty/`, with amd64/arm64 support
 
 ## 2. Build
 
@@ -74,8 +74,8 @@ cd scripts
 Save the maps:
 
 ```bash
-./save_map.sh       # 2D grid map → src/me_nav2_bringup/map/
-./save_pcd.sh       # 3D point cloud → src/me_nav2_bringup/pcd/ (for KISS-Matcher)
+./save_map.sh       # 2D grid map → src/bringup/nav2_planner_bringup/map/
+./save_pcd.sh       # 3D point cloud → src/bringup/nav2_planner_bringup/pcd/ (for KISS-Matcher)
 ```
 
 ### 3.2 Simulation Navigation
@@ -116,13 +116,13 @@ The system provides three 3D relocalization options based on a prior PCD map:
 Before use, confirm that the prior point-cloud path is correct:
 
 ```bash
-vim src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py
-vim src/registration/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py
+vim src/localization/relocalization/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py
+vim src/localization/relocalization/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py
 ```
 
 Check the following carefully:
 
-- `prior_pcd_file`: Prior PCD map path, for example `src/me_nav2_bringup/pcd/*.pcd`
+- `prior_pcd_file`: Prior PCD map path, for example `src/bringup/nav2_planner_bringup/pcd/*.pcd`
 - `input_cloud_topic`: Default is `/registered_scan`
 - `map_frame` / `odom_frame`: Default is `map` / `odom`
 - `base_frame` / `robot_base_frame` / `lidar_frame`: Default is `base_footprint` / `base_footprint` / `livox_frame`
@@ -165,15 +165,18 @@ When `KISSMatcher initialization succeeded` appears in the log, global initializ
 
 ## 4. Packages
 
-The workspace contains **19 ROS 2 packages** under `src/`:
+Source repositories are grouped by function. See [Source directory guide](src/README.md)
+for the complete tree and rebuild instructions after relocation. Package discovery
+currently finds 35 packages, including the plain CMake package `kiss_matcher`.
+The following is an overview of selected components:
 
-**Odometry and Localization** (`src/localization/`)
+**Odometry and Localization** (`src/localization/lio/`)
 
-- `FAST_LIO` - FAST-LIO2: Tightly coupled LiDAR-IMU odometry based on ikd-Tree, 100 Hz+
+- `FAST_LIO_ROBOAIRY` (`fast_lio_robosense`) - FAST-LIO2 odometry backend
 - `point_lio` - Point-LIO: High-bandwidth odometry (4-8 kHz), robust to IMU saturation
-- `Sophus` - Lie group library (SO(3)/SE(3)), math dependency for LIO
+- `Super-LIO` (`basic`, `super_lio`) - Super-LIO odometry backend
 
-**Registration and Relocalization** (`src/registration/`)
+**Registration and Relocalization** (`src/localization/relocalization/`)
 
 - `small_gicp_relocalization` - Relocalization when the approximate startup pose is known: 3D point-cloud registration based on small_gicp
 - `global_relocalization_kiss_matcher` - KISS-Matcher + small_gicp global relocalization: coarse registration without an initial guess, followed by GICP continuous tracking of `map` &rarr; `odom`
@@ -188,7 +191,7 @@ The workspace contains **19 ROS 2 packages** under `src/`:
 
 **Navigation**
 
-- `me_nav2_bringup` - Nav2 integration: launch files, parameter configuration, maps, PCD files, and RViz configuration
+- `nav2_planner_bringup` (`src/bringup/`) - Nav2 integration: launch files, parameter configuration, maps, PCD files, and RViz configuration
 - `gui_teleop` - tkinter GUI teleoperation with speed adjustment and emergency stop
 
 **Simulation and Description**
@@ -206,22 +209,22 @@ The workspace contains **19 ROS 2 packages** under `src/`:
 ### 5.1 Key Configuration Files
 
 **Navigation configuration**
-- `me_nav2_bringup/config/nav2_params.yaml` - Nav2 parameters
-- `me_nav2_bringup/config/slam_toolbox_params.yaml` - SLAM Toolbox online-mapping parameters
-- `me_nav2_bringup/config/Pointcloud2d_3d.yaml` - 3D-to-2D slicing height and angular resolution
+- `src/bringup/nav2_planner_bringup/config/nav2_params.yaml` - Nav2 parameters
+- `src/bringup/nav2_planner_bringup/config/slam_toolbox_params.yaml` - SLAM Toolbox online-mapping parameters
+- `src/bringup/nav2_planner_bringup/config/Pointcloud2d_3d.yaml` - 3D-to-2D slicing height and angular resolution
 
 **LIO configuration**
-- `localization/FAST_LIO/config/mid360.yaml` - FAST-LIO parameters
-- `localization/point_lio/config/mid360_sim.yaml` - Point-LIO simulation parameters
-- `localization/point_lio/config/mid360_real.yaml` - Point-LIO real-robot parameters
+- `src/localization/lio/FAST_LIO_ROBOAIRY/config/mid360.yaml` - FAST-LIO parameters
+- `src/localization/lio/point_lio/config/mid360_sim.yaml` - Point-LIO simulation parameters
+- `src/localization/lio/point_lio/config/mid360_real.yaml` - Point-LIO real-robot parameters
 
 **Sensor configuration**
-- `livox_ros_driver2/config/MID360_config.json` - LiDAR network configuration
+- `src/drivers/livox_ros_driver2/config/MID360_config.json` - LiDAR network configuration
 
 **Registration configuration**
-- `registration/icp_registration/config/icp.yaml` - ICP registration parameters
-- `registration/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py` - KISS-Matcher global relocalization launch parameters
-- `registration/global_relocalization_kiss_matcher/config/alignment_config.yaml` - Example KISS-Matcher frame-to-frame/global registration parameters
+- `src/localization/relocalization/icp_registration/config/icp.yaml` - ICP registration parameters
+- `src/localization/relocalization/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py` - KISS-Matcher global relocalization launch parameters
+- `src/localization/relocalization/global_relocalization_kiss_matcher/config/alignment_config.yaml` - Example KISS-Matcher frame-to-frame/global registration parameters
 
 ### 5.2 Nav2 Parameter Highlights
 
@@ -278,7 +281,7 @@ Common parameters:
 Current workspace defaults in the launch file:
 
 ```text
-prior_pcd_file: /home/pio/Nav2_3D_ws/src/me_nav2_bringup/pcd/nav_test_4_27.pcd
+prior_pcd_file: /home/pio/Nav2_3D_ws/src/bringup/nav2_planner_bringup/pcd/nav_test_4_27.pcd
 input_cloud_topic: /registered_scan
 map_frame: map
 odom_frame: odom

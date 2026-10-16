@@ -34,7 +34,7 @@ W "SCAN"      "ros2 launch scan_planner scan_planner_lio_launch.py"
 
 
 # ================ scan planner 可视化================
-W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d $WS/src/planner/nav2_planner_bringup/rviz/scan_planner.rviz"
+W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d $WS/src/bringup/nav2_planner_bringup/rviz/scan_planner.rviz"
 
 echo "========================================="
 echo " Gazebo + FAST-LIO + SCAN-Planner"
