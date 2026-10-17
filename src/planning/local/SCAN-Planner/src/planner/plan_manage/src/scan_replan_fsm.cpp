@@ -40,6 +40,12 @@ namespace scan_planner
     emergency_time_ = load_parameter<double>(node_, "fsm.emergency_time", 1.0);
     enable_fail_safe_ = load_parameter<bool>(node_, "fsm.fail_safe", true);
     max_replan_fail_count_ = load_parameter<int>(node_, "fsm.max_replan_fail_count", 1000);
+    prefer_previous_trajectory_ = load_parameter<bool>(node_, "fsm.prefer_previous_trajectory", true);
+    use_controller_progress_ = load_parameter<bool>(node_, "fsm.use_controller_progress", false);
+    if (use_controller_progress_)
+      controller_progress_sub_ = node_->create_subscription<scan_planner_msgs::msg::ExecutionProgress>(
+          "planning/execution_progress", 10,
+          std::bind(&SCANReplanFSM::controllerProgressCallback, this, std::placeholders::_1));
     self_inflation_z_up_ = load_parameter<double>(node_, "grid_map.obstacles_inflation_z_up", 0.0);
     self_inflation_z_down_ = load_parameter<double>(node_, "grid_map.obstacles_inflation_z_down", 0.0);
     self_double_cylinder_radius_ = load_parameter<double>(node_, "grid_map.double_cylinder_radius", 0.0);
@@ -418,6 +424,30 @@ namespace scan_planner
     go2_execution_frozen_ = msg->data;
   }
 
+  void SCANReplanFSM::controllerProgressCallback(
+      const scan_planner_msgs::msg::ExecutionProgress::ConstSharedPtr &msg)
+  {
+    auto &info = planner_manager_->local_data_;
+    const double age = (node_->now() - rclcpp::Time(msg->header.stamp,
+                            node_->get_clock()->get_clock_type())).seconds();
+    if (!use_controller_progress_ || msg->traj_id != info.traj_id_ ||
+        !std::isfinite(msg->time_from_start) || msg->time_from_start < 0.0 ||
+        msg->time_from_start > info.duration_ + 1e-3 || age < -0.1 || age > 0.5)
+      return;
+    controller_progress_id_ = msg->traj_id;
+    controller_feedback_time_ = node_->now();
+    // Projection can reach the last path sample while the car is still beside it.
+    const double end_margin = std::min(0.02, info.duration_ * 0.1);
+    controller_progress_time_ = msg->reached_end ? info.duration_ :
+        std::min(msg->time_from_start, info.duration_ - end_margin);
+    if (msg->tracking_lost && exec_state_ == EXEC_TRAJ)
+    {
+      RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 1000,
+                           "Car tracking deviation requests replanning from odometry");
+      changeFSMExecState(REPLAN_TRAJ, "CAR_TRACKING");
+    }
+  }
+
   void SCANReplanFSM::updateLocalTrajTimeFreeze()
   {
     const rclcpp::Time now = node_->now();
@@ -428,6 +458,15 @@ namespace scan_planner
       return;
 
     LocalTrajData *info = &planner_manager_->local_data_;
+    if (use_controller_progress_ && info->start_time_.seconds() > 1e-5)
+    {
+      const double age = (now - controller_feedback_time_).seconds();
+      if (controller_progress_id_ == info->traj_id_ && age >= 0.0 && age <= 0.5)
+        info->start_time_ = now - rclcpp::Duration::from_seconds(controller_progress_time_);
+      else
+        info->start_time_ += rclcpp::Duration::from_seconds(dt);
+      return;
+    }
     if (go2_execution_frozen_ && info->start_time_.seconds() > 1e-5)
       info->start_time_ += rclcpp::Duration::from_seconds(dt);
   }
@@ -740,6 +779,19 @@ namespace scan_planner
     {
       start_vel_.setZero();
       start_acc_.setZero();
+    }
+
+    // Preserve the selected detour before rebuilding a goal-directed reference.
+    // The optimizer and the existing feasibility checks still run.
+    if (prefer_previous_trajectory_ && !have_new_target_ && info->traj_id_ > 0)
+    {
+      if (callReboundReplan(false, false))
+      {
+        RCLCPP_INFO(node_->get_logger(), "Warm-start replan accepted from previous trajectory");
+        return true;
+      }
+      RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 1000,
+                           "Warm-start replan failed; rebuilding trajectory initialization");
     }
 
     if (!planner_manager_->planGlobalTraj(

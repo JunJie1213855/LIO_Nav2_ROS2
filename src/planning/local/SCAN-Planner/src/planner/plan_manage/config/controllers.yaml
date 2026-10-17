@@ -10,6 +10,28 @@ closed_loop_controller:
     max_vyaw: 1.0
     finish_dist: 0.15
 
+closed_loop_controller_car:
+  ros__parameters:
+    use_sim_time: true
+    odom_frame: odom
+    max_vx: 0.5
+    max_vyaw: 1.0
+    max_accel: 0.5
+    max_decel: 0.8
+    max_yaw_accel: 2.0
+    max_lateral_accel: 0.4
+    lookahead_min: 0.25
+    lookahead_max: 0.6
+    lookahead_time: 0.6
+    rotate_enter: 0.7 # rad，超过此夹角先原地转向
+    rotate_exit: 0.25 # rad，转向滞回，避免频繁启停
+    kp_rotate: 1.5
+    finish_dist: 0.1
+    max_tracking_error: 0.8
+    progress_search_distance: 1.0
+    odom_timeout: 0.5
+    sample_dt: 0.03
+
 open_loop_controller:
   ros__parameters:
     use_sim_time: false

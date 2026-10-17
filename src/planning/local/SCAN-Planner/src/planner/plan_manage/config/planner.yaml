@@ -9,6 +9,7 @@ scan_planner_node:
     fsm.emergency_time: 1.0
     fsm.fail_safe: true
     fsm.max_replan_fail_count: 1000
+    fsm.prefer_previous_trajectory: true
 
     grid_map.resolution: 0.1
     grid_map.sliding_map_size_x: 10.0
@@ -56,6 +57,7 @@ scan_planner_node:
     manager.control_points_distance: 0.2
     manager.feasibility_tolerance: 0.5
     manager.planning_horizon: 7.5
+    manager.max_warm_start_deviation: 0.5 # 超过此实测位置误差时重新初始化，单位 m
 
     optimization.lambda_smooth: 1.0
     optimization.lambda_collision: 1.0

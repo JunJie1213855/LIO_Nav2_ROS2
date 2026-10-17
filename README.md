@@ -270,7 +270,7 @@ SCAN-Planner 是 B-spline 轨迹优化 + A* 绕障的局部反应式规划器，
 需要 GroundSeg 去除地面时运行：
 
 ```bash
-./scripts/mapping_sim_seg.sh 0
+./scripts/nav2_scan_seg.sh 0
 ```
 
 该脚本启动 `Gazebo | FAST-LIO | lio_interface | sensor_scan | GroundSeg | SCAN | SP-RViz`。
@@ -285,6 +285,9 @@ FAST-LIO 使用原始 `/livox/lidar`，GroundSeg 并行分割同一输入；SCAN
 脚本设置 `cloud_is_world:=false`，由规划器根据雷达位姿将点云转换到规划坐标系。
 GroundSeg 设置 `publish_tf:=false`，传感器静态外参由机器人模型发布；规划器与控制器均使用仿真时间。
 在 SP-RViz 中使用 "2D Goal Pose" 指定目标后，闭环控制器输出 `/cmd_vel`。
+
+该去地面导航入口使用新增的差速小车控制器 `closed_loop_controller_car`，
+配置、接口和验证方法见 [差速控制器说明](docs/scan_car_controller.md)。
 
 ### 8.2 `map_then_scan.sh` — 建图后加载 PCD 全局规划
 

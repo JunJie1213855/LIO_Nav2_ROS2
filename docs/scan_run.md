@@ -4,6 +4,21 @@
 > 在 Gazebo + FAST-LIO 仿真环境中，机器人通过 RViz 2D Goal Pose 指定目标，规划器实时避障。
 > 环境：Ubuntu 22.04 + ROS 2 Humble + Docker（容器名 `lio_nav2`，工作空间挂载到 `/ws`）。
 
+### 左右绕障反复切换：重规划连续性
+
+`planner.yaml` 默认启用 `fsm.prefer_previous_trajectory: true`。正常重规划先将
+上一条轨迹的剩余段作为初值，并按实测位姿修正起点，保留已选择的绕行路线。
+初值仍经过避障优化和可行性检查；复用失败后，才重建参考轨迹并尝试原有的随机初始化。
+新目标仍走重新初始化流程，碰撞检测和紧急停车保持启用。
+
+`manager.max_warm_start_deviation: 0.5` 表示实测位置偏离旧轨迹对应时刻超过
+0.5 m 时，放弃复用并重新初始化。空路径、重复采样点、轨迹过期等情况也会安全回退。
+这是对旧路线的优先复用，障碍变化时仍可能选择另一侧。
+
+SCAN 窗口出现 `Warm-start replan accepted from previous trajectory` 表示复用成功；
+`Warm-start replan failed; rebuilding trajectory initialization` 表示本次已回退。
+可将 `fsm.prefer_previous_trajectory` 设为 `false` 并重建以对比原有行为。
+
 ---
 
 ## 1. 管线架构

@@ -10,6 +10,7 @@ find_package(std_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Bspline.msg"
   "msg/DataDisp.msg"
+  "msg/ExecutionProgress.msg"
   DEPENDENCIES builtin_interfaces geometry_msgs std_msgs
 )
 

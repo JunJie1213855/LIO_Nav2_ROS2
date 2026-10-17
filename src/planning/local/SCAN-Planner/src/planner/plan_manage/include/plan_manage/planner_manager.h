@@ -48,6 +48,7 @@ namespace scan_planner
 
     BsplineOptimizer::Ptr bspline_optimizer_rebound_;
 
+    double max_warm_start_deviation_{0.5};
     int continuous_failures_count_{0};
 
     void updateTrajInfo(const UniformBspline &position_traj, const rclcpp::Time time_now);

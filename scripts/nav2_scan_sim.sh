@@ -8,7 +8,7 @@ export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 killall -9 gzserver gzclient fastlio_mapping lio_interface_node \
   sensor_scan_generation_node scan_planner_node \
-  closed_loop_controller 2>/dev/null
+  closed_loop_controller closed_loop_controller_car 2>/dev/null
 
 tmux kill-session -t "$SESS" 2>/dev/null
 # ================ 关闭相关进程 ================

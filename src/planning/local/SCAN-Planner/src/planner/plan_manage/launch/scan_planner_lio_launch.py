@@ -13,7 +13,8 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -27,6 +28,7 @@ def generate_launch_description():
     body_pose = LaunchConfiguration("body_pose_topic")
     sensor_pose = LaunchConfiguration("sensor_pose_topic")
     cloud = LaunchConfiguration("cloud_topic")
+    use_car = PythonExpression(["'", LaunchConfiguration("controller_type"), "' == 'car'"])
 
     # SCAN-Planner 核心规划节点
     # 将 LIO 管线话题映射到 SCAN-Planner 的输入
@@ -41,6 +43,7 @@ def generate_launch_description():
             "grid_map.cloud_is_world": ParameterValue(
                 LaunchConfiguration("cloud_is_world"), value_type=bool),
             "grid_map.need_extrinsic": False,
+            "fsm.use_controller_progress": ParameterValue(use_car, value_type=bool),
         }],
         remappings=[
             # LIO 管线 → SCAN-Planner 输入
@@ -55,12 +58,24 @@ def generate_launch_description():
         package="scan_planner",
         executable="closed_loop_controller",
         name="closed_loop_controller",
+        condition=IfCondition(PythonExpression([
+            "'", LaunchConfiguration("controller_type"), "' == 'legacy'"])),
         output="screen",
         parameters=[controllers_yaml, {"use_sim_time": use_sim_time}],
         remappings=[
             ("body_pose", body_pose),
             ("cmd_vel", "/cmd_vel"),
         ],
+    )
+
+    car_controller = Node(
+        package="scan_planner",
+        executable="closed_loop_controller_car",
+        name="closed_loop_controller_car",
+        condition=IfCondition(use_car),
+        output="screen",
+        parameters=[controllers_yaml, {"use_sim_time": use_sim_time}],
+        remappings=[("body_pose", body_pose), ("cmd_vel", "/cmd_vel")],
     )
 
     # SCAN-Planner 可视化硬编码 "world" 帧, 发布 world→odom identity TF 桥接
@@ -74,6 +89,8 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument("use_sim_time", default_value="true"),
+        DeclareLaunchArgument("controller_type", default_value="legacy", choices=["legacy", "car"],
+                              description="car: 差速小车空间路径跟踪；legacy: 原闭环控制器"),
         DeclareLaunchArgument("body_pose_topic", default_value="/odom",
                               description="车体位姿，odom -> base_footprint"),
         DeclareLaunchArgument("sensor_pose_topic", default_value="/odom",
@@ -84,4 +101,5 @@ def generate_launch_description():
         world_tf,
         scan_planner_node,
         closed_loop_controller,
+        car_controller,
     ])

@@ -179,6 +179,8 @@ ALL_PROCESS_NAMES=(
     "joint_state_publisher"
     # GUI & 控制
     "gui_teleop_node" "teleop_twist_keyboard" "rviz2"
+    # SCAN-Planner 与两种闭环控制器
+    "scan_planner_node" "closed_loop_controller" "closed_loop_controller_car"
     # 自定义脚本
     "ground_ceiling_filter.py" "airy_unflip.py" "ground_filter.py"
 )
@@ -219,6 +221,7 @@ ALL_LAUNCH_PATTERNS=(
     "small_gicp_relocalization"
     "online_async_launch.py"
     "my_nav2_launch.py"
+    "scan_planner_lio_launch.py"
     "gld_robot_description"
 )
 

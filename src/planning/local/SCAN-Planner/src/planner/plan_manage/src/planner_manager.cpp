@@ -1,5 +1,7 @@
 // #include <fstream>
 #include <plan_manage/planner_manager.h>
+#include <plan_manage/warm_start_path.h>
+#include <stdexcept>
 #include <chrono>
 #include <thread>
 
@@ -61,6 +63,9 @@ namespace scan_planner
     pp_.feasibility_tolerance_ = get_double("manager.feasibility_tolerance", 0.0);
     pp_.ctrl_pt_dist = get_double("manager.control_points_distance", -1.0);
     pp_.planning_horizon_ = get_double("manager.planning_horizon", 5.0);
+    max_warm_start_deviation_ = get_double("manager.max_warm_start_deviation", 0.5);
+    if (!std::isfinite(max_warm_start_deviation_) || max_warm_start_deviation_ <= 0.0)
+      throw std::invalid_argument("manager.max_warm_start_deviation must be positive and finite");
 
     local_data_.traj_id_ = 0;
     grid_map_.reset(new GridMap);
@@ -169,82 +174,58 @@ namespace scan_planner
         start_end_derivatives.push_back(gl_traj.evaluateAcc(0));
         start_end_derivatives.push_back(gl_traj.evaluateAcc(t));
       }
-      else // Initial path generated from previous trajectory.
+      else // Initial path generated from the unexecuted portion of the old route.
       {
+        const double t_cur = (node_->now() - local_data_.start_time_).seconds();
+        if (!std::isfinite(t_cur) || !std::isfinite(local_data_.duration_) ||
+            t_cur < 0.0 || t_cur >= local_data_.duration_ - 1e-3 ||
+            !std::isfinite(ts) || ts <= 0.0)
+          return false;
 
-        double t;
-        double t_cur = (node_->now() - local_data_.start_time_).seconds();
+        const Eigen::Vector3d old_start = local_data_.position_traj_.evaluateDeBoorT(t_cur);
+        const Eigen::Vector3d correction = start_pt - old_start;
+        if (!old_start.allFinite() || !correction.allFinite() ||
+            correction.norm() > max_warm_start_deviation_)
+          return false;
 
-        vector<double> pseudo_arc_length;
-        vector<Eigen::Vector3d> segment_point;
-        pseudo_arc_length.push_back(0.0);
-        for (t = t_cur; t < local_data_.duration_ + 1e-3; t += ts)
+        // Anchor to measured odometry and fade the correction along the old route.
+        vector<Eigen::Vector3d> segment_point{start_pt};
+        const double blend_duration = std::min(1.0, local_data_.duration_ - t_cur);
+        for (double t = t_cur + ts; t < local_data_.duration_; t += ts)
         {
-          segment_point.push_back(local_data_.position_traj_.evaluateDeBoorT(t));
-          if (t > t_cur)
-          {
-            pseudo_arc_length.push_back((segment_point.back() - segment_point[segment_point.size() - 2]).norm() + pseudo_arc_length.back());
-          }
+          const double blend = std::max(0.0, 1.0 - (t - t_cur) / blend_duration);
+          segment_point.push_back(local_data_.position_traj_.evaluateDeBoorT(t) + blend * correction);
+          if (segment_point.size() > 10000)
+            return false;
         }
-        t -= ts;
+        segment_point.push_back(local_data_.position_traj_.evaluateDeBoorT(local_data_.duration_));
 
-        double poly_time = (local_data_.position_traj_.evaluateDeBoorT(t) - local_target_pt).norm() / pp_.max_vel_ * 2;
+        const double poly_time = (segment_point.back() - local_target_pt).norm() / pp_.max_vel_ * 2;
         if (poly_time > ts)
         {
-          PolynomialTraj gl_traj = PolynomialTraj::one_segment_traj_gen(local_data_.position_traj_.evaluateDeBoorT(t),
-                                                                        local_data_.velocity_traj_.evaluateDeBoorT(t),
-                                                                        local_data_.acceleration_traj_.evaluateDeBoorT(t),
-                                                                        local_target_pt, local_target_vel, Eigen::Vector3d::Zero(), poly_time);
-
-          for (t = ts; t < poly_time; t += ts)
+          PolynomialTraj extension = PolynomialTraj::one_segment_traj_gen(
+              segment_point.back(),
+              local_data_.velocity_traj_.evaluateDeBoorT(local_data_.duration_),
+              local_data_.acceleration_traj_.evaluateDeBoorT(local_data_.duration_),
+              local_target_pt, local_target_vel, Eigen::Vector3d::Zero(), poly_time);
+          for (double t = ts; t < poly_time; t += ts)
           {
-            if (!pseudo_arc_length.empty())
-            {
-              segment_point.push_back(gl_traj.evaluate(t));
-              pseudo_arc_length.push_back((segment_point.back() - segment_point[segment_point.size() - 2]).norm() + pseudo_arc_length.back());
-            }
-            else
-            {
-              RCLCPP_ERROR(node_->get_logger(), "pseudo_arc_length is empty; aborting replan");
-              continuous_failures_count_++;
+            segment_point.push_back(extension.evaluate(t));
+            if (segment_point.size() > 10000)
               return false;
-            }
           }
         }
+        segment_point.push_back(local_target_pt);
 
-        double sample_length = 0;
-        double cps_dist = pp_.ctrl_pt_dist * 1.5; // cps_dist will be divided by 1.5 in the next
-        size_t id = 0;
-        do
-        {
-          cps_dist /= 1.5;
-          point_set.clear();
-          sample_length = 0;
-          id = 0;
-          while ((id <= pseudo_arc_length.size() - 2) && sample_length <= pseudo_arc_length.back())
-          {
-            if (sample_length >= pseudo_arc_length[id] && sample_length < pseudo_arc_length[id + 1])
-            {
-              point_set.push_back((sample_length - pseudo_arc_length[id]) / (pseudo_arc_length[id + 1] - pseudo_arc_length[id]) * segment_point[id + 1] +
-                                  (pseudo_arc_length[id + 1] - sample_length) / (pseudo_arc_length[id + 1] - pseudo_arc_length[id]) * segment_point[id]);
-              sample_length += cps_dist;
-            }
-            else
-              id++;
-          }
-          point_set.push_back(local_target_pt);
-        } while (point_set.size() < 7); // If the start point is very close to end point, this will help
+        const auto max_points = static_cast<std::size_t>(
+            std::max(7.0, pp_.planning_horizon_ / pp_.ctrl_pt_dist * 3.0));
+        if (!resampleWarmStartPath(segment_point, pp_.ctrl_pt_dist, max_points, point_set))
+          return false;
 
-        start_end_derivatives.push_back(local_data_.velocity_traj_.evaluateDeBoorT(t_cur));
+        start_end_derivatives.push_back(start_vel);
         start_end_derivatives.push_back(local_target_vel);
-        start_end_derivatives.push_back(local_data_.acceleration_traj_.evaluateDeBoorT(t_cur));
+        start_end_derivatives.push_back(start_acc);
         start_end_derivatives.push_back(Eigen::Vector3d::Zero());
-
-        if (point_set.size() > pp_.planning_horizon_ / pp_.ctrl_pt_dist * 3) // The initial path is abnormally too long!
-        {
-          flag_force_polynomial = true;
-          flag_regenerate = true;
-        }
       }
     } while (flag_regenerate);
 

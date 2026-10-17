@@ -11,7 +11,7 @@ MAP_FILE="$WS/src/bringup/nav2_planner_bringup/pcd/test_world.pcd"
 
 killall -9 gzserver gzclient fastlio_mapping lio_interface_node \
   sensor_scan_generation_node scan_planner_node \
-  closed_loop_controller cloud_z_filter 2>/dev/null
+  closed_loop_controller closed_loop_controller_car cloud_z_filter 2>/dev/null
 sleep 2
 tmux kill-session -t "$SESS" 2>/dev/null
 

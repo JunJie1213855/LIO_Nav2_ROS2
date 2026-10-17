@@ -18,7 +18,7 @@ SESSION=mapping_sim
 
 tmux kill-session -t "$SESSION" 2>/dev/null
 killall -9 gzserver gzclient fastlio_mapping lio_interface_node \
-  sensor_scan_generation_node scan_planner_node closed_loop_controller \
+  sensor_scan_generation_node scan_planner_node closed_loop_controller closed_loop_controller_car \
   ground_separation_node cloud_z_filter 2>/dev/null
 # sleep 2
 
@@ -78,7 +78,7 @@ new_win "GroundSeg" "ros2 launch efficient_online_segmentation ground_separation
 # GroundSeg 输出仍在 livox_frame，规划器用雷达位姿把它投影到 odom/world。
 # body_pose 必须是车体位姿，sensor_pose 则用雷达位姿，二者不能混用。
 new_win "SCAN" "ros2 launch scan_planner scan_planner_lio_launch.py \
-    use_sim_time:=true body_pose_topic:=/odom \
+    use_sim_time:=true controller_type:=car body_pose_topic:=/odom \
     sensor_pose_topic:=/registered_odometry \
     cloud_topic:=/no_ground_cloud cloud_is_world:=false"
 
