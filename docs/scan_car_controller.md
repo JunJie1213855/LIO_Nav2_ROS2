@@ -1,5 +1,7 @@
 # SCAN-Planner 差速小车闭环控制器
 
+两种控制器的数学推导、参数对比和示意图见 [Car 与 Legacy 控制器对比](scan_controller_comparison.md)。
+
 `closed_loop_controller_car.cpp` 是独立节点，原 `closed_loop_controller.cpp` 保留。
 差速控制器对 B-spline 进行空间采样，根据实测位置选择局部最近点和前视点，
 通过纯追踪曲率生成 `linear.x`、`angular.z`；`linear.y` 始终为零。
@@ -21,19 +23,24 @@ source install/setup.bash
 ```bash
 ros2 launch scan_planner scan_planner_lio_launch.py \
   controller_type:=car use_sim_time:=true \
-  body_pose_topic:=/odom sensor_pose_topic:=/registered_odometry \
-  cloud_topic:=/no_ground_cloud cloud_is_world:=false
+  body_pose_topic:=/ground_seg/odom sensor_pose_topic:=/ground_seg/odom \
+  cloud_topic:=/no_ground_cloud cloud_is_world:=true
 ```
 
 `controller_type:=legacy` 使用原控制器。launch 每次只启动一个控制器，
 默认仍为 `legacy`，其他已有入口的行为保持原样。
+
+上述非地面点云应由 `nav2_scan_seg.sh` 的配准点云分割模式产生（`odom` 系）。
+该模式严格同步 `/registered_scan` 和 `/odom`，分类后保留原始世界坐标，
+并将配对位姿原样转发到 `/ground_seg/odom`。GroundSeg 不广播 TF。
+使用 `cloud_only_segmentation.launch.py` 单点云入口时，输出仍是传感器系，不能套用这里的 `cloud_is_world:=true`。
 
 ## 输入与输出
 
 | 话题 | 类型 | 用途 |
 | --- | --- | --- |
 | `planning/bspline` | `scan_planner_msgs/Bspline` | 三次 B-spline，包含轨迹 ID 和起始时间 |
-| `body_pose` | `nav_msgs/Odometry` | 车体位姿，launch 中映射到 `/odom` |
+| `body_pose` | `nav_msgs/Odometry` | 车体位姿，分割脚本中映射到 `/ground_seg/odom`，无分割入口使用 `/odom` |
 | `cmd_vel` | `geometry_msgs/Twist` | 前进速度和角速度 |
 | `planning/execution_progress` | `scan_planner_msgs/ExecutionProgress` | 当前轨迹的实测投影进度、到达状态和跟踪丢失状态 |
 | `planning/go2_execution_frozen` | `std_msgs/Bool` | 保留原有暂停反馈接口 |

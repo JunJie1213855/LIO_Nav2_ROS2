@@ -48,7 +48,7 @@ scan_planner_node:
     grid_map.p_max: 0.98
     grid_map.p_occ: 0.80
     grid_map.max_ray_length: 5.0
-    grid_map.vis_height: 3.0
+    grid_map.vis_height: 1.0
     grid_map.show_occ_time: false
 
     manager.max_vel: 0.75

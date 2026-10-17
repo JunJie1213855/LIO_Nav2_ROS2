@@ -2,6 +2,26 @@
 
 #include "core/efficient_online_segmentation.h"
 
+TEST(SegmentationParameters, RejectInvalidDimensionsAndNonfiniteExtrinsics)
+{
+    SegmentationParams params;
+    params.kNumSectors = 0;
+    EXPECT_FALSE(params.UpdateInternalParams());
+    params = SegmentationParams();
+    params.kLidarVertRes = 0;
+    EXPECT_FALSE(params.UpdateInternalParams());
+    params = SegmentationParams();
+    params.kExtrinsicTrans.x() = std::numeric_limits<float>::quiet_NaN();
+    EXPECT_FALSE(params.UpdateInternalParams());
+}
+
+TEST(SegmentationParameters, ExtrinsicIsAHomogeneousTransform)
+{
+    SegmentationParams params;
+    ASSERT_TRUE(params.UpdateInternalParams());
+    EXPECT_FLOAT_EQ(params.kBaseToSensor.matrix()(3, 3), 1.0f);
+}
+
 TEST(SegmentationStartup, ConstructWithDefaultParameters)
 {
     // Both ROS nodes construct the core before loading their YAML parameters.

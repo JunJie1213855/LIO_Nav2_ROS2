@@ -14,7 +14,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-#include <opencv2/core/core.hpp> // only for visualization.
+#include <opencv2/core/core.hpp> // sector range-image storage; no ROS image publication.
 
 #include "segmentation_utility.h"
 #include "smart_sector.h"
@@ -28,6 +28,7 @@ class EfficientOnlineSegmentation {
     EfficientOnlineSegmentation& operator=(const EfficientOnlineSegmentation&) = delete;
 
     void ResetParameters(const SegmentationParams& params);
+    void SetVerbose(bool enabled) { kPrintLog = enabled; }
 
     void Segment(pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_data, 
                 std::vector<int>* labels_out, 

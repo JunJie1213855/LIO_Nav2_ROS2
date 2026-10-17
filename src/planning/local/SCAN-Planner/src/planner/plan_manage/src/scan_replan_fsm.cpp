@@ -53,6 +53,7 @@ namespace scan_planner
     body_height_ = load_parameter<double>(node_, "grid_map.body_height", 0.4);
     self_inflation_frame_id_ = load_parameter<std::string>(node_, "grid_map.frame_id", "world");
 
+    // 导航模式为 2.预设航点模式
     if (navi_mode_ == NAVI_MODE::PRESET_TARGET)
     {
       const auto flat_waypoints = load_parameter<std::vector<double>>(node_, "fsm.waypoints", {});
@@ -67,19 +68,23 @@ namespace scan_planner
       }
     }
 
-    /* initialize main modules */
-    visualization_.reset(new PlanningVisualization(node_));
-    planner_manager_.reset(new SCANPlannerManager);
-    planner_manager_->initPlanModules(node_, visualization_);
+    // 初始化主要模块
+    visualization_.reset(new PlanningVisualization(node_));  // 可视化
+    planner_manager_.reset(new SCANPlannerManager);          // 规划管理
+    planner_manager_->initPlanModules(node_, visualization_);// 初始化
 
-    /* callback */
+    // 回调
+    // 主要状态机定时器
     exec_timer_ = node_->create_wall_timer(std::chrono::milliseconds(10),
                                            std::bind(&SCANReplanFSM::execFSMCallback, this));
+    // 碰撞检测
     safety_timer_ = node_->create_wall_timer(std::chrono::milliseconds(50),
                                              std::bind(&SCANReplanFSM::checkCollisionCallback, this));
+    // 里程计订阅器
     odom_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
         "body_pose", rclcpp::SensorDataQoS(),
         std::bind(&SCANReplanFSM::odometryCallback, this, std::placeholders::_1));
+    // go2 执行发布器，发给控制器
     go2_execution_frozen_sub_ = node_->create_subscription<std_msgs::msg::Bool>(
         "planning/go2_execution_frozen", 10,
         std::bind(&SCANReplanFSM::go2ExecutionFrozenCallback, this, std::placeholders::_1));
@@ -89,14 +94,15 @@ namespace scan_planner
     self_inflation_pub_ = node_->create_publisher<visualization_msgs::msg::Marker>(
         "self_inflation", rclcpp::QoS(1).reliable().transient_local());
 
-    if (navi_mode_ == NAVI_MODE::MANUAL_TARGET)
+    // 两种导航模式的目标点获取方式
+    if (navi_mode_ == NAVI_MODE::MANUAL_TARGET)        // 导航模式为 1.手动给航点，直接订阅 goal 话题
       goal_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
           "move_base_simple/goal", 1,
           std::bind(&SCANReplanFSM::rvizGoalCallback, this, std::placeholders::_1));
-    else if (navi_mode_ == NAVI_MODE::REFERENCE_PATH)
+    else if (navi_mode_ == NAVI_MODE::REFERENCE_PATH)  // 导航模式为 3.给定参考路径，订阅 初始化路径即可
       path_sub_ = node_->create_subscription<nav_msgs::msg::Path>(
           "initial_path", 1, std::bind(&SCANReplanFSM::pathCallback, this, std::placeholders::_1));
-    else if (navi_mode_ == NAVI_MODE::PRESET_TARGET)
+    else if (navi_mode_ == NAVI_MODE::PRESET_TARGET)  // 导航模式为 2.给定预设航点，上面已经处理，这里仅仅打印日志
       RCLCPP_INFO(node_->get_logger(), "Preset waypoint mode will start after the first odometry message");
     else
       throw std::runtime_error("fsm.navi_mode must be 1, 2, or 3");
@@ -392,27 +398,30 @@ namespace scan_planner
     odom_pos_(1) = msg->pose.pose.position.y;
     odom_pos_(2) = msg->pose.pose.position.z;
 
+    // 如果是手动给航点
     if (navi_mode_ == NAVI_MODE::MANUAL_TARGET && !rviz_height_ready_)
     {
-      rviz_goal_height_ = odom_pos_(2);
+      // rviz_goal_height_ = odom_pos_(2); 通过初始化的位姿，取 z 轴高度，作为导航平面
+      rviz_goal_height_ = 0.4; // 直接设置高度
       rviz_height_ready_ = true;
       RCLCPP_INFO(node_->get_logger(), "Set RViz goal height from initial body_pose z: %.3f", rviz_goal_height_);
     }
-
+    // 速度设置
     odom_vel_(0) = msg->twist.twist.linear.x;
     odom_vel_(1) = msg->twist.twist.linear.y;
     odom_vel_(2) = msg->twist.twist.linear.z;
 
     //odom_acc_ = estimateAcc( msg );
-
+    // 朝向设置
     odom_orient_.w() = msg->pose.pose.orientation.w;
     odom_orient_.x() = msg->pose.pose.orientation.x;
     odom_orient_.y() = msg->pose.pose.orientation.y;
     odom_orient_.z() = msg->pose.pose.orientation.z;
 
     have_odom_ = true;
+    // 发布自膨胀 marker
     publishSelfInflationMarker();
-    if (navi_mode_ == NAVI_MODE::PRESET_TARGET && !preset_started_)
+    if (navi_mode_ == NAVI_MODE::PRESET_TARGET && !preset_started_) // 如果是预设航点，就发布
     {
       preset_started_ = true;
       planGlobalTrajbyGivenWps();
@@ -564,17 +573,17 @@ namespace scan_planner
     fsm_num++;
     if (fsm_num == 100)
     {
-      printFSMExecState();
-      if (!have_odom_)
+      printFSMExecState();  // 获取状态
+      if (!have_odom_)      // 没有里程计
         cout << "no odom." << endl;
-      if (!trigger_)
+      if (!trigger_)        // 没有目标点
         cout << "wait for goal." << endl;
       fsm_num = 0;
     }
 
     switch (exec_state_)
     {
-    case INIT:
+    case INIT: // 1.初始化状态
     {
       if (!have_odom_)
       {
@@ -584,24 +593,24 @@ namespace scan_planner
       {
         return;
       }
-      changeFSMExecState(WAIT_TARGET, "FSM");
+      changeFSMExecState(WAIT_TARGET, "FSM");  // 2.转换为  WAIT_TARGET 状态
       break;
     }
 
-    case WAIT_TARGET:
+    case WAIT_TARGET: // 等待目标点
     {
-      if (!have_target_)
+      if (!have_target_) // 没有目标点就继续等
         return;
       else
       {
-        changeFSMExecState(GEN_NEW_TRAJ, "FSM");
+        changeFSMExecState(GEN_NEW_TRAJ, "FSM"); // 3.有目标点，就转换为生成新轨迹状态
       }
       break;
     }
 
     case GEN_NEW_TRAJ:
     {
-      setStartStateFromOdomOrCurrentTraj();
+      setStartStateFromOdomOrCurrentTraj(); // 4.
 
       // Eigen::Vector3d rot_x = odom_orient_.toRotationMatrix().block(0, 0, 3, 1);
       // start_yaw_(0)         = atan2(rot_x(1), rot_x(0));
@@ -629,7 +638,7 @@ namespace scan_planner
       break;
     }
 
-    case REPLAN_TRAJ:
+    case REPLAN_TRAJ:              // 5. 重新规划
     {
 
       if (planFromCurrentTraj())
@@ -646,7 +655,7 @@ namespace scan_planner
       break;
     }
 
-    case EXEC_TRAJ:
+    case EXEC_TRAJ:              // 6. 执行规划
     {
       /* determine if need to replan */
       LocalTrajData *info = &planner_manager_->local_data_;
@@ -715,7 +724,7 @@ namespace scan_planner
       break;
     }
 
-    case EMERGENCY_STOP:
+    case EMERGENCY_STOP:  // 7.出现停止信号
     {
 
       if (flag_escape_emergency_) // Avoiding repeated calls
@@ -742,7 +751,7 @@ namespace scan_planner
     }
     }
 
-    finishProcess();
+    finishProcess(); //完成处理
 
     data_disp_.header.stamp = node_->now();
     data_disp_pub_->publish(data_disp_);

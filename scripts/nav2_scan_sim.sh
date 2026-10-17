@@ -30,8 +30,8 @@ W "sensor"    "ros2 launch sensor_scan_generation sensor_scan_generation_launch.
 
 # ================ scan planner ================
 # SCAN-Planner 直接使用 LIO 输出的 /registered_scan 点云。
-W "SCAN"      "ros2 launch scan_planner scan_planner_lio_launch.py"
-
+W "SCAN"      "ros2 launch scan_planner scan_planner_lio_launch.py \
+               controller_type:=car cloud_is_world:=true"
 
 # ================ scan planner 可视化================
 W "SP-RViz"   "ros2 run rviz2 rviz2 --ros-args -r __name:=rviz2_scan -p use_sim_time:=true -- -d $WS/src/bringup/nav2_planner_bringup/rviz/scan_planner.rviz"

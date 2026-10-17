@@ -43,9 +43,13 @@ Visualization Manager:
     # SCAN-Planner 体素占据地图 (PointCloud2, 不是 OccupancyGrid)
     - Alpha: 1
       Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Value: true
+      Axis: Z
       Class: rviz_default_plugins/PointCloud2
-      Color Transformer: FlatColor
-      Color: 200; 200; 200
+      Color Transformer: AxisColor
+      Invert Rainbow: false
+      Use rainbow: true
       Enabled: true
       Name: OccupancyVoxels
       Size (Pixels): 2
@@ -62,9 +66,13 @@ Visualization Manager:
     # SCAN-Planner 膨胀体素图 (PointCloud2, 不是 OccupancyGrid)
     - Alpha: 1
       Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Value: true
+      Axis: Z
       Class: rviz_default_plugins/PointCloud2
-      Color Transformer: FlatColor
-      Color: 255; 100; 100
+      Color Transformer: AxisColor
+      Invert Rainbow: false
+      Use rainbow: true
       Enabled: true
       Name: InflatedOccupancy
       Size (Pixels): 2

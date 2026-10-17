@@ -1,77 +1,44 @@
-/*
- * Copyright 2024
- * ROS2 (Humble) interface: ground-vs-nonground separation.
- *
- * This node runs the same EfficientOnlineSegmentation core, but instead of the
- * visualization topics it only splits the input cloud into two outputs:
- *   - /ground_cloud    : points labelled as ground.
- *   - /no_ground_cloud : everything else (wall + unknown).
- *
- * The original per-point intensity is preserved (Segment is called with
- * use_intensity=false), so the output clouds carry the original reflectivity.
- */
-
+/* Copyright 2024. Paired cloud/odometry segmentation and cloud-only processing. */
+#include <cmath>
+#include <memory>
+#include <stdexcept>
 #include <string>
-#include <iostream>
-
 #include <rclcpp/rclcpp.hpp>
-
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <geometry_msgs/msg/transform_stamped.hpp>
-
-#include <tf2_ros/transform_broadcaster.h>
-
-#include <pcl_conversions/pcl_conversions.h>
-
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-
+#include <nav_msgs/msg/odometry.hpp>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
 #include "core/efficient_online_segmentation.h"
-
-// Labels produced by EfficientOnlineSegmentation (see core/efficient_online_segmentation.h):
-//   0 = unknown, 1 = ground, 2 = wall.
-static constexpr int kGroundLabel = 1;
-
-// ###########################################################################
+#include "point_cloud_io.h"
 
 class GroundSeparationNode : public rclcpp::Node
 {
 public:
-    GroundSeparationNode()
-    : Node("ground_separation")
+    explicit GroundSeparationNode(bool standalone)
+    : Node("ground_separation"), standalone_(standalone)
     {
-        common_original_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
-        custom_original_cloud_.reset(new pcl::PointCloud<PointXYZIRT>());
-        ground_common_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
-        nonground_common_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
-        ground_custom_cloud_.reset(new pcl::PointCloud<PointXYZIRT>());
-        nonground_custom_cloud_.reset(new pcl::PointCloud<PointXYZIRT>());
-
         LoadAlgorithmParams();
-        const bool is_params_legal = params_.UpdateInternalParams();
-        if (!is_params_legal) {
-            RCLCPP_ERROR(get_logger(),
-                "###################### ERROR! ######################\n"
-                "## Parameters illegal, please check!!!\n"
-                "###################### ERROR! ######################");
-            rclcpp::shutdown();
-            return;
+        if (!params_.UpdateInternalParams())
+            throw std::invalid_argument("Invalid segmentation parameters");
+        segmentation_.reset(new EfficientOnlineSegmentation(params_));
+        segmentation_->SetVerbose(declare_parameter<bool>("verbose", false));
+        ground_pub_ = create_publisher<ground_seg::Cloud>(pub_ground_cloud_topic_, 5);
+        nonground_pub_ = create_publisher<ground_seg::Cloud>(pub_no_ground_cloud_topic_, 5);
+        if (standalone_) {
+            cloud_sub_ = create_subscription<ground_seg::Cloud>(sub_cloud_topic_, rclcpp::SensorDataQoS(),
+                [this](ground_seg::Cloud::ConstSharedPtr cloud) { process(cloud, nullptr); });
+        } else {
+            pose_pub_ = create_publisher<nav_msgs::msg::Odometry>(pub_odometry_topic_, 10);
+            cloud_filter_.subscribe(this, sub_cloud_topic_, rmw_qos_profile_sensor_data);
+            pose_filter_.subscribe(this, odometry_topic_, rmw_qos_profile_sensor_data);
+            sync_.reset(new Sync(cloud_filter_, pose_filter_, sync_queue_size_));
+            sync_->registerCallback(std::bind(&GroundSeparationNode::process, this,
+                                              std::placeholders::_1, std::placeholders::_2));
         }
-        efficient_sgmtt_.ResetParameters(params_);
-
-        source_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            sub_cloud_topic_, 1,
-            std::bind(&GroundSeparationNode::pointCloudCallback,
-                      this, std::placeholders::_1));
-        ground_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-            pub_ground_cloud_topic_, 1);
-        no_ground_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-            pub_no_ground_cloud_topic_, 1);
+        RCLCPP_INFO(get_logger(), "%s mode; input cloud: %s; TF is not used or published",
+                    standalone_ ? "Cloud-only" : "Exact cloud/odometry pairing", sub_cloud_topic_.c_str());
     }
 
 private:
-    // ####################### Parameter loading #######################
-
     void LoadAndConvertDegToRad(const std::string& name, float& variable)
     {
         const double deg2rad = 1.0 / 180.0 * M_PI;
@@ -91,24 +58,33 @@ private:
     void LoadAlgorithmParams()
     {
         // ROS interface params.
-        this->declare_parameter<std::string>("sub_cloud_topic", "/rslidar_points");
+        this->declare_parameter<std::string>("sub_cloud_topic", standalone_ ? "/livox/lidar" : "/registered_scan");
         this->declare_parameter<std::string>("pub_ground_cloud_topic", "/ground_cloud");
         this->declare_parameter<std::string>("pub_no_ground_cloud_topic", "/no_ground_cloud");
-        this->declare_parameter<std::string>("base_link_frame_id", "base_link");
-        this->declare_parameter<std::string>("sensor_frame_id", "rslidar");
-        publish_tf_ = this->declare_parameter<bool>("publish_tf", true);
+        this->declare_parameter<std::string>("sensor_frame_id", "livox_frame");
+        input_cloud_is_world_ = this->declare_parameter<bool>("input_cloud_is_world", !standalone_);
+        odometry_topic_ = this->declare_parameter<std::string>("odometry_topic", "/odom");
+        pub_odometry_topic_ = this->declare_parameter<std::string>("pub_odometry_topic", "/ground_seg/odom");
+        odometry_is_sensor_pose_ = this->declare_parameter<bool>("odometry_is_sensor_pose", false);
+        body_frame_id_ = this->declare_parameter<std::string>("body_frame_id", "base_footprint");
+
+        sync_queue_size_ = this->declare_parameter<int>("sync_queue_size", 30);
+        if (sync_queue_size_ < 1 || sync_queue_size_ > 10000)
+            throw std::invalid_argument("sync_queue_size must be in [1, 10000]");
+        if (standalone_ && input_cloud_is_world_)
+            throw std::invalid_argument("Cloud-only mode requires sensor-frame input");
 
         // LiDAR parameters (angles in degree, converted below).
-        this->declare_parameter<int>("kLidarRows", 96);
-        this->declare_parameter<int>("kLidarCols", 900);
-        this->declare_parameter<double>("kLidarHorizRes", 0.4);
-        this->declare_parameter<double>("kLidarVertRes", 0.92);
-        this->declare_parameter<double>("kLidarVertFovMax", 88.0);
-        this->declare_parameter<double>("kLidarVertFovMin", 0.0);
+        this->declare_parameter<int>("kLidarRows", 50);
+        this->declare_parameter<int>("kLidarCols", 360);
+        this->declare_parameter<double>("kLidarHorizRes", 1.0);
+        this->declare_parameter<double>("kLidarVertRes", 1.273);
+        this->declare_parameter<double>("kLidarVertFovMax", 55.2);
+        this->declare_parameter<double>("kLidarVertFovMin", -7.2);
         this->declare_parameter<double>("kLidarProjectionError", 0.5);
 
         // Basic segmentation parameters.
-        this->declare_parameter<int>("kNumSectors", 360);
+        this->declare_parameter<int>("kNumSectors", 180);
         this->declare_parameter<double>("kGroundYInterceptTolerance", 0.5);
         this->declare_parameter<double>("kGroundPointLineDistThres", 0.1);
         this->declare_parameter<int>("kWallLineMinBinNum", 3);
@@ -116,9 +92,9 @@ private:
 
         // Extrinsics (from base(ground) to sensor).
         this->declare_parameter<std::vector<double>>(
-            "kExtrinsicTrans", std::vector<double>{0.0, 0.0, 2.07});
+            "kExtrinsicTrans", std::vector<double>{0.0, 0.0, 0.25});
         this->declare_parameter<std::vector<double>>(
-            "kExtrinsicRot", std::vector<double>{1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0});
+            "kExtrinsicRot", std::vector<double>{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0});
 
         // Identify ground / wall (angles in degree, converted to slope below).
         this->declare_parameter<double>("kGroundSameLineTolerance", 2.0);
@@ -130,7 +106,6 @@ private:
         sub_cloud_topic_ = this->get_parameter("sub_cloud_topic").as_string();
         pub_ground_cloud_topic_ = this->get_parameter("pub_ground_cloud_topic").as_string();
         pub_no_ground_cloud_topic_ = this->get_parameter("pub_no_ground_cloud_topic").as_string();
-        base_link_frame_id_ = this->get_parameter("base_link_frame_id").as_string();
         sensor_frame_id_ = this->get_parameter("sensor_frame_id").as_string();
 
         params_.kLidarRows = this->get_parameter("kLidarRows").as_int();
@@ -160,6 +135,8 @@ private:
         // Extrinsics (double arrays -> Eigen float matrices, row-major).
         std::vector<double> ext_trans_vec = this->get_parameter("kExtrinsicTrans").as_double_array();
         std::vector<double> ext_rot_vec = this->get_parameter("kExtrinsicRot").as_double_array();
+        if (ext_trans_vec.size() != 3 || ext_rot_vec.size() != 9)
+            throw std::invalid_argument("Extrinsics require 3 translation and 9 rotation values");
         if (ext_trans_vec.size() == 3) {
             for (int i = 0; i < 3; ++i) {
                 params_.kExtrinsicTrans(i) = static_cast<float>(ext_trans_vec[i]);
@@ -174,137 +151,100 @@ private:
         }
     }
 
-    // ####################### Split helper #######################
-
-    template <typename PointT>
-    void SplitCloud(const typename pcl::PointCloud<PointT>::Ptr& in,
-                    typename pcl::PointCloud<PointT>::Ptr& ground,
-                    typename pcl::PointCloud<PointT>::Ptr& nonground)
+    void process(const ground_seg::Cloud::ConstSharedPtr& cloud,
+                 const nav_msgs::msg::Odometry::ConstSharedPtr& pose)
     {
-        ground->clear();
-        nonground->clear();
-        ground->reserve(in->size());
-        nonground->reserve(in->size());
-        for (std::size_t i = 0; i < in->size(); ++i) {
-            if (labels_[i] == kGroundLabel) {
-                ground->push_back(in->points[i]);
-            } else {
-                nonground->push_back(in->points[i]);
+        try {
+            Eigen::Isometry3d world_from_sensor = Eigen::Isometry3d::Identity();
+            std::string output_frame = cloud->header.frame_id;
+            if (output_frame.empty()) throw std::invalid_argument("Empty cloud frame");
+            if (pose) {
+                const auto expected_child = odometry_is_sensor_pose_ ? sensor_frame_id_ : body_frame_id_;
+                if (pose->header.frame_id.empty() || pose->child_frame_id != expected_child ||
+                    cloud->header.frame_id != (input_cloud_is_world_ ? pose->header.frame_id : sensor_frame_id_))
+                    throw std::invalid_argument("Cloud/odometry frame mismatch");
+                const auto& p = pose->pose.pose.position;
+                const auto& q = pose->pose.pose.orientation;
+                Eigen::Quaterniond rotation(q.w, q.x, q.y, q.z);
+                Eigen::Vector3d translation(p.x, p.y, p.z);
+                if (!translation.allFinite() || !rotation.coeffs().allFinite() || rotation.norm() < 1e-9)
+                    throw std::invalid_argument("Invalid odometry pose");
+                world_from_sensor.linear() = rotation.normalized().toRotationMatrix();
+                world_from_sensor.translation() = translation;
+                if (!odometry_is_sensor_pose_) {
+                    Eigen::Isometry3d body_from_sensor = Eigen::Isometry3d::Identity();
+                    body_from_sensor.linear() = params_.kExtrinsicRot.cast<double>();
+                    body_from_sensor.translation() = params_.kExtrinsicTrans.cast<double>();
+                    world_from_sensor = world_from_sensor * body_from_sensor;
+                }
+                output_frame = pose->header.frame_id;
+            } else if (cloud->header.frame_id != sensor_frame_id_) {
+                throw std::invalid_argument("Cloud-only input must match sensor_frame_id");
             }
-        }
-    }
-
-    // ####################### Callback #######################
-
-    void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
-    {
-        // Check cloud msg fields (once).
-        static bool need_check_fields = true;
-        static bool ring_field_exists = false;
-        if (need_check_fields) {
-            for (const auto& field : msg->fields) {
-                if (field.name == "ring") {
-                    ring_field_exists = true;
-                    RCLCPP_INFO(get_logger(), "########## `ring` field exists -> ring path.");
-                    break;
+            const ground_seg::CloudView view(*cloud);
+            auto ground = view.empty(output_frame);
+            auto nonground = view.empty(output_frame);
+            pcl::PointCloud<pcl::PointXYZI>::Ptr local(new pcl::PointCloud<pcl::PointXYZI>);
+            pcl::PointCloud<PointXYZIRT>::Ptr ring_local(new pcl::PointCloud<PointXYZIRT>);
+            std::vector<std::size_t> offsets;
+            const auto sensor_from_world = world_from_sensor.inverse();
+            for (uint32_t row = 0; row < cloud->height; ++row) {
+                for (uint32_t column = 0; column < cloud->width; ++column) {
+                    const std::size_t offset = static_cast<std::size_t>(row) * cloud->row_step +
+                                               static_cast<std::size_t>(column) * cloud->point_step;
+                    const Eigen::Vector3d original = view.point(offset);
+                    const Eigen::Vector3d sensor = input_cloud_is_world_ ? sensor_from_world * original : original;
+                    if (!sensor.allFinite() || !sensor.cast<float>().allFinite()) continue;
+                    pcl::PointXYZI point;
+                    point.x = sensor.x(); point.y = sensor.y(); point.z = sensor.z(); point.intensity = 0;
+                    local->push_back(point);
+                    if (view.ring) {
+                        PointXYZIRT ring_point{};
+                        ring_point.x = point.x; ring_point.y = point.y; ring_point.z = point.z;
+                        ring_point.ring = view.read<uint16_t>(cloud->data.data() + offset + view.ring->offset);
+                        ring_local->push_back(ring_point);
+                    }
+                    offsets.push_back(offset);
                 }
             }
-            if (!ring_field_exists) {
-                RCLCPP_INFO(get_logger(),
-                    "########## no `ring` field -> elevation-angle path.");
+            std::vector<int> labels;
+            if (view.ring) segmentation_->Segment(ring_local, &labels, false);
+            else segmentation_->Segment(local, &labels, false);
+            if (labels.size() != offsets.size()) throw std::runtime_error("Invalid segmentation label count");
+            for (std::size_t i = 0; i < offsets.size(); ++i) {
+                auto& output = labels[i] == 1 ? ground : nonground;
+                if (pose && !input_cloud_is_world_) {
+                    const Eigen::Vector3d world = world_from_sensor * view.point(offsets[i]);
+                    if (!world.allFinite() || !world.cast<float>().allFinite()) continue;
+                    view.append(output, offsets[i], &world);
+                } else view.append(output, offsets[i]);
             }
-            need_check_fields = false;
-        }
-
-        // Run ground segmentation. use_intensity=false keeps the original intensity.
-        if (ring_field_exists) {
-            pcl::fromROSMsg(*msg, *custom_original_cloud_);
-            efficient_sgmtt_.Segment(custom_original_cloud_, &labels_, false);
-            SplitCloud<PointXYZIRT>(custom_original_cloud_,
-                                    ground_custom_cloud_, nonground_custom_cloud_);
-        } else {
-            pcl::fromROSMsg(*msg, *common_original_cloud_);
-            efficient_sgmtt_.Segment(common_original_cloud_, &labels_, false);
-            SplitCloud<pcl::PointXYZI>(common_original_cloud_,
-                                       ground_common_cloud_, nonground_common_cloud_);
-        }
-
-        // Standalone visualization can publish TF; integrated robots use their URDF.
-        if (publish_tf_) {
-            geometry_msgs::msg::TransformStamped tf_msg;
-            tf_msg.header.stamp = msg->header.stamp;
-            tf_msg.header.frame_id = base_link_frame_id_;
-            tf_msg.child_frame_id = sensor_frame_id_;
-            Eigen::Quaternionf rot_quat(params_.kBaseToSensor.rotation());
-            Eigen::Vector3f trans = params_.kBaseToSensor.translation();
-            tf_msg.transform.rotation.x = rot_quat.x();
-            tf_msg.transform.rotation.y = rot_quat.y();
-            tf_msg.transform.rotation.z = rot_quat.z();
-            tf_msg.transform.rotation.w = rot_quat.w();
-            tf_msg.transform.translation.x = trans.x();
-            tf_msg.transform.translation.y = trans.y();
-            tf_msg.transform.translation.z = trans.z();
-            tf_broadcaster_.sendTransform(tf_msg);
-        }
-
-        // Publish ground cloud.
-        {
-            sensor_msgs::msg::PointCloud2 out;
-            if (ring_field_exists) {
-                pcl::toROSMsg(*ground_custom_cloud_, out);
-            } else {
-                pcl::toROSMsg(*ground_common_cloud_, out);
-            }
-            out.header = msg->header;
-            out.header.frame_id = sensor_frame_id_;
-            ground_cloud_publisher_->publish(out);
-        }
-
-        // Publish non-ground cloud.
-        {
-            sensor_msgs::msg::PointCloud2 out;
-            if (ring_field_exists) {
-                pcl::toROSMsg(*nonground_custom_cloud_, out);
-            } else {
-                pcl::toROSMsg(*nonground_common_cloud_, out);
-            }
-            out.header = msg->header;
-            out.header.frame_id = sensor_frame_id_;
-            no_ground_cloud_publisher_->publish(out);
+            // Publish only after the complete pair has been validated and processed.
+            if (pose) pose_pub_->publish(*pose);
+            ground_pub_->publish(ground);
+            nonground_pub_->publish(nonground);
+        } catch (const std::exception& error) {
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "Dropping cloud/pair: %s", error.what());
         }
     }
 
-    // ####################### Members #######################
-
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr source_cloud_subscriber_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr ground_cloud_publisher_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr no_ground_cloud_publisher_;
-    tf2_ros::TransformBroadcaster tf_broadcaster_{*this};
-
-    std::string sub_cloud_topic_;
-    std::string pub_ground_cloud_topic_;
-    std::string pub_no_ground_cloud_topic_;
-    std::string base_link_frame_id_;
-    std::string sensor_frame_id_;
-    bool publish_tf_{true};
-
+    using Sync = message_filters::TimeSynchronizer<ground_seg::Cloud, nav_msgs::msg::Odometry>;
+    bool standalone_;
+    bool input_cloud_is_world_{true}, odometry_is_sensor_pose_{false};
+    int sync_queue_size_{30};
+    std::string sub_cloud_topic_, odometry_topic_, pub_odometry_topic_;
+    std::string pub_ground_cloud_topic_, pub_no_ground_cloud_topic_, sensor_frame_id_, body_frame_id_;
     SegmentationParams params_;
-    EfficientOnlineSegmentation efficient_sgmtt_;
-
-    pcl::PointCloud<pcl::PointXYZI>::Ptr common_original_cloud_;
-    pcl::PointCloud<PointXYZIRT>::Ptr custom_original_cloud_;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr ground_common_cloud_;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr nonground_common_cloud_;
-    pcl::PointCloud<PointXYZIRT>::Ptr ground_custom_cloud_;
-    pcl::PointCloud<PointXYZIRT>::Ptr nonground_custom_cloud_;
-    std::vector<int> labels_;
+    std::unique_ptr<EfficientOnlineSegmentation> segmentation_;
+    message_filters::Subscriber<ground_seg::Cloud> cloud_filter_;
+    message_filters::Subscriber<nav_msgs::msg::Odometry> pose_filter_;
+    std::shared_ptr<Sync> sync_;
+    rclcpp::Subscription<ground_seg::Cloud>::SharedPtr cloud_sub_;
+    rclcpp::Publisher<ground_seg::Cloud>::SharedPtr ground_pub_, nonground_pub_;
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pose_pub_;
 };
 
-int main(int argc, char** argv)
+std::shared_ptr<rclcpp::Node> makeGroundSeparationNode(bool standalone)
 {
-    rclcpp::init(argc, argv);
-    auto node = std::make_shared<GroundSeparationNode>();
-    rclcpp::spin(node);
-    rclcpp::shutdown();
-    return 0;
+    return std::make_shared<GroundSeparationNode>(standalone);
 }

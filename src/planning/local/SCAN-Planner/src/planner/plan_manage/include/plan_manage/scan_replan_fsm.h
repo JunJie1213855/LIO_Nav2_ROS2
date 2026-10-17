@@ -29,7 +29,7 @@ namespace scan_planner
   {
 
   private:
-    /* ---------- flag ---------- */
+    // 状态机的状态枚举值
     enum FSM_EXEC_STATE
     {
       INIT,
@@ -39,19 +39,20 @@ namespace scan_planner
       EXEC_TRAJ,
       EMERGENCY_STOP
     };
+    // 三种导航模式
     enum NAVI_MODE
     {
-      MANUAL_TARGET = 1,
-      PRESET_TARGET = 2,
-      REFERENCE_PATH = 3,
+      MANUAL_TARGET = 1,  // 手动 2D 航点
+      PRESET_TARGET = 2,  // 预设 3D 航点导航，可以由配置文件提供
+      REFERENCE_PATH = 3, // 参考路径导航，可以由全局路径提供
     };
 
-    /* planning utils */
-    SCANPlannerManager::Ptr planner_manager_;
-    PlanningVisualization::Ptr visualization_;
-    scan_planner_msgs::msg::DataDisp data_disp_;
+    // 工具类
+    SCANPlannerManager::Ptr planner_manager_;    // 规划器管理器
+    PlanningVisualization::Ptr visualization_;   // 可视化
+    scan_planner_msgs::msg::DataDisp data_disp_; // 数据视差
 
-    /* parameters */
+    // 参数
     int navi_mode_; // 1 manual select, 2 hard code
     bool use_controller_progress_{false};
     int64_t controller_progress_id_{-1};
@@ -71,7 +72,7 @@ namespace scan_planner
     double body_height_;
     std::string self_inflation_frame_id_;
 
-    /* planning data */
+    // 规划数据
     bool trigger_, have_target_, have_odom_, have_new_target_;
     bool preset_started_{false};
     bool rviz_height_ready_;
@@ -83,29 +84,31 @@ namespace scan_planner
     int max_replan_fail_count_{1000};
     rclcpp::Time last_freeze_update_time_;
 
-    Eigen::Vector3d odom_pos_, odom_vel_, odom_acc_; // odometry state
-    Eigen::Quaterniond odom_orient_;
+    // 里程计状态
+    Eigen::Vector3d odom_pos_, odom_vel_, odom_acc_; // 里程计状态，包括位置、速度和加速度
+    Eigen::Quaterniond odom_orient_;                 // 里程计朝向，四元数
 
-    Eigen::Vector3d init_pt_, start_pt_, start_vel_, start_acc_, start_yaw_; // start state
-    Eigen::Vector3d end_pt_, end_vel_;                                       // goal state
-    Eigen::Vector3d local_target_pt_, local_target_vel_;                     // local target state
-    std::vector<Eigen::Vector3d> active_waypoints_;
+    // 导航状态
+    Eigen::Vector3d init_pt_, start_pt_, start_vel_, start_acc_, start_yaw_; // start state，开始状态，包括初始化位置、开始位置、开始速度、开始加速度、开始角度
+    Eigen::Vector3d end_pt_, end_vel_;                                       // goal state，目标状态，包括位置、速度
+    Eigen::Vector3d local_target_pt_, local_target_vel_;                     // local target state，局部目标状态，包括位置，速度
+    std::vector<Eigen::Vector3d> active_waypoints_;                          // 
     int current_wp_;
 
     bool flag_escape_emergency_;
 
-    /* ROS utils */
-    rclcpp::Node *node_{nullptr};
-    rclcpp::TimerBase::SharedPtr exec_timer_, safety_timer_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-    rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr path_sub_;
-    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr go2_execution_frozen_sub_;
-    rclcpp::Publisher<scan_planner_msgs::msg::Bspline>::SharedPtr bspline_pub_;
-    rclcpp::Publisher<scan_planner_msgs::msg::DataDisp>::SharedPtr data_disp_pub_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr self_inflation_pub_;
+    // ROS 工具，节点、订阅者、发布者
+    rclcpp::Node *node_{nullptr};  // 节点
+    rclcpp::TimerBase::SharedPtr exec_timer_, safety_timer_;                           // 定时器
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;        // 目标订阅器
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;                // 里程计订阅器
+    rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr path_sub_;                    // 路径订阅器
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr go2_execution_frozen_sub_;    // go2 执行器
+    rclcpp::Publisher<scan_planner_msgs::msg::Bspline>::SharedPtr bspline_pub_;        // B样条发布器
+    rclcpp::Publisher<scan_planner_msgs::msg::DataDisp>::SharedPtr data_disp_pub_;     // 数据差距发布器
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr self_inflation_pub_; // 自我膨胀发布其
 
-    /* helper functions */
+    // 帮助函数
     bool callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj); // front-end and back-end method
     bool callEmergencyStop(Eigen::Vector3d stop_pos);                          // front-end and back-end method
     bool planFromCurrentTraj();
@@ -128,7 +131,7 @@ namespace scan_planner
     double estimateYawFromSegment(const Eigen::Vector3d &from, const Eigen::Vector3d &to) const;
     void updateLocalTrajTimeFreeze();
 
-    /* ROS functions */
+    // ROS 回调函数
     void execFSMCallback();
     void checkCollisionCallback();
     void rvizGoalCallback(const geometry_msgs::msg::PoseStamped::ConstSharedPtr &msg);

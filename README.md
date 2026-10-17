@@ -274,20 +274,31 @@ SCAN-Planner 是 B-spline 轨迹优化 + A* 绕障的局部反应式规划器，
 ```
 
 该脚本启动 `Gazebo | FAST-LIO | lio_interface | sensor_scan | GroundSeg | SCAN | SP-RViz`。
-FAST-LIO 使用原始 `/livox/lidar`，GroundSeg 并行分割同一输入；SCAN-Planner 的输入为：
+FAST-LIO 使用原始 `/livox/lidar`；GroundSeg 同步 `/registered_scan` 与 `/odom`，
+在局部坐标中分类，再筛选原始配准点，输出保留 `odom` 坐标和时间戳。SCAN-Planner 的输入为：
+
+分割脚本的 FAST-LIO 分支设置 `point_filter_num:=1 dense_publish_en:=true`，
+避免预处理抽点使地面分割缺少样本；匹配用的 `filter_size_surf` 仍按 YAML 配置。
+这里的稠密点云仍会经过盲区、无效点过滤等处理，不等同于原始雷达全部点。
 
 | 输入 | 话题 | 坐标系与用途 |
 | --- | --- | --- |
-| 车体位姿 | `/odom` | FAST-LIO 经适配后得到的 `odom -> base_footprint` 位姿，供规划与控制使用 |
-| 雷达位姿 | `/registered_odometry` | `odom -> livox_frame` 位姿，供点云投影与射线更新使用 |
-| 非地面点云 | `/no_ground_cloud` | GroundSeg 输出的 `livox_frame` 系点云 |
+| 车体位姿 | `/ground_seg/odom` | GroundSeg 原样转发对应帧的 `/odom`（`odom -> base_footprint`），供规划与控制使用 |
+| 地图更新位姿 | `/ground_seg/odom` | 与非地面点云配对的车体位姿，供局部地图与射线更新使用 |
+| 非地面点云 | `/no_ground_cloud` | GroundSeg 从 `/registered_scan` 筛选出的 `odom` 系点云 |
 
-脚本设置 `cloud_is_world:=false`，由规划器根据雷达位姿将点云转换到规划坐标系。
-GroundSeg 设置 `publish_tf:=false`，传感器静态外参由机器人模型发布；规划器与控制器均使用仿真时间。
+脚本设置 `cloud_is_world:=true`，规划器直接使用配准坐标，不再用最新位姿变换非地面点云。
+分割使用时间戳严格相同的配准点云和位姿，匹配不到则不输出该帧。
+GroundSeg 不查询或广播 TF；分类时用 YAML 的车体到雷达外参（需与模型一致）。
+包内另保留 `cloud_only_segmentation.launch.py` 单点云入口，使用方法见
+[GroundSeg 功能包说明](src/perception/GroundSeg/efficient_online_segmentation/README.md)。
+位姿输出保留输入的 pose、twist、协方差和坐标系，与两份点云时间戳相同。
+其他节点继续维护机器人 TF；规划器与控制器均使用仿真时间。
 在 SP-RViz 中使用 "2D Goal Pose" 指定目标后，闭环控制器输出 `/cmd_vel`。
 
 该去地面导航入口使用新增的差速小车控制器 `closed_loop_controller_car`，
 配置、接口和验证方法见 [差速控制器说明](docs/scan_car_controller.md)。
+两种控制方式的公式与示意图见 [Car 与 Legacy 控制器对比](docs/scan_controller_comparison.md)。
 
 ### 8.2 `map_then_scan.sh` — 建图后加载 PCD 全局规划
 

@@ -49,39 +49,24 @@ SegmentationParams& SegmentationParams::operator=(const SegmentationParams& othe
 
 bool SegmentationParams::UpdateInternalParams()
 {
+    if (kLidarRows <= 0 || kLidarCols <= 0 || kNumSectors <= 0 || kNumSectors > kLidarCols ||
+        !std::isfinite(kLidarHorizRes) || kLidarHorizRes <= 0 ||
+        !std::isfinite(kLidarVertRes) || kLidarVertRes <= 0 ||
+        !std::isfinite(kLidarVertFovMin) || !std::isfinite(kLidarVertFovMax) ||
+        kLidarVertFovMin >= kLidarVertFovMax || !std::isfinite(kLidarProjectionError) ||
+        kLidarProjectionError < 0 || !kExtrinsicRot.allFinite() || !kExtrinsicTrans.allFinite())
+        return false;
+    for (float limit : {kGroundSameLineTolerance, kGroundSlopeTolerance,
+                        kGroundYInterceptTolerance, kGroundPointLineDistThres,
+                        kWallSameLineTolerance, kWallSlopeTolerance, kWallPointLineDistThres})
+        if (!std::isfinite(limit) || limit <= 0) return false;
+    if (kWallLineMinBinNum < 2) return false;
     bool is_user_params_correct = true;
-
-    kLidarHorizResInv = 1/kLidarHorizRes; 
-    kLidarVertResInv = 1/kLidarVertRes; 
+    kLidarHorizResInv = 1/kLidarHorizRes;
+    kLidarVertResInv = 1/kLidarVertRes;
     kLidarVertAngMin = kLidarVertFovMin - kLidarProjectionError;
-    kLidarVertAngMax = kLidarVertFovMax + kLidarProjectionError; 
-
+    kLidarVertAngMax = kLidarVertFovMax + kLidarProjectionError;
     kColsPerSector = kLidarCols/kNumSectors;
-
-    // Calculate Sensor Pose in Base frame.
-    // {
-    //     float roll=45., pitch=45., yaw=0.; // in degree.
-    //     Eigen::AngleAxisf rot1 (roll/180*M_PI, Eigen::Vector3f::UnitX());
-    //     Eigen::AngleAxisf rot2 (pitch/180*M_PI, Eigen::Vector3f::UnitY());
-    //     Eigen::AngleAxisf rot3 (yaw/180*M_PI, Eigen::Vector3f::UnitZ());
-    //     std::cout << "######   [rotation matrix generator]  ###### " << std::endl 
-    //         << "roll, pitch, yaw (in degrees): " << roll << "," << pitch << "," << yaw << std::endl
-    //         << "generated rotation matrix: " << std::endl 
-    //         << (rot1 * rot2 * rot3).toRotationMatrix() << std::endl;
-    //     Eigen::Matrix3f rot_test = Eigen::Matrix3f::Identity();
-    //     std::cout << "###### [test `normalized()` function] ###### " << std::endl 
-    //         << "original:   " << std::endl << rot_test << std::endl
-    //         << "normalized: " << std::endl << rot_test.normalized() << std::endl;
-    // }
-    // Eigen::AngleAxisf rot1 (kSensorRoll, Eigen::Vector3f::UnitX());
-    // Eigen::AngleAxisf rot2 (kSensorPitch, Eigen::Vector3f::UnitY());
-    // std::cout << "euler anglue to matrix" << std::endl << (rot1 * rot2).toRotationMatrix() << std::endl;
-    // Eigen::Matrix3f rot = (rot1 * rot2).toRotationMatrix();
-    // Eigen::Translation3f translation (0, 0, kSensorHeight);
-    // Eigen::Matrix4f transform = (translation * rot1 * rot2).matrix();
-    // kBaseToSensor = transform;
-    // kBaseToSensor.pretranslate(Eigen::Vector3f(0,0,kSensorHeight));
-    // kBaseToSensor.rotate( (rot1 * rot2).toRotationMatrix() );
 
     // Check: the rotation matrix must be a special orthogonal matrix!
     {
@@ -112,7 +97,7 @@ bool SegmentationParams::UpdateInternalParams()
         std::cout << std::endl;
     }
 
-    kExtrinsicTF = Eigen::Matrix4f::Zero();
+    kExtrinsicTF = Eigen::Matrix4f::Identity();
     kExtrinsicTF.block<3,3>(0,0) = kExtrinsicRot;
     kExtrinsicTF.block<3,1>(0,3) = kExtrinsicTrans;
     kBaseToSensor = kExtrinsicTF;
