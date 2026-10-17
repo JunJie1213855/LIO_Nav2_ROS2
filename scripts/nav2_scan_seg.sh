@@ -19,7 +19,7 @@ SESSION=mapping_sim
 tmux kill-session -t "$SESSION" 2>/dev/null
 killall -9 gzserver gzclient fastlio_mapping lio_interface_node \
   sensor_scan_generation_node scan_planner_node closed_loop_controller \
-  cloud_z_filter 2>/dev/null
+  ground_separation_node cloud_z_filter 2>/dev/null
 # sleep 2
 
 # 每个窗口：进工作空间 -> source -> 启动节点；节点退出后保留 shell 方便看报错
@@ -63,38 +63,32 @@ case "$LIO_SEL" in
 esac
 
 new_win "$LIO_WIN" "$LIO_CMD"
-# sleep 3
+
+# ============== FAST-LIO 位姿转换 ==============
+# /Odometry -> /registered_odometry (odom -> livox_frame)
+# /registered_odometry + /registered_scan -> /odom (odom -> base_footprint)
+new_win "lio_interface" "$LIO_IFACE use_sim_time:=true"
+new_win "sensor_scan" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
 
 # ============== 地面分割（GroundSeg，去地面）==============
-# 消费 Gazebo 直接输出的 /livox/lidar，去地面后输出 /no_ground_cloud（livox_frame 系）。
-# scan_planner_lio_launch.py 里的 cloud_frame_transform 会把 /no_ground_cloud
-# 从 livox_frame 转到 odom 系，再经 cloud_z_filter 只去天花板。
-new_win "GroundSeg" "ros2 launch efficient_online_segmentation ground_separation.launch.py"
-# sleep 2
+new_win "GroundSeg" "ros2 launch efficient_online_segmentation ground_separation.launch.py \
+    use_sim_time:=true publish_tf:=false"
 
-# ============== lio interface（按所选 LIO 自动匹配话题）==============
-# lio camera -> body => /odom -> livox_frame
-new_win "lio_interface" "$LIO_IFACE"
+# ============== SCAN-Planner + 闭环控制 ==============
+# GroundSeg 输出仍在 livox_frame，规划器用雷达位姿把它投影到 odom/world。
+# body_pose 必须是车体位姿，sensor_pose 则用雷达位姿，二者不能混用。
+new_win "SCAN" "ros2 launch scan_planner scan_planner_lio_launch.py \
+    use_sim_time:=true body_pose_topic:=/odom \
+    sensor_pose_topic:=/registered_odometry \
+    cloud_topic:=/no_ground_cloud cloud_is_world:=false"
 
-# ============== 中间层转换 ==============
-new_win "sensor_scan" "ros2 launch sensor_scan_generation sensor_scan_generation_launch.py"
-# sleep 2
-
-# ============== SCAN-Planner 探索规划 ==============
-# 地面已由 GroundSeg 去掉，z_min:=0.0 只保留天花板过滤（z_max:=3.0）。
-# 输入：body_pose=/odom、cloud=/registered_scan_filtered；输出：/cmd_vel 轨迹。
-new_win "SCAN" "ros2 launch scan_planner scan_planner_lio_launch.py use_sim_time:=true \
-    z_min:=0.0 z_max:=3.0 \
-    double_cylinder_radius:=0.45 double_cylinder_offset:=0.18 \
-    body_height:=0.25 obstacles_inflation_z_down:=1.0 \
-    optimization.lambda_collision:=50.0 optimization.dist0:=3.0 \
-    grid_map.p_occ:=0.3 grid_map.p_hit:=0.9 grid_map.p_miss:=0.1"
-# sleep 2
-
-# ============== SCAN-Planner 可视化 ==============
-new_win "SP-RViz" "ros2 run rviz2 rviz2 -d src/bringup/nav2_planner_bringup/rviz/scan_planner.rviz"
+new_win "SP-RViz" "ros2 run rviz2 rviz2 \
+    -d \$(ros2 pkg prefix --share nav2_planner_bringup)/rviz/scan_planner.rviz \
+    --ros-args -r __node:=rviz2_scan_seg -r /registered_scan:=/no_ground_cloud \
+    -p use_sim_time:=true"
 
 echo "已在 tmux 会话 '$SESSION' 中启动 Gazebo + LIO + GroundSeg + SCAN-Planner (LIO: $LIO_WIN)。"
 echo "查看输出: tmux attach -t $SESSION   (Ctrl-b n/p 切换窗口, Ctrl-b d 退出)"
+echo "规划输入: /odom (车体位姿), /registered_odometry (雷达位姿), /no_ground_cloud (非地面点云)"
 echo "操作: 切到 SP-RViz 窗口, 用 '2D Goal Pose' 点目标开始探索"
 echo "全部停止: tmux kill-session -t $SESSION"

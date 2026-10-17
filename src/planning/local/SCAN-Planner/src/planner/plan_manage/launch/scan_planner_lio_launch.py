@@ -13,8 +13,9 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -22,7 +23,10 @@ def generate_launch_description():
     planner_yaml = os.path.join(scan_share, "config", "planner.yaml")
     controllers_yaml = os.path.join(scan_share, "config", "controllers.yaml")
 
-    use_sim_time = LaunchConfiguration("use_sim_time", default="true")
+    use_sim_time = ParameterValue(LaunchConfiguration("use_sim_time"), value_type=bool)
+    body_pose = LaunchConfiguration("body_pose_topic")
+    sensor_pose = LaunchConfiguration("sensor_pose_topic")
+    cloud = LaunchConfiguration("cloud_topic")
 
     # SCAN-Planner 核心规划节点
     # 将 LIO 管线话题映射到 SCAN-Planner 的输入
@@ -31,12 +35,18 @@ def generate_launch_description():
         executable="scan_planner_node",
         name="scan_planner_node",
         output="screen",
-        parameters=[planner_yaml],
+        parameters=[planner_yaml, {
+            "use_sim_time": use_sim_time,
+            "grid_map.sensor_type": "lidar",
+            "grid_map.cloud_is_world": ParameterValue(
+                LaunchConfiguration("cloud_is_world"), value_type=bool),
+            "grid_map.need_extrinsic": False,
+        }],
         remappings=[
             # LIO 管线 → SCAN-Planner 输入
-            ("body_pose", "/odom"),                       # odom→base_footprint (sensor_scan_generation)
-            ("sensor_pose", "/odom"),                     # IMU≈body, 共用
-            ("cloud", "/registered_scan"),                # lio 点云
+            ("body_pose", body_pose),
+            ("sensor_pose", sensor_pose),
+            ("cloud", cloud),
         ],
     )
 
@@ -46,9 +56,9 @@ def generate_launch_description():
         executable="closed_loop_controller",
         name="closed_loop_controller",
         output="screen",
-        parameters=[controllers_yaml],
+        parameters=[controllers_yaml, {"use_sim_time": use_sim_time}],
         remappings=[
-            ("body_pose", "/odom"),
+            ("body_pose", body_pose),
             ("cmd_vel", "/cmd_vel"),
         ],
     )
@@ -63,6 +73,14 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument("use_sim_time", default_value="true"),
+        DeclareLaunchArgument("body_pose_topic", default_value="/odom",
+                              description="车体位姿，odom -> base_footprint"),
+        DeclareLaunchArgument("sensor_pose_topic", default_value="/odom",
+                              description="雷达位姿；传感器系点云应使用 /registered_odometry"),
+        DeclareLaunchArgument("cloud_topic", default_value="/registered_scan"),
+        DeclareLaunchArgument("cloud_is_world", default_value="true",
+                              description="false: 用 sensor_pose 将传感器系点云转换到规划坐标系"),
         world_tf,
         scan_planner_node,
         closed_loop_controller,

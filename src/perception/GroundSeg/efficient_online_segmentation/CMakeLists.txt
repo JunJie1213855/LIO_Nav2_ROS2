@@ -8,7 +8,7 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra)
+  add_compile_options(-Wall -Wextra -Werror=return-type)
 endif()
 
 find_package(ament_cmake REQUIRED)
@@ -70,5 +70,19 @@ add_segmentation_node(ground_separation_node
 
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME})
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_segmentation_startup
+    test/test_segmentation_startup.cpp
+    ${CORE_SOURCES})
+  target_include_directories(test_segmentation_startup PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PCL_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(test_segmentation_startup
+    ${PCL_LIBRARIES}
+    ${OpenCV_LIBRARIES})
+endif()
 
 ament_package()

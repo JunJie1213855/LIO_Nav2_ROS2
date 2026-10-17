@@ -66,8 +66,14 @@ void EfficientOnlineSegmentation::Segment(pcl::PointCloud<pcl::PointXYZI>::Ptr& 
 
     // step01 register every and each point into corresponding sector!
     for (auto& sector : sectors_) {sector.Reset();}
-    pcl::transformPointCloud(*cloud_data, *common_cloud_in_base_, sensor_pose_in_base_);
     range_image_ = cv::Mat::zeros(params_.kLidarRows, params_.kLidarCols, CV_32FC1);
+    if (cloud_data->empty()) {
+        common_cloud_in_base_->clear();
+        extracted_lines_.clear();
+        labels_out->clear();
+        return;
+    }
+    pcl::transformPointCloud(*cloud_data, *common_cloud_in_base_, sensor_pose_in_base_);
     for (std::size_t i=0; i<cloud_data->size(); ++i)
     {
         if (use_intensity) {cloud_data->points[i].intensity=kUnknownIntensity;}
@@ -131,7 +137,7 @@ void EfficientOnlineSegmentation::Segment(pcl::PointCloud<pcl::PointXYZI>::Ptr& 
         (*labels_out)[index] = kWallLabel;
         if (use_intensity) {cloud_data->points[index].intensity=kWallIntensity;}
     }
-    if (use_intensity) { /* expand intensity interval to [0, 255]. */
+    if (use_intensity && cloud_data->size() >= 2) { /* expand intensity interval to [0, 255]. */
         cloud_data->points[0].intensity=0;
         cloud_data->points[1].intensity=255;
     } 
@@ -173,9 +179,14 @@ void EfficientOnlineSegmentation::Segment(pcl::PointCloud<PointXYZIRT>::Ptr& clo
 
     // step01 register every and each point into corresponding sector!
     for (auto& sector : sectors_) {sector.Reset();}
-    pcl::transformPointCloud(*cloud_data, *custom_cloud_in_base_, sensor_pose_in_base_);
-    // pcl::transformPointCloud(*cloud_data, *custom_cloud_in_base_, params_.kBaseToSenTF);
     range_image_ = cv::Mat::zeros(params_.kLidarRows, params_.kLidarCols, CV_32FC1);
+    if (cloud_data->empty()) {
+        custom_cloud_in_base_->clear();
+        extracted_lines_.clear();
+        labels_out->clear();
+        return;
+    }
+    pcl::transformPointCloud(*cloud_data, *custom_cloud_in_base_, sensor_pose_in_base_);
     for (std::size_t i=0; i<cloud_data->size(); ++i)
     {
         if (use_intensity) {cloud_data->points[i].intensity=kUnknownIntensity;}
@@ -238,7 +249,7 @@ void EfficientOnlineSegmentation::Segment(pcl::PointCloud<PointXYZIRT>::Ptr& clo
         (*labels_out)[index] = kWallLabel;
         if (use_intensity) {cloud_data->points[index].intensity=kWallIntensity;}
     }
-    if (use_intensity) { /* expand intensity interval to [0, 255]. */
+    if (use_intensity && cloud_data->size() >= 2) { /* expand intensity interval to [0, 255]. */
         cloud_data->points[0].intensity=0;
         cloud_data->points[1].intensity=255;
     } 

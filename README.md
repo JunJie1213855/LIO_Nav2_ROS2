@@ -265,7 +265,26 @@ SCAN-Planner 是 B-spline 轨迹优化 + A* 绕障的局部反应式规划器，
 ./scripts/nav2_scan_sim.sh
 ```
 
-启动窗口：`Gazebo | FAST-LIO | GroundSeg | lio_if | sensor | SCAN | SP-RViz`。切到 SP-RViz 窗口用 "2D Goal Pose" 点目标开始规划。
+启动窗口：`Gazebo | FAST-LIO | lio_if | sensor | SCAN | SP-RViz`。切到 SP-RViz 窗口用 "2D Goal Pose" 点目标开始规划。
+
+需要 GroundSeg 去除地面时运行：
+
+```bash
+./scripts/mapping_sim_seg.sh 0
+```
+
+该脚本启动 `Gazebo | FAST-LIO | lio_interface | sensor_scan | GroundSeg | SCAN | SP-RViz`。
+FAST-LIO 使用原始 `/livox/lidar`，GroundSeg 并行分割同一输入；SCAN-Planner 的输入为：
+
+| 输入 | 话题 | 坐标系与用途 |
+| --- | --- | --- |
+| 车体位姿 | `/odom` | FAST-LIO 经适配后得到的 `odom -> base_footprint` 位姿，供规划与控制使用 |
+| 雷达位姿 | `/registered_odometry` | `odom -> livox_frame` 位姿，供点云投影与射线更新使用 |
+| 非地面点云 | `/no_ground_cloud` | GroundSeg 输出的 `livox_frame` 系点云 |
+
+脚本设置 `cloud_is_world:=false`，由规划器根据雷达位姿将点云转换到规划坐标系。
+GroundSeg 设置 `publish_tf:=false`，传感器静态外参由机器人模型发布；规划器与控制器均使用仿真时间。
+在 SP-RViz 中使用 "2D Goal Pose" 指定目标后，闭环控制器输出 `/cmd_vel`。
 
 ### 8.2 `map_then_scan.sh` — 建图后加载 PCD 全局规划
 

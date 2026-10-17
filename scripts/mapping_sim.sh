@@ -81,7 +81,7 @@ new_win "slam_toolbox" "ros2 launch slam_toolbox online_async_launch.py \
     slam_params_file:=src/bringup/nav2_planner_bringup/config/slam_toolbox_params.yaml"
 
 # ============== Nav2 导航（可选——关掉不影响建图和 RViz 显示） ==============
-# new_win "Nav2" "ros2 launch nav2_planner_bringup my_nav2_launch.py"
+new_win "Nav2" "ros2 launch nav2_planner_bringup my_nav2_launch.py"
 
 echo "已在 tmux 会话 '$SESSION' 中启动全部节点 (LIO: $LIO_WIN)。"
 echo "查看输出: tmux attach -t $SESSION   (Ctrl-b n/p 切换窗口, Ctrl-b d 退出)"

@@ -96,6 +96,7 @@ private:
         this->declare_parameter<std::string>("pub_no_ground_cloud_topic", "/no_ground_cloud");
         this->declare_parameter<std::string>("base_link_frame_id", "base_link");
         this->declare_parameter<std::string>("sensor_frame_id", "rslidar");
+        publish_tf_ = this->declare_parameter<bool>("publish_tf", true);
 
         // LiDAR parameters (angles in degree, converted below).
         this->declare_parameter<int>("kLidarRows", 96);
@@ -228,8 +229,8 @@ private:
                                        ground_common_cloud_, nonground_common_cloud_);
         }
 
-        // Publish base_link -> sensor tf (so the result can also be viewed in base_link).
-        {
+        // Standalone visualization can publish TF; integrated robots use their URDF.
+        if (publish_tf_) {
             geometry_msgs::msg::TransformStamped tf_msg;
             tf_msg.header.stamp = msg->header.stamp;
             tf_msg.header.frame_id = base_link_frame_id_;
@@ -285,6 +286,7 @@ private:
     std::string pub_no_ground_cloud_topic_;
     std::string base_link_frame_id_;
     std::string sensor_frame_id_;
+    bool publish_tf_{true};
 
     SegmentationParams params_;
     EfficientOnlineSegmentation efficient_sgmtt_;

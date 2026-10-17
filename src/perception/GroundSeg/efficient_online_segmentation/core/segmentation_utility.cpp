@@ -44,6 +44,7 @@ SegmentationParams& SegmentationParams::operator=(const SegmentationParams& othe
     kWallPointLineDistThres = other.kWallPointLineDistThres;
 
     // PrintAllParams("Copied parameters");
+    return *this;
 }
 
 bool SegmentationParams::UpdateInternalParams()

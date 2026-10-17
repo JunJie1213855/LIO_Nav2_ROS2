@@ -6,7 +6,7 @@ closed_loop_controller:
     kp_pos: 0.8
     kp_yaw: 1.5
     max_vx: 0.75
-    max_vy: 0.35
+    max_vy: 0.0
     max_vyaw: 1.0
     finish_dist: 0.15
 
@@ -31,7 +31,7 @@ go2_kinematic_sim:
     init_z: 0.3
     init_yaw: 0.0
     max_vx: 0.75
-    max_vy: 0.35
+    max_vy: 0.0
     max_vyaw: 1.0
     cmd_timeout: 0.3
     sim_rate: 100.0
