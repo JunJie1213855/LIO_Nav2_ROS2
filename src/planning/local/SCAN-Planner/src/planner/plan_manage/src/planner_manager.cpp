@@ -95,7 +95,7 @@ namespace scan_planner
     cout.precision(3);
     cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pt.transpose() << ", " << local_target_vel.transpose()
          << endl;
-
+    // 目标到达判定
     if ((start_pt - local_target_pt).norm() < 0.2)
     {
       cout << "Close to goal" << endl;
@@ -106,7 +106,7 @@ namespace scan_planner
     auto t_start = std::chrono::steady_clock::now();
     double t_init = 0.0, t_opt = 0.0, t_refine = 0.0;
 
-    /*** STEP 1: INIT ***/
+    // 1.初始化
     double ts = (start_pt - local_target_pt).norm() > 0.1 ? pp_.ctrl_pt_dist / pp_.max_vel_ * 1.2 : pp_.ctrl_pt_dist / pp_.max_vel_ * 5; // pp_.ctrl_pt_dist / pp_.max_vel_ is too tense, and will surely exceed the acc/vel limits
     vector<Eigen::Vector3d> point_set, start_end_derivatives;
     static bool flag_first_call = true, flag_force_polynomial = false;
@@ -245,7 +245,7 @@ namespace scan_planner
 
     t_start = std::chrono::steady_clock::now();
 
-    /*** STEP 2: OPTIMIZE ***/
+    // 2.B样条轨迹优化
     bool flag_step_1_success = bspline_optimizer_rebound_->BsplineOptimizeTrajRebound(ctrl_pts, ts);
     cout << "first_optimize_step_success=" << flag_step_1_success << endl;
     if (!flag_step_1_success)
@@ -260,6 +260,7 @@ namespace scan_planner
     t_start = std::chrono::steady_clock::now();
 
     /*** STEP 3: REFINE(RE-ALLOCATE TIME) IF NECESSARY ***/
+    // 3.细化
     UniformBspline pos = UniformBspline(ctrl_pts, 3, ts);
     pos.setPhysicalLimits(pp_.max_vel_, pp_.max_acc_, pp_.feasibility_tolerance_);
 

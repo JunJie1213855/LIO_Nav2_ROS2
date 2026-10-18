@@ -904,8 +904,10 @@ namespace scan_planner
   bool SCANReplanFSM::callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj)
   {
 
+    // 1.获取当前滑动窗口的局部目标
     getLocalTarget();
 
+    // 2.规划管理器的重规划 ！！重要！！
     bool plan_success =
         planner_manager_->reboundReplan(start_pt_, start_vel_, start_acc_, local_target_pt_, local_target_vel_, (have_new_target_ || flag_use_poly_init), flag_randomPolyTraj);
     have_new_target_ = false;
