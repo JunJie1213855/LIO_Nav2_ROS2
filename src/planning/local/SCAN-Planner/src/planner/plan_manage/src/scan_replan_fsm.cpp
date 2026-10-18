@@ -396,13 +396,13 @@ namespace scan_planner
   {
     odom_pos_(0) = msg->pose.pose.position.x;
     odom_pos_(1) = msg->pose.pose.position.y;
-    odom_pos_(2) = msg->pose.pose.position.z;
+    odom_pos_(2) = msg->pose.pose.position.z + 0.45; // 提升开始点的z轴
 
     // 如果是手动给航点
     if (navi_mode_ == NAVI_MODE::MANUAL_TARGET && !rviz_height_ready_)
     {
       // rviz_goal_height_ = odom_pos_(2); 通过初始化的位姿，取 z 轴高度，作为导航平面
-      rviz_goal_height_ = 0.4; // 直接设置高度
+      rviz_goal_height_ = 0.45; // 直接设置高度
       rviz_height_ready_ = true;
       RCLCPP_INFO(node_->get_logger(), "Set RViz goal height from initial body_pose z: %.3f", rviz_goal_height_);
     }
@@ -583,7 +583,8 @@ namespace scan_planner
 
     switch (exec_state_)
     {
-    case INIT: // 1.初始化状态
+      // 1.初始化状态
+    case INIT: 
     {
       if (!have_odom_)
       {
@@ -596,21 +597,21 @@ namespace scan_planner
       changeFSMExecState(WAIT_TARGET, "FSM");  // 2.转换为  WAIT_TARGET 状态
       break;
     }
-
-    case WAIT_TARGET: // 等待目标点
+    // 2.等待目标点
+    case WAIT_TARGET: 
     {
       if (!have_target_) // 没有目标点就继续等
         return;
       else
       {
-        changeFSMExecState(GEN_NEW_TRAJ, "FSM"); // 3.有目标点，就转换为生成新轨迹状态
+        changeFSMExecState(GEN_NEW_TRAJ, "FSM"); // 有目标点，就转换为生成新轨迹状态
       }
       break;
     }
-
+    // 3.生成新的轨迹
     case GEN_NEW_TRAJ:
     {
-      setStartStateFromOdomOrCurrentTraj(); // 4.
+      setStartStateFromOdomOrCurrentTraj(); 
 
       // Eigen::Vector3d rot_x = odom_orient_.toRotationMatrix().block(0, 0, 3, 1);
       // start_yaw_(0)         = atan2(rot_x(1), rot_x(0));
@@ -621,7 +622,7 @@ namespace scan_planner
         flag_random_poly_init = false;
       else
         flag_random_poly_init = true;
-
+      // !!! 边界重规划 !!! 主要的规划API
       bool success = callReboundReplan(true, flag_random_poly_init);
       if (success)
       {
@@ -638,24 +639,24 @@ namespace scan_planner
       break;
     }
 
-    case REPLAN_TRAJ:              // 5. 重新规划
+    // 4.重新规划
+    case REPLAN_TRAJ:
     {
-
-      if (planFromCurrentTraj())
+      if (planFromCurrentTraj()) // 从现在的轨迹重新规划
       {
         replan_fail_count_ = 0;
-        changeFSMExecState(EXEC_TRAJ, "FSM");
+        changeFSMExecState(EXEC_TRAJ, "FSM"); // 规划成功，执行
       }
       else
       {
         replan_fail_count_++;
-        changeFSMExecState(REPLAN_TRAJ, "FSM");
+        changeFSMExecState(REPLAN_TRAJ, "FSM"); // 不成功就继续重新规划，直到成功
       }
 
       break;
     }
-
-    case EXEC_TRAJ:              // 6. 执行规划
+    // 5.执行规划
+    case EXEC_TRAJ:              
     {
       /* determine if need to replan */
       LocalTrajData *info = &planner_manager_->local_data_;
@@ -670,13 +671,13 @@ namespace scan_planner
           (end_pt_ - odom_pos_).norm() < 0.5)
       {
         current_wp_++;
-        if (planNextWaypoint())
+        if (planNextWaypoint())   // 规划到下一个路标点 way point
         {
-          changeFSMExecState(GEN_NEW_TRAJ, "FSM");
+          changeFSMExecState(GEN_NEW_TRAJ, "FSM"); // 成功就规划新的轨迹
           return;
         }
-        replan_fail_count_++;
-        changeFSMExecState(GEN_NEW_TRAJ, "FSM");
+        replan_fail_count_++; // 不成功就记录，然后重新规划
+        changeFSMExecState(GEN_NEW_TRAJ, "FSM"); //
         return;
       }
 
@@ -723,8 +724,8 @@ namespace scan_planner
       }
       break;
     }
-
-    case EMERGENCY_STOP:  // 7.出现停止信号
+    // 6.出现停止信号
+    case EMERGENCY_STOP:  
     {
 
       if (flag_escape_emergency_) // Avoiding repeated calls
