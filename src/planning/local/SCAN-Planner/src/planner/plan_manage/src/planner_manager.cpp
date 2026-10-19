@@ -95,7 +95,7 @@ namespace scan_planner
     cout.precision(3);
     cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pt.transpose() << ", " << local_target_vel.transpose()
          << endl;
-    // 目标到达判定
+    // 1.目标到达判定 < 0.2 m 就是到达了，直接返回
     if ((start_pt - local_target_pt).norm() < 0.2)
     {
       cout << "Close to goal" << endl;
@@ -105,36 +105,49 @@ namespace scan_planner
 
     auto t_start = std::chrono::steady_clock::now();
     double t_init = 0.0, t_opt = 0.0, t_refine = 0.0;
-
-    // 1.初始化
-    double ts = (start_pt - local_target_pt).norm() > 0.1 ? pp_.ctrl_pt_dist / pp_.max_vel_ * 1.2 : pp_.ctrl_pt_dist / pp_.max_vel_ * 5; // pp_.ctrl_pt_dist / pp_.max_vel_ is too tense, and will surely exceed the acc/vel limits
+ 
+    // 2.初始化 pp_.ctrl_pt_dist / pp_.max_vel_ is too tense, and will surely exceed the acc/vel limits
+    // 时间补偿
+    double ts = (start_pt - local_target_pt).norm() > 0.1 ? 
+                pp_.ctrl_pt_dist / pp_.max_vel_ * 1.2 :  // 较远的时候，因子小 1.2
+                pp_.ctrl_pt_dist / pp_.max_vel_ * 5;     // 较近的时候，因子大 5
+    // 初始陆军 point_set，
     vector<Eigen::Vector3d> point_set, start_end_derivatives;
     static bool flag_first_call = true, flag_force_polynomial = false;
     bool flag_regenerate = false;
     do
     {
+      // 清除所有内容
       point_set.clear();
       start_end_derivatives.clear();
-      flag_regenerate = false;
+      flag_regenerate = false; 
 
       if (flag_first_call || flag_polyInit || flag_force_polynomial /*|| ( start_pt - local_target_pt ).norm() < 1.0*/) // Initial path generated from a min-snap traj by order.
       {
+        // 复位标志
         flag_first_call = false;
         flag_force_polynomial = false;
 
         PolynomialTraj gl_traj;
 
+        // 用梯形速度曲线估算总时间 time，加速—匀速—减速
         double dist = (start_pt - local_target_pt).norm();
-        double time = pow(pp_.max_vel_, 2) / pp_.max_acc_ > dist ? sqrt(dist / pp_.max_acc_) : (dist - pow(pp_.max_vel_, 2) / pp_.max_acc_) / pp_.max_vel_ + 2 * pp_.max_vel_ / pp_.max_acc_;
+        double time = pow(pp_.max_vel_, 2) / pp_.max_acc_ > dist ? 
+                      sqrt(dist / pp_.max_acc_) : 
+                      (dist - pow(pp_.max_vel_, 2) / pp_.max_acc_) / pp_.max_vel_ + 2 * pp_.max_vel_ / pp_.max_acc_;
 
-        if (!flag_randomPolyTraj)
+       
+        if (!flag_randomPolyTraj)  // 利用多项式先生成一个直线参考轨迹，一段五次多项式直线
         {
+          // 轨迹生成
           gl_traj = PolynomialTraj::one_segment_traj_gen(start_pt, start_vel, start_acc, local_target_pt, local_target_vel, Eigen::Vector3d::Zero(), time);
         }
-        else
+        else                      // 生成随机点轨迹，插入随机中间点
         {
-          Eigen::Vector3d horizon_dir = ((start_pt - local_target_pt).cross(Eigen::Vector3d(0, 0, 1))).normalized();
-          Eigen::Vector3d vertical_dir = ((start_pt - local_target_pt).cross(horizon_dir)).normalized();
+          // 生成起点到目标点的一个坐标轴
+          Eigen::Vector3d horizon_dir = ((start_pt - local_target_pt).cross(Eigen::Vector3d(0, 0, 1))).normalized(); // 与 z 轴叉乘，得到水平面内、垂直于飞行方向的横向单位向量
+          Eigen::Vector3d vertical_dir = ((start_pt - local_target_pt).cross(horizon_dir)).normalized();             // 再与横向叉乘，得到垂直于前两者的方向，近似竖直方向。
+          // 在起终点中点加随机偏移，偏移量随失败次数增大
           Eigen::Vector3d random_inserted_pt = (start_pt + local_target_pt) / 2 +
                                                (((double)rand()) / RAND_MAX - 0.5) * (start_pt - local_target_pt).norm() * horizon_dir * 0.8 * (-0.978 / (continuous_failures_count_ + 0.989) + 0.989) +
                                                (((double)rand()) / RAND_MAX - 0.5) * (start_pt - local_target_pt).norm() * vertical_dir * 0.4 * (-0.978 / (continuous_failures_count_ + 0.989) + 0.989);
@@ -143,22 +156,28 @@ namespace scan_planner
           pos.col(1) = random_inserted_pt;
           pos.col(2) = local_target_pt;
           Eigen::VectorXd t(2);
-          t(0) = t(1) = time / 2;
+          t(0) = t(1) = time / 2; // 按照 time 分成两段时间
+          // 生成两段等时的 min-snap 轨迹
           gl_traj = PolynomialTraj::minSnapTraj(pos, start_vel, local_target_vel, start_acc, Eigen::Vector3d::Zero(), t);
         }
 
         double t;
         bool flag_too_far;
-        ts *= 1.5; // ts will be divided by 1.5 in the next
+        // 第一次不进行重采样
+        ts *= 1.5;
+        // 重采样，如果1.距离大于 pp_.ctrl_pt_dist * 1.5 或者 2.点数小于 7，就将采样时间 ts 按照 1.5 倍频率重新采样
         do
         {
-          ts /= 1.5;
+          ts /= 1.5;         // 重采样，第一次不会
           point_set.clear();
           flag_too_far = false;
+          // 获取最终点
           Eigen::Vector3d last_pt = gl_traj.evaluate(0);
+          // [0, time] dt = ts
           for (t = 0; t < time; t += ts)
           {
             Eigen::Vector3d pt = gl_traj.evaluate(t);
+            // 距离过大，重采样
             if ((last_pt - pt).norm() > pp_.ctrl_pt_dist * 1.5)
             {
               flag_too_far = true;
@@ -167,12 +186,15 @@ namespace scan_planner
             last_pt = pt;
             point_set.push_back(pt);
           }
-        } while (flag_too_far || point_set.size() < 7); // To make sure the initial path has enough points.
-        t -= ts;
-        start_end_derivatives.push_back(gl_traj.evaluateVel(0));
-        start_end_derivatives.push_back(local_target_vel);
-        start_end_derivatives.push_back(gl_traj.evaluateAcc(0));
-        start_end_derivatives.push_back(gl_traj.evaluateAcc(t));
+        } while (flag_too_far || point_set.size() < 7); // 对三次 B 样条至少需要 7 个点，来初始化
+
+        // 
+        t -= ts; // 循环结束时 t 已越过 time，回退一步得到最后一个实际采样时刻
+        // 下面四个量，会交给 B 样条，然后进行轨迹优化
+        start_end_derivatives.push_back(gl_traj.evaluateVel(0));  // 起点速度
+        start_end_derivatives.push_back(local_target_vel);        // 终点速度（显式指定）
+        start_end_derivatives.push_back(gl_traj.evaluateAcc(0));  // 起点加速度
+        start_end_derivatives.push_back(gl_traj.evaluateAcc(t));  // 终点加速度
       }
       else // Initial path generated from the unexecuted portion of the old route.
       {
@@ -234,18 +256,20 @@ namespace scan_planner
     Eigen::MatrixXd ctrl_pts;
     UniformBspline::parameterizeToBspline(ts, point_set, start_end_derivatives, ctrl_pts);
 
+    // 初始化控制点，也用来初始化 A* 路径
     vector<vector<Eigen::Vector3d>> a_star_paths;
     a_star_paths = bspline_optimizer_rebound_->initControlPoints(ctrl_pts, true);
 
     t_init = std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count();
 
+    // 可视化
     static int vis_id = 0;
     visualization_->displayInitPathList(point_set, 0.2, 0);
     visualization_->displayAStarList(a_star_paths, vis_id);
 
     t_start = std::chrono::steady_clock::now();
 
-    // 2.B样条轨迹优化
+    // 2.B样条轨迹优化，平滑、碰撞、
     bool flag_step_1_success = bspline_optimizer_rebound_->BsplineOptimizeTrajRebound(ctrl_pts, ts);
     cout << "first_optimize_step_success=" << flag_step_1_success << endl;
     if (!flag_step_1_success)
@@ -266,17 +290,17 @@ namespace scan_planner
 
     double ratio;
     bool flag_step_2_success = true;
-    if (!pos.checkFeasibility(ratio, false))
+    if (!pos.checkFeasibility(ratio, false)) // 检查可行性
     {
       cout << "Need to reallocate time." << endl;
 
       Eigen::MatrixXd optimal_control_points;
-      flag_step_2_success = refineTrajAlgo(pos, start_end_derivatives, ratio, ts, optimal_control_points);
+      flag_step_2_success = refineTrajAlgo(pos, start_end_derivatives, ratio, ts, optimal_control_points); // 细化算法
       if (flag_step_2_success)
         pos = UniformBspline(optimal_control_points, 3, ts);
     }
 
-    if (!flag_step_2_success || !checkDynamicFeasibility(pos))
+    if (!flag_step_2_success || !checkDynamicFeasibility(pos)) // 动态可行性
     {
       printf("\033[34mThis refined trajectory is unsafe or dynamically infeasible. Skip publishing it.\n\033[0m");
       continuous_failures_count_++;
@@ -286,7 +310,7 @@ namespace scan_planner
     t_refine = std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count();
 
     // save planned results
-    updateTrajInfo(pos, node_->now());
+    updateTrajInfo(pos, node_->now()); // 更新轨迹信息
 
     cout << "total time:\033[42m" << (t_init + t_opt + t_refine)
          << "\033[0m,optimize:" << (t_init + t_opt) << ",refine:" << t_refine << endl;
