@@ -15,7 +15,7 @@
     lio.ros.imu_topic: "/livox/imu"
 
     lio.sensor.lidar_type: 3              # VELO16 — 订阅标准 sensor_msgs/PointCloud2
-    lio.sensor.blind: 2.0
+    lio.sensor.blind: 0.25
     lio.sensor.maxrange: 60.0
     lio.sensor.filter_rate: 3
     lio.sensor.enable_downsample: true

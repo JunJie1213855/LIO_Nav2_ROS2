@@ -396,13 +396,13 @@ namespace scan_planner
   {
     odom_pos_(0) = msg->pose.pose.position.x;
     odom_pos_(1) = msg->pose.pose.position.y;
-    odom_pos_(2) = msg->pose.pose.position.z + 0.45; // 提升开始点的z轴
+    odom_pos_(2) = msg->pose.pose.position.z + 0.25; // 提升开始点的z轴
 
     // 如果是手动给航点
     if (navi_mode_ == NAVI_MODE::MANUAL_TARGET && !rviz_height_ready_)
     {
       // rviz_goal_height_ = odom_pos_(2); 通过初始化的位姿，取 z 轴高度，作为导航平面
-      rviz_goal_height_ = 0.45; // 直接设置高度
+      rviz_goal_height_ = 0.25; // 直接设置高度
       rviz_height_ready_ = true;
       RCLCPP_INFO(node_->get_logger(), "Set RViz goal height from initial body_pose z: %.3f", rviz_goal_height_);
     }

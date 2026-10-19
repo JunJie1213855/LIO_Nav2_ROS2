@@ -259,13 +259,21 @@ ros2 run cartographer_ros cartographer_pbstream_to_ros_map \
 
 SCAN-Planner 是 B-spline 轨迹优化 + A* 绕障的局部反应式规划器，用于需要比 Nav2 更激进的局部避障场景。
 
-### 8.1 `nav2_scan_sim.sh` — FAST-LIO + SCAN-Planner 联合仿真
+### 8.1 `nav2_scan_sim.sh` — LIO + SCAN-Planner 联合仿真
 
 ```bash
 ./scripts/nav2_scan_sim.sh
+# 0=FAST-LIO（默认），1=Point-LIO，2=Super-LIO
+./scripts/nav2_scan_sim.sh 1
+# 只检查依赖并预览命令，不启动或停止进程
+./scripts/nav2_scan_sim.sh 0 --dry-run
 ```
 
-启动窗口：`Gazebo | FAST-LIO | lio_if | sensor | SCAN | SP-RViz`。切到 SP-RViz 窗口用 "2D Goal Pose" 点目标开始规划。
+启动窗口：`Gazebo | CloudConvert | LIO | lio_interface | sensor_scan | SCAN | SP-RViz`。脚本与 `mapping_sim.sh` 一样使用 `new_win "窗口名" "命令"`，在 `case` 的 0/1/2 分支中分别设置 `LIO_WIN`、`LIO_CMD` 和 `LIO_IFACE`。切到 SP-RViz 窗口用 "2D Goal Pose" 点目标开始规划。
+脚本适配 `simple_car` 的 50 线仿真雷达：转换 `/livox/lidar` 为带 ring/time 字段的 `/velodyne_points`，
+使用仿真时间，并按 URDF 中同位安装的雷达/IMU 覆盖外参。
+等待 `/clock` 和 `/odom` 首条消息后才启动后续阶段；超时可用 `tmux attach -t scan_gz` 查看日志。
+FAST-LIO、Point-LIO 在此导航脚本中关闭全程 PCD 累积保存。脚本只替换自身 `scan_gz` 会话，不再全局强制结束同名进程。
 
 需要 GroundSeg 去除地面时运行：
 
