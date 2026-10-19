@@ -33,6 +33,7 @@ namespace scan_planner
         const double ratio = total_xy_length > 1e-6
                                  ? accumulated_xy_length[i] / total_xy_length
                                  : static_cast<double>(i) / static_cast<double>(points.size() - 1);
+        // z 轴线性插值 z[i] = s_z + s[i] * (t_z -  s_z)
         points[i](2) = start_z + ratio * (target_z - start_z);
       }
 
