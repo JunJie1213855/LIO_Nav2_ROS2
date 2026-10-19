@@ -198,12 +198,14 @@ namespace scan_planner
       }
       else // 非首次生成轨迹，走剩下的轨迹，planner 是局部规划其，局部由滑动窗口决定
       {
+        // 获取从开始时间到现在的时间差
         const double t_cur = (node_->now() - local_data_.start_time_).seconds();
         if (!std::isfinite(t_cur) || !std::isfinite(local_data_.duration_) ||
             t_cur < 0.0 || t_cur >= local_data_.duration_ - 1e-3 ||
             !std::isfinite(ts) || ts <= 0.0)
           return false;
 
+        // 获取当前时刻旧起始点
         const Eigen::Vector3d old_start = local_data_.position_traj_.evaluateDeBoorT(t_cur);
         const Eigen::Vector3d correction = start_pt - old_start;
         if (!old_start.allFinite() || !correction.allFinite() ||
@@ -251,12 +253,14 @@ namespace scan_planner
       }
     } while (flag_regenerate);
 
+    // 3.z 轴插值，用于在开始和局部目标点的斜坡或者有高度的路径规划导航
     applyLinearZReference(point_set, start_pt(2), local_target_pt(2));
 
+    // 4.B 样条参数化，还没有开始优化
     Eigen::MatrixXd ctrl_pts;
     UniformBspline::parameterizeToBspline(ts, point_set, start_end_derivatives, ctrl_pts);
 
-    // 初始化控制点，也用来初始化 A* 路径
+    // 5.A*算法路径规划
     vector<vector<Eigen::Vector3d>> a_star_paths;
     a_star_paths = bspline_optimizer_rebound_->initControlPoints(ctrl_pts, true);
 
@@ -269,7 +273,7 @@ namespace scan_planner
 
     t_start = std::chrono::steady_clock::now();
 
-    // 2.B样条轨迹优化，平滑、碰撞、
+    // 6.B样条轨迹优化，平滑、碰撞
     bool flag_step_1_success = bspline_optimizer_rebound_->BsplineOptimizeTrajRebound(ctrl_pts, ts);
     cout << "first_optimize_step_success=" << flag_step_1_success << endl;
     if (!flag_step_1_success)
@@ -284,7 +288,7 @@ namespace scan_planner
     t_start = std::chrono::steady_clock::now();
 
     /*** STEP 3: REFINE(RE-ALLOCATE TIME) IF NECESSARY ***/
-    // 3.细化
+    // 7.细化，物理软约束
     UniformBspline pos = UniformBspline(ctrl_pts, 3, ts);
     pos.setPhysicalLimits(pp_.max_vel_, pp_.max_acc_, pp_.feasibility_tolerance_);
 
