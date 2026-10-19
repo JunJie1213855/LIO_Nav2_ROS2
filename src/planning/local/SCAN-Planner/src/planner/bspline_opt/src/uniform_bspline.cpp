@@ -210,12 +210,13 @@ namespace scan_planner
                                              const vector<Eigen::Vector3d> &start_end_derivative,
                                              Eigen::MatrixXd &ctrl_pts)
   {
+    // 采样时间小于0,错误了
     if (ts <= 0)
     {
       cout << "[B-spline]:time step error." << endl;
       return;
     }
-
+    // 小于三个点不初始化
     if (point_set.size() <= 3)
     {
       cout << "[B-spline]:point set have only " << point_set.size() << " points." << endl;
@@ -231,24 +232,28 @@ namespace scan_planner
 
     // write A
     Eigen::Vector3d prow(3), vrow(3), arow(3);
-    prow << 1, 4, 1;
-    vrow << -1, 0, 1;
-    arow << 1, -2, 1;
+    prow << 1, 4, 1; // 三次均匀 B 样条  Pi = (Qi + 4 Q_{i+1} + Q_{i+2}) / 6
+    vrow << -1, 0, 1;// 起终点速度方程   v1 = (-Q0 + Q2) / 2ts, vK = (-Q_{K - 1} + Q_{K + 1}) / 2ts 
+    arow << 1, -2, 1;// 起终点加速度方程 a1 = (Q0 - 2Q1 + Q2) / ts^2, aK = (Q_{K - 1} - 2Q_{K} + Q_{K + 1}) / ts^2 
 
+    // 利用上面的关系式，组成线性方程组， K + 4 个方程，求 K + 2 个未知数
+    // Aq = b
+    // q 为控制点 Q 向量，b 包含采样点、起终点速度、起终点加速度
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(K + 4, K + 2);
-
+    // 开始填充
+    // 前 K 行 -> 三次均匀 B 样条
     for (int i = 0; i < K; ++i)
       A.block(i, i, 1, 3) = (1 / 6.0) * prow.transpose();
-
+    // K + 1 、K + 2 行 -> 起终点速度
     A.block(K, 0, 1, 3) = (1 / 2.0 / ts) * vrow.transpose();
     A.block(K + 1, K - 1, 1, 3) = (1 / 2.0 / ts) * vrow.transpose();
-
+    // K + 3、 K + 4 行 -> 起终点加速度
     A.block(K + 2, 0, 1, 3) = (1 / ts / ts) * arow.transpose();
     A.block(K + 3, K - 1, 1, 3) = (1 / ts / ts) * arow.transpose();
 
     //cout << "A" << endl << A << endl << endl;
 
-    // write b
+    // K 个点
     Eigen::VectorXd bx(K + 4), by(K + 4), bz(K + 4);
     for (int i = 0; i < K; ++i)
     {
@@ -256,7 +261,7 @@ namespace scan_planner
       by(i) = point_set[i](1);
       bz(i) = point_set[i](2);
     }
-
+    // 起终点速度、起终点加速度
     for (int i = 0; i < 4; ++i)
     {
       bx(K + i) = start_end_derivative[i](0);
@@ -264,17 +269,18 @@ namespace scan_planner
       bz(K + i) = start_end_derivative[i](2);
     }
 
-    // solve Ax = b
+    // 求解 Ax = b
     Eigen::VectorXd px = A.colPivHouseholderQr().solve(bx);
     Eigen::VectorXd py = A.colPivHouseholderQr().solve(by);
     Eigen::VectorXd pz = A.colPivHouseholderQr().solve(bz);
 
-    // convert to control pts
+    // 转换为控制点
     ctrl_pts.resize(3, K + 2);
     ctrl_pts.row(0) = px.transpose();
     ctrl_pts.row(1) = py.transpose();
     ctrl_pts.row(2) = pz.transpose();
 
+    // ctrl = [Q0 Q1 Q2 ... Q_{K + 1}]
     // cout << "[B-spline]: parameterization ok." << endl;
   }
 

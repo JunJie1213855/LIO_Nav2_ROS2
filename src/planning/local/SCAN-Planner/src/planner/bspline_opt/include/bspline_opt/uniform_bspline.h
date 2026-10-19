@@ -56,9 +56,10 @@ namespace scan_planner
     // constraints
     // input : (K+2) points with boundary vel/acc; ts
     // output: (K+6) control_pts
-    static void parameterizeToBspline(const double &ts, const vector<Eigen::Vector3d> &point_set,
-                                      const vector<Eigen::Vector3d> &start_end_derivative,
-                                      Eigen::MatrixXd &ctrl_pts);
+    static void parameterizeToBspline(const double &ts,                                   // 时间间隔
+                                      const vector<Eigen::Vector3d> &point_set,           // K 个位置采样点
+                                      const vector<Eigen::Vector3d> &start_end_derivative,// 起点速度、终点速度、起点加速度、终点加速度
+                                      Eigen::MatrixXd &ctrl_pts);                         // 输出控制点
 
     /* check feasibility, adjust time */
 
