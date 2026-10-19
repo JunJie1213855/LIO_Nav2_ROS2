@@ -1,0 +1,35 @@
+# map.pcd 地图演示模型；机器人尺寸不代表实车，最高层目标仍存在断连。
+# 输入为完整 PointCloud2 地图话题，不会自动读取 PCD 文件。
+dddmr_planner:
+  ros__parameters:
+    map_topic: /global_points
+    path_topic: /init_path
+    goal_topic: /goal_pose
+    initial_pose_topic: /initialpose
+    odom_topic: ''
+    start:
+    - -5.46
+    - 7.45
+    - 0.06
+    update_map: false
+    map_transient_local: false
+    planner:
+      robot_radius: 0.35
+      robot_height: 0.8
+      max_slope_deg: 25.0
+      max_step: 0.25
+      max_roughness: 0.1
+      voxel_size: 0.1
+      normal_k: 16
+      inflation_radius: 0.55
+      cost_scaling_factor: 3.0
+      lethal_cost: 254.0
+      connection_radius: 0.4
+      max_neighbors: 12
+      edge_collision_check: true
+      heuristic_weight: 1.0
+      cost_weight: 0.02
+      snap_radius: 1.5
+      path_resolution: 0.1
+      smooth_iterations: 3
+      shortcut: true

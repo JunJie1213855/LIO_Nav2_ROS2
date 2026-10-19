@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>dddmr_ros2</name>
+  <version>0.1.0</version>
+  <description>ROS2 PointCloud2 input and init_path output for dddmr_py.</description>
+  <maintainer email="ros@example.com">ros</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>sensor_msgs_py</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <test_depend>python3-pytest</test_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

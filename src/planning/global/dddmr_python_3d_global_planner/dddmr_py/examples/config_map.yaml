@@ -1,0 +1,30 @@
+# map.pcd 建图验证配置：用于楼梯区域连接排查。
+# 已验证 (-5.46,7.45,0.06) -> (-5.36,0.25,1.01) 可达，路径约 7.58 m。
+# 高度 0.80 m 时，已验证至 (6.26,-3.96,1.56) 可达，路径约 22.96 m。
+# 连接半径 0.40 m 时，已验证至 (8.76,0.94,2.38) 可达，路径约 30.04 m。
+# 以下机器人尺寸用于地图演示，不由点云自动估计；接入实车时应填写实际尺寸。
+# max_step 仍须符合实际机器人能力；此配置不保证所有楼层相互连通。
+robot_radius: 0.1        # 机器人外接圆半径 (m)
+robot_height: 0.40        # 地图演示模型高度 (m), 用于净空/多层判断
+max_slope_deg: 25.0       # 可通行最大坡度
+max_step: 0.25            # 可跨越最大台阶
+max_roughness: 0.10       # 局部平面残差上限
+
+voxel_size: 0.10          # 体素降采样 (决定节点密度与耗时)
+normal_k: 16              # 法向量估计近邻数
+
+inflation_radius: 0.2    # 障碍膨胀半径
+cost_scaling_factor: 3.0  # 膨胀代价衰减
+lethal_cost: 254.0
+
+connection_radius: 0.40   # 楼梯路径存在约 0.284/0.321 m 的连接边，自动半径 0.26 m 会截断
+max_neighbors: 12
+edge_collision_check: true  # 增大候选连接范围后仍检查沿线碰撞
+
+heuristic_weight: 1.0     # 0=Dijkstra, 1=A*, >1=加权A*(更快, 次优)
+cost_weight: 0.02         # 代价对边权影响
+snap_radius: 1.5          # 起终点吸附半径
+
+path_resolution: 0.10
+smooth_iterations: 3
+shortcut: true

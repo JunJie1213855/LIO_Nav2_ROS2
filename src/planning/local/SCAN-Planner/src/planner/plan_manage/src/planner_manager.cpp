@@ -188,15 +188,15 @@ namespace scan_planner
           }
         } while (flag_too_far || point_set.size() < 7); // 对三次 B 样条至少需要 7 个点，来初始化
 
-        // 
-        t -= ts; // 循环结束时 t 已越过 time，回退一步得到最后一个实际采样时刻
+        // 循环结束时 t 已越过 time，回退一步得到最后一个实际采样时刻
+        t -= ts;
         // 下面四个量，会交给 B 样条，然后进行轨迹优化
         start_end_derivatives.push_back(gl_traj.evaluateVel(0));  // 起点速度
         start_end_derivatives.push_back(local_target_vel);        // 终点速度（显式指定）
         start_end_derivatives.push_back(gl_traj.evaluateAcc(0));  // 起点加速度
         start_end_derivatives.push_back(gl_traj.evaluateAcc(t));  // 终点加速度
       }
-      else // Initial path generated from the unexecuted portion of the old route.
+      else // 非首次生成轨迹，走剩下的轨迹，planner 是局部规划其，局部由滑动窗口决定
       {
         const double t_cur = (node_->now() - local_data_.start_time_).seconds();
         if (!std::isfinite(t_cur) || !std::isfinite(local_data_.duration_) ||

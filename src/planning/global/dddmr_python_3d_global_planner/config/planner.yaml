@@ -1,0 +1,21 @@
+dddmr_planner:
+  ros__parameters:
+    map_topic: /global_points
+    path_topic: /init_path
+    goal_topic: /goal_pose
+    initial_pose_topic: /initialpose
+    odom_topic: ""                 # e.g. /Odometry; empty disables odometry input
+    start: [0.0, 0.0, 0.0]         # fallback start in the incoming map frame
+    update_map: false             # static global map: build once; true rebuilds on every map
+    map_transient_local: false    # true for a latched/static map publisher
+    planner:
+      robot_radius: 0.35
+      robot_height: 1.20
+      max_slope_deg: 25.0
+      max_step: 0.25
+      voxel_size: 0.10
+      max_neighbors: 18
+      edge_collision_check: true
+      snap_radius: 1.5
+      path_resolution: 0.10
+      search_backend: auto
