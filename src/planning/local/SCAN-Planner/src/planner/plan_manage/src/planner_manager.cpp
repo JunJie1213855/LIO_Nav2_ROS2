@@ -301,7 +301,7 @@ namespace scan_planner
 
     // 5.A*算法路径规划
     vector<vector<Eigen::Vector3d>> a_star_paths;
-    a_star_paths = bspline_optimizer_rebound_->initControlPoints(ctrl_pts, true);
+    a_star_paths = bspline_optimizer_rebound_->initControlPoints(ctrl_pts, true); // 内部包含碰撞查找、A*查找、路径优化
 
     t_init = std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count();
 
@@ -312,7 +312,7 @@ namespace scan_planner
 
     t_start = std::chrono::steady_clock::now();
 
-    // 6.B样条轨迹优化，平滑、碰撞
+    // 6.B样条轨迹优化，平滑、碰撞、物理速度以及加速度限制
     bool flag_step_1_success = bspline_optimizer_rebound_->BsplineOptimizeTrajRebound(ctrl_pts, ts);
     cout << "first_optimize_step_success=" << flag_step_1_success << endl;
     if (!flag_step_1_success)
@@ -327,7 +327,7 @@ namespace scan_planner
     t_start = std::chrono::steady_clock::now();
 
     /*** STEP 3: REFINE(RE-ALLOCATE TIME) IF NECESSARY ***/
-    // 7.细化，物理软约束
+    // 7.细化
     UniformBspline pos = UniformBspline(ctrl_pts, 3, ts);
     pos.setPhysicalLimits(pp_.max_vel_, pp_.max_acc_, pp_.feasibility_tolerance_);
 

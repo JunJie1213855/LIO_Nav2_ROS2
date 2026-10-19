@@ -60,20 +60,22 @@ namespace scan_planner
    * But I will merge then someday.*/
   std::vector<std::vector<Eigen::Vector3d>> BsplineOptimizer::initControlPoints(Eigen::MatrixXd &init_points, bool flag_first_init /*= true*/)
   {
-
+    // 第一次初始化
     if (flag_first_init)
     {
-      cps_.clearance = dist0_;
+      cps_.clearance = dist0_;        // 安全间距
       cps_.resize(init_points.cols());
-      cps_.points = init_points;
+      cps_.points = init_points;      // 控制点坐标
     }
 
     /*** Segment the initial trajectory according to obstacles ***/
     constexpr int ENOUGH_INTERVAL = 2;
+    // 相邻采样点之间的采样步子
     double step_size = grid_map_->getResolution() / ((init_points.col(0) - init_points.rightCols(1)).norm() / (init_points.cols() - 1)) / 2;
     int in_id = -1, out_id = -1;
+    // 碰撞区间，记录控制点中，哪几个区间会出现碰撞
     vector<std::pair<int, int>> segment_ids;
-    int same_occ_state_times = ENOUGH_INTERVAL + 1;
+    int same_occ_state_times = ENOUGH_INTERVAL + 1; // 过滤阈值
     int occ; bool last_occ = false;
     bool flag_got_start = false, flag_got_end = false, flag_got_end_maybe = false;
     int i_end = (int)init_points.cols() - order_; // check all points (was only 2/3)
@@ -83,11 +85,14 @@ namespace scan_planner
       {
         Eigen::Vector3d sample_pt = a * init_points.col(i - 1) + (1 - a) * init_points.col(i);
         double sample_yaw = estimateSegmentYaw(init_points.col(i - 1), init_points.col(i));
+
+        // grid map 采样占据式网格
         occ = grid_map_->getInflateOccupancy(sample_pt, sample_yaw);
         if (occ == -1) occ = 0; // unknown/outside-map → treat as free, not occupied
         // cout << setprecision(5);
         // cout << (a * init_points.col(i-1) + (1-a) * init_points.col(i)).transpose() << " occ1=" << occ << endl;
-
+        
+        // 
         if (occ && !last_occ)
         {
           if (same_occ_state_times > ENOUGH_INTERVAL || i == order_)
@@ -130,18 +135,23 @@ namespace scan_planner
       }
     }
 
-    /*** a star search ***/
+    // A* 查找
     vector<vector<Eigen::Vector3d>> a_star_paths;
     RCLCPP_INFO(rclcpp::get_logger("bspline_opt"), "[DIAG] detected %zu collision segments", segment_ids.size());
     for (size_t i = 0; i < segment_ids.size(); ++i)
     {
+      // 获取碰撞区间
       Eigen::Vector3d in(init_points.col(segment_ids[i].first)), out(init_points.col(segment_ids[i].second));
       RCLCPP_INFO(rclcpp::get_logger("bspline_opt"), "[DIAG] segment %zu: in[%d]=(%.2f,%.2f,%.2f) out[%d]=(%.2f,%.2f,%.2f)",
                   i, segment_ids[i].first, in(0), in(1), in(2), segment_ids[i].second, out(0), out(1), out(2));
+      // A* 查找算法，使用避障算法
       ASTAR_RET ret = a_star_->AstarSearch(grid_map_->getResolution(), in, out);
+    
       if (ret == ASTAR_RET::SUCCESS)
       {
+        // 路径获取
         vector<Eigen::Vector3d> path = a_star_->getPath();
+        // 路径长短
         if (path.size() < 2)
         {
           RCLCPP_WARN(rclcpp::get_logger("bspline_opt"), "A-star path has fewer than 2 points; skip segment %zu", i);
@@ -159,7 +169,7 @@ namespace scan_planner
       }
     }
 
-    /*** calculate bounds ***/
+    // 边界计算
     int id_low_bound, id_up_bound;
     vector<std::pair<int, int>> bounds(segment_ids.size());
     for (size_t i = 0; i < segment_ids.size(); i++)
